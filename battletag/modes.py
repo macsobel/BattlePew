@@ -1292,9 +1292,6 @@ class ArenaEngine:
         self.results_revealed = False
         self.match_end_ts = 0.0
         self._pending_audio = []
-        self.score_history = [
-            {"t": 0.0, "scores": {str(p.gun_num): 0 for p in self.players.values()}}
-        ]
         self.audio.reset_match_timers()
         team_map = {gid: p.team_id for gid, p in self.players.items()}
         self.sim.reset_for_mode(self.mode_name, self.settings, team_map=team_map)
@@ -1308,9 +1305,13 @@ class ArenaEngine:
         max_life = int(self.settings.get("lifePoints", 5))
         max_ammo = 6 if self.mode_name == "OldFashionDuel" else int(self.settings.get("ammunitions", 9))
         max_clips = 0 if self.mode_name == "OldFashionDuel" else int(self.settings.get("clips", 3))
+        num_players = len(self.players)
 
         for p in self.players.values():
-            p.score = 0
+            # LastManStanding's original survival formula sets an alive
+            # player's score to life_points + num_players; initialize it
+            # at match start so an untouched survivor does not stay at 0.
+            p.score = (max_life + num_players) if self.mode_name == "LastManStanding" else 0
             p.hits_landed = 0
             p.hits_received = 0
             p.frags = 0
@@ -1342,6 +1343,10 @@ class ArenaEngine:
             p.last_status_ts = 0.0
             p.baseline_set = False
             p.prev_slots = [0, 0, 0, 0, 0]
+
+        self.score_history = [
+            {"t": 0.0, "scores": {str(p.gun_num): p.score for p in self.players.values()}}
+        ]
 
         if self.mode_name == "OldFashionDuel":
             self.duel_state = {

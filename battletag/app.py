@@ -728,6 +728,17 @@ def _trigger_winner_announcement() -> None:
             ranked_players = sorted(engine.players.values(), key=lambda p: p.score, reverse=True)
             top_score = ranked_players[0].score
             winners = [p for p in ranked_players if p.score == top_score]
+    elif engine.mode_name == "LastManStanding":
+        # Survival decides: any alive player beats all eliminated players,
+        # and among alive players higher HP / score wins.
+        ranked_players = engine.get_sorted_players()
+        if not ranked_players:
+            return
+        top_key = (ranked_players[0].life_points > 0, ranked_players[0].life_points, ranked_players[0].score)
+        winners = [
+            p for p in ranked_players
+            if (p.life_points > 0, p.life_points, p.score) == top_key
+        ]
     else:
         ranked_players = sorted(engine.players.values(), key=lambda p: p.score, reverse=True)
         if not ranked_players:

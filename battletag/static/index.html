@@ -5851,10 +5851,12 @@
 
       document.getElementById('resultsModeName').textContent = state.mode.title;
       const isRace = state.mode.id === 'TagThenShoot';
-      // The race arrives in the server's race ranking (finished runs
-      // by time, then unfinished by points); re-sorting by score
-      // would crown the wrong winner.
-      const sorted = isRace
+      const isLMS = state.mode.id === 'LastManStanding';
+      // The race and LastManStanding arrive in the server's mode ranking
+      // (race: finished runs by time then unfinished by points; LMS:
+      // alive > life_points > score > hits_landed); re-sorting by score
+      // alone would crown the wrong winner.
+      const sorted = (isRace || isLMS)
         ? [...(state.players || [])]
         : [...(state.players || [])].sort((a, b) => (b.score - a.score) || (a.gun_num - b.gun_num));
       const topWinner = sorted[0];
@@ -5906,7 +5908,14 @@
           } else {
             // Solo modes: a tie at the top is a tie game, not a victory.
             const runnerUp = sorted[1];
-            const isTie = runnerUp && runnerUp.score === topWinner.score;
+            const isTie = isLMS
+              ? Boolean(
+                  runnerUp
+                  && (runnerUp.life_points > 0) === (topWinner.life_points > 0)
+                  && runnerUp.life_points === topWinner.life_points
+                  && runnerUp.score === topWinner.score
+                )
+              : Boolean(runnerUp && runnerUp.score === topWinner.score);
             if (isTie) {
               document.getElementById('resultsHeadline').textContent = `Tie Game — ${topWinner.score} Points!`;
               document.getElementById('resultsSub').textContent = `${state.mode.title} Match Complete · No outright winner`;
@@ -5914,7 +5923,9 @@
               hasOutrightWinner = true;
               winningGunNum = topWinner.gun_num;
               document.getElementById('resultsHeadline').textContent = `Victory: ${topWinner.name.toUpperCase()}!`;
-              document.getElementById('resultsSub').textContent = `${state.mode.title} Match Complete · Top Score: ${topWinner.score} Points`;
+              document.getElementById('resultsSub').textContent = isLMS && topWinner.life_points > 0
+                ? `${state.mode.title} Match Complete · Last Survivor (${topWinner.life_points} HP · ${topWinner.score} Pts)`
+                : `${state.mode.title} Match Complete · Top Score: ${topWinner.score} Points`;
             }
           }
         }
@@ -5945,6 +5956,14 @@
             if (qFin && !pFin) return true;
             if (!qFin && !pFin) return q.score > p.score;
             return false;
+          }).length + 1
+        : isLMS
+        ? (p) => sorted.filter((q) => {
+            const qAlive = q.life_points > 0;
+            const pAlive = p.life_points > 0;
+            if (qAlive !== pAlive) return qAlive;
+            if (q.life_points !== p.life_points) return q.life_points > p.life_points;
+            return q.score > p.score;
           }).length + 1
         : (p) => sorted.filter((q) => q.score > p.score).length + 1;
       const rankCardHtml = (p, delayMs) => {
