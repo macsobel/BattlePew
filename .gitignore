@@ -40,10 +40,8 @@ battletag/static/assets/textures/Ui/*
 !battletag/static/assets/textures/Ui/ubiconnect-connected.png
 !battletag/static/assets/textures/Ui/ubiconnect-disconnected.png
 
-# Local dev / handoff / test files (not shipped to GitHub)
+# Local dev / handoff files (not shipped to GitHub)
 battle-tag-antigravity-handoff/
 macos-app/Docs/
 scripts/
-tests/
-pytest.ini
 
