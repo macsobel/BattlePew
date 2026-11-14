@@ -1,0 +1,147 @@
+name: Build BattlePew (Windows & Linux)
+
+on:
+  push:
+    branches:
+      - main
+    tags:
+      - "v*"
+  pull_request:
+    branches:
+      - main
+    paths:
+      - "battletag/**"
+      - "desktop_launcher.py"
+      - "run_battletag.py"
+      - "macos-app/requirements-app.txt"
+      - ".github/workflows/build-windows-linux.yml"
+  workflow_dispatch:
+
+jobs:
+  build-windows:
+    runs-on: windows-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.13
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - name: Install Python dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r macos-app/requirements-app.txt pywebview pyinstaller
+
+      - name: Smoke-test imports
+        run: |
+          python -c "import battletag.app, desktop_launcher; print('OK')"
+
+      - name: Build Windows app with PyInstaller
+        run: |
+          pyinstaller --noconfirm --windowed --name BattlePew `
+            --add-data "battletag;battletag" `
+            --add-data "run_battletag.py;." `
+            --hidden-import uvicorn.logging `
+            --hidden-import uvicorn.loops.auto `
+            --hidden-import uvicorn.protocols.http.auto `
+            --hidden-import uvicorn.protocols.websockets.auto `
+            --hidden-import uvicorn.lifespan.on `
+            desktop_launcher.py
+
+      - name: Package Windows release archive
+        shell: pwsh
+        run: |
+          $version = python -c "import battletag; print(battletag.__version__)"
+          $shortSha = "${{ github.sha }}".Substring(0, 7)
+          New-Item -ItemType Directory -Force -Path release | Out-Null
+          $zipPath = "release/BattlePew-Windows-$version-$shortSha.zip"
+          Compress-Archive -Path "dist/BattlePew/*" -DestinationPath $zipPath -Force
+          Get-ChildItem release
+
+      - name: Upload Windows artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: battlepew-windows-${{ github.sha }}
+          path: release/BattlePew-Windows-*.zip
+
+  build-linux:
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install system dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            libhidapi-dev \
+            python3-gi \
+            gir1.2-webkit2-4.1 \
+            libcairo2-dev \
+            libgirepository1.0-dev
+
+      - name: Set up Python 3.13
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - name: Install Python dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r macos-app/requirements-app.txt pywebview pyinstaller
+
+      - name: Smoke-test imports
+        run: |
+          python -c "import battletag.app, desktop_launcher; print('OK')"
+
+      - name: Build Linux app with PyInstaller
+        run: |
+          pyinstaller --noconfirm --windowed --name BattlePew \
+            --add-data "battletag:battletag" \
+            --add-data "run_battletag.py:." \
+            --hidden-import uvicorn.logging \
+            --hidden-import uvicorn.loops.auto \
+            --hidden-import uvicorn.protocols.http.auto \
+            --hidden-import uvicorn.protocols.websockets.auto \
+            --hidden-import uvicorn.lifespan.on \
+            desktop_launcher.py
+
+      - name: Package Linux release archive
+        run: |
+          VERSION=$(python -c "import battletag; print(battletag.__version__)")
+          SHORT_SHA="${GITHUB_SHA::7}"
+          mkdir -p release
+          tar -czf "release/BattlePew-Linux-${VERSION}-${SHORT_SHA}.tar.gz" -C dist BattlePew
+          ls -lh release
+
+      - name: Upload Linux artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: battlepew-linux-${{ github.sha }}
+          path: release/BattlePew-Linux-*.tar.gz
+
+  release:
+    needs: [build-windows, build-linux]
+    if: startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Download Windows artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: battlepew-windows-${{ github.sha }}
+          path: release
+
+      - name: Download Linux artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: battlepew-linux-${{ github.sha }}
+          path: release
+
+      - name: Attach archives to GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: release/*

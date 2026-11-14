@@ -1,0 +1,2054 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <link rel="icon" href="/static/assets/textures/Ui/Loading_Logo.png" />
+  <title>BattlePew — Personal T-Blaster HUD</title>
+  <style>
+    @font-face {
+      font-family: 'UbiTTB';
+      src: url('/static/assets/fonts/UbiTTB.ttf') format('truetype');
+      font-weight: 700;
+      font-display: swap;
+    }
+
+    :root {
+      /* §5.6 Dark/High-Contrast Physical T-Blaster Readout Palette for 0.5s Glanceability */
+      --hud-bg: #0E1117;
+      --hud-card: #171C26;
+      --hud-border: #2C3446;
+      --bt-orange: #F26314;
+      --bt-orange-bright: #FB8119;
+      --team-red: #D41900;
+      --team-blue: #0767C5;
+      --team-yellow: #FFB432;
+      --team-green: #00AB03;
+      --font-display: 'UbiTTB', -apple-system, BlinkMacSystemFont, 'SF Pro Display', sans-serif;
+      --font-sans: -apple-system, BlinkMacSystemFont, 'SF Pro Text', sans-serif;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    body {
+      background: var(--hud-bg);
+      color: #FFFFFF;
+      font-family: var(--font-sans);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      padding: 12px;
+      gap: 12px;
+      max-width: 520px;
+      margin: 0 auto;
+    }
+
+    /* Player Identity Header */
+    .player-header {
+      background: var(--hud-card);
+      border: 2px solid var(--bt-orange);
+      border-radius: 12px;
+      padding: 12px 14px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+    }
+
+    .player-header-left {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .hud-avatar {
+      width: 62px;
+      height: 62px;
+      border-radius: 10px;
+      background: #232A38;
+      border: 1.5px solid var(--hud-border);
+      object-fit: contain;
+      padding: 3px;
+    }
+
+    .avatar-with-badge {
+      position: relative;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    }
+
+    .player-num-badge {
+      position: absolute;
+      right: -5px;
+      bottom: -5px;
+      pointer-events: none;
+      filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.5));
+      z-index: 2;
+    }
+
+    .hud-callsign {
+      font-family: var(--font-display);
+      font-size: 1.45rem;
+      letter-spacing: 0.04em;
+      line-height: 1.05;
+      text-transform: uppercase;
+    }
+
+    .hud-team-pill {
+      display: inline-block;
+      margin-top: 4px;
+      padding: 2px 8px;
+      border-radius: 4px;
+      font-size: 0.72rem;
+      font-weight: 800;
+      text-transform: uppercase;
+      background: var(--bt-orange);
+      color: #FFFFFF;
+    }
+
+    .edit-btn {
+      background: #252C3D;
+      border: 1.5px solid #3E4963;
+      color: #FFFFFF;
+      font-family: var(--font-display);
+      font-size: 0.8rem;
+      padding: 8px 12px;
+      border-radius: 8px;
+      cursor: pointer;
+      text-transform: uppercase;
+    }
+
+    /* Top Telemetry: Clock + Rank + Score */
+    .top-telemetry {
+      display: grid;
+      grid-template-columns: 1.2fr 0.8fr 1fr;
+      gap: 10px;
+    }
+
+    .t-box {
+      background: var(--hud-card);
+      border: 1.5px solid var(--hud-border);
+      border-radius: 10px;
+      padding: 10px;
+      text-align: center;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+    }
+
+    .t-label {
+      font-size: 0.68rem;
+      font-weight: 800;
+      color: #8E97AB;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+    }
+
+    .t-val {
+      font-family: var(--font-display);
+      font-size: 2.15rem;
+      font-variant-numeric: tabular-nums;
+      line-height: 1.05;
+      margin-top: 2px;
+    }
+
+    /* Incoming Tag / Status Alert Flash */
+    .alert-banner {
+      border-radius: 10px;
+      padding: 12px 14px;
+      font-family: var(--font-display);
+      font-size: 1.05rem;
+      text-align: center;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      background: rgba(212, 25, 0, 0.22);
+      border: 2px solid var(--team-red);
+      color: #FF8575;
+      display: none;
+    }
+
+    .alert-banner.visible {
+      display: block;
+      animation: flashAlert 0.65s infinite alternate;
+    }
+
+    @keyframes flashAlert {
+      from { opacity: 0.75; }
+      to { opacity: 1; box-shadow: 0 0 18px rgba(212, 25, 0, 0.5); }
+    }
+
+    /* Primary Vitals: Health & Ammo */
+    .vitals-card {
+      background: var(--hud-card);
+      border: 1.5px solid var(--hud-border);
+      border-radius: 12px;
+      padding: 14px;
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+    }
+
+    .vital-row-head {
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+    }
+
+    .vital-title {
+      font-family: var(--font-display);
+      font-size: 0.95rem;
+      color: #9BA3B5;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    .vital-number {
+      font-family: var(--font-display);
+      font-size: 2.4rem;
+      font-variant-numeric: tabular-nums;
+      line-height: 1;
+    }
+
+    .hp-bar-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(24px, 1fr));
+      gap: 6px;
+      margin-top: 6px;
+    }
+
+    .hp-segment {
+      height: 22px;
+      border-radius: 5px;
+      background: #252C3B;
+      border: 1px solid #384157;
+    }
+
+    .hp-segment.active {
+      background: linear-gradient(180deg, #FF3B1F 0%, var(--team-red) 100%);
+      border-color: #FF7663;
+      box-shadow: 0 0 8px rgba(212, 25, 0, 0.5);
+    }
+
+    .ammo-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+    }
+
+    .sub-vital {
+      background: #11151E;
+      border: 1px solid var(--hud-border);
+      border-radius: 9px;
+      padding: 10px 12px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    /* Secondary Stats: Streak, Accuracy, Hits, Frags */
+    .stats-4grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 8px;
+    }
+
+    .mini-stat {
+      background: var(--hud-card);
+      border: 1px solid var(--hud-border);
+      border-radius: 9px;
+      padding: 10px 6px;
+      text-align: center;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 4px;
+    }
+
+    .mini-stat-icon {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 4px;
+      color: var(--hud-muted);
+    }
+
+    .mini-stat-icon svg {
+      width: 15px;
+      height: 15px;
+    }
+
+    .gameover-stats {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      gap: 12px;
+      font-size: 0.85rem;
+      font-weight: 700;
+      color: var(--hud-muted);
+    }
+
+    .hud-stat-chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .hud-stat-chip svg {
+      width: 14px;
+      height: 14px;
+      opacity: 0.85;
+    }
+
+    .t-box {
+      transition: opacity 3s ease;
+    }
+
+    .hud-fade-hidden {
+      opacity: 0;
+      pointer-events: none;
+    }
+
+    .hud-chart-box {
+      width: 100%;
+      background: rgba(15, 20, 32, 0.72);
+      border: 1px solid var(--hud-border);
+      border-radius: 10px;
+      padding: 10px;
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) 74px;
+      gap: 10px;
+      align-items: center;
+    }
+
+    .hud-chart-wrap {
+      height: 150px;
+      min-width: 0;
+    }
+
+    .hud-chart-wrap canvas {
+      width: 100%;
+      height: 100%;
+      display: block;
+    }
+
+    .hud-chart-legend {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      padding-left: 8px;
+      border-left: 1px solid var(--hud-border);
+      font-size: 0.72rem;
+      font-weight: 700;
+    }
+
+    .hud-legend-item {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+    }
+
+    .hud-legend-swatch {
+      width: 12px;
+      height: 0;
+      border-top: 3px solid;
+      flex-shrink: 0;
+    }
+
+    .hud-h2h-wrap {
+      width: 100%;
+      text-align: left;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .hud-h2h-badges {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+    }
+
+    .hud-h2h-badge {
+      background: rgba(15, 20, 32, 0.72);
+      border: 1px solid var(--hud-border);
+      border-radius: 8px;
+      padding: 7px 9px;
+      font-size: 0.74rem;
+    }
+
+    .hud-h2h-badge-lbl {
+      color: var(--hud-muted);
+      font-size: 0.65rem;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+
+    .hud-h2h-badge-val {
+      font-weight: 800;
+      color: #F4F6FB;
+      margin-top: 2px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .hud-h2h-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.76rem;
+    }
+
+    .hud-h2h-table th {
+      color: var(--hud-muted);
+      font-size: 0.66rem;
+      text-transform: uppercase;
+      padding: 4px 6px;
+      border-bottom: 1px solid var(--hud-border);
+    }
+
+    .hud-h2h-table td {
+      padding: 5px 6px;
+      border-bottom: 1px solid rgba(255,255,255,0.06);
+      font-weight: 600;
+    }
+
+    .mini-stat .val {
+      font-family: var(--font-display);
+      font-size: 1.45rem;
+      font-variant-numeric: tabular-nums;
+      color: var(--bt-orange-bright);
+    }
+
+    /* Quick Simulator Controls on Phone */
+    .phone-sim-card {
+      background: var(--hud-card);
+      border: 1px dashed #3E4963;
+      border-radius: 10px;
+      padding: 12px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .phone-sim-btns {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 8px;
+    }
+
+    .sim-tap-btn {
+      background: #232A3A;
+      border: 1.5px solid #3D4863;
+      color: #FFFFFF;
+      font-family: var(--font-display);
+      font-size: 0.85rem;
+      padding: 10px;
+      border-radius: 8px;
+      cursor: pointer;
+      text-transform: uppercase;
+    }
+
+    .sim-tap-btn:active {
+      background: var(--bt-orange);
+    }
+
+    /* Profile Edit Modal (<dialog>) */
+    dialog {
+      margin: auto;
+      border: 2px solid var(--bt-orange);
+      border-radius: 14px;
+      background: #171C26;
+      color: #FFFFFF;
+      width: calc(100% - 24px);
+      max-width: 440px;
+      padding: 0;
+    }
+
+    dialog:modal {
+      overscroll-behavior: contain;
+    }
+
+    dialog::backdrop {
+      background: rgba(0, 0, 0, 0.72);
+      backdrop-filter: blur(3px);
+      overflow: hidden;
+      overscroll-behavior: contain;
+    }
+
+    .dlg-head {
+      background: var(--bt-orange);
+      padding: 12px 16px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-family: var(--font-display);
+    }
+
+    .dlg-body {
+      padding: 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+      max-height: 75vh;
+      overflow-y: auto;
+    }
+
+    .avatar-grid-12 {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 8px;
+    }
+
+    .av-choice {
+      background: #222938;
+      border: 2px solid transparent;
+      border-radius: 8px;
+      padding: 6px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 4px;
+      color: #FFFFFF;
+      font-size: 0.72rem;
+      font-weight: 700;
+      cursor: pointer;
+    }
+
+    .av-choice.selected {
+      border-color: var(--bt-orange-bright);
+      background: rgba(242, 99, 20, 0.2);
+    }
+
+    .av-choice img {
+      width: 48px;
+      height: 48px;
+      object-fit: contain;
+    }
+
+    .hud-input {
+      width: 100%;
+      padding: 10px 12px;
+      border-radius: 8px;
+      border: 1.5px solid #3D4863;
+      background: #0E1117;
+      color: #FFFFFF;
+      font-size: 1rem;
+      font-weight: 700;
+      text-transform: uppercase;
+    }
+
+    .hud-vest-line {
+      font-size: 0.7rem;
+      font-weight: 700;
+      margin-top: 3px;
+    }
+
+    /* Mid-match signal warning: this gun stopped answering polls. */
+    .hud-signal-warn {
+      font-size: 0.7rem;
+      font-weight: 800;
+      margin-top: 3px;
+      color: #FF8575;
+    }
+
+    /* Team color swatches (team modes only) */
+    .team-swatches {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 8px;
+    }
+
+    .team-swatch {
+      border: 2px solid transparent;
+      border-radius: 10px;
+      padding: 10px 4px 8px;
+      min-height: 64px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 3px;
+      font-family: var(--font-display);
+      font-size: 0.78rem;
+      letter-spacing: 0.03em;
+      cursor: pointer;
+      text-transform: uppercase;
+    }
+
+    .team-swatch .swatch-count {
+      font-family: var(--font-sans);
+      font-size: 0.68rem;
+      font-weight: 700;
+      opacity: 0.85;
+      text-transform: none;
+      letter-spacing: 0;
+    }
+
+    .team-swatch.selected {
+      border-color: #FFFFFF;
+      box-shadow: 0 0 0 2px var(--bt-orange-bright);
+    }
+
+    .team-swatch:disabled {
+      opacity: 0.55;
+      cursor: default;
+    }
+
+    /* Full-screen hit flash + haptics fire the moment a new tag lands. */
+    #hitFlash {
+      position: fixed;
+      inset: 0;
+      background: radial-gradient(ellipse at center, rgba(212, 25, 0, 0.12) 0%, rgba(212, 25, 0, 0.55) 100%);
+      opacity: 0;
+      pointer-events: none;
+      z-index: 60;
+    }
+
+    #hitFlash.flash {
+      animation: hitFlashAnim 0.6s ease-out;
+    }
+
+    @keyframes hitFlashAnim {
+      0% { opacity: 1; }
+      100% { opacity: 0; }
+    }
+
+    /* Reconnect indicator (the socket already retries on its own). */
+    #reconnectPill {
+      display: none;
+      background: #3A2A10;
+      border: 1.5px solid var(--team-yellow);
+      color: var(--team-yellow);
+      border-radius: 8px;
+      padding: 8px 12px;
+      text-align: center;
+      font-size: 0.8rem;
+      font-weight: 800;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+    }
+
+    /* Big countdown treatment: the number fills the screen while the
+       guns count down, instead of hiding in the small clock tile. */
+    .countdown-hero {
+      background: var(--hud-card);
+      border: 2px solid var(--bt-orange);
+      border-radius: 12px;
+      padding: 18px 12px 14px;
+      text-align: center;
+    }
+
+    .countdown-label {
+      font-family: var(--font-display);
+      font-size: 1rem;
+      letter-spacing: 0.2em;
+      color: var(--bt-orange-bright);
+    }
+
+    .countdown-num {
+      font-family: var(--font-display);
+      font-size: 5rem;
+      line-height: 1;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .countdown-sub {
+      font-size: 0.8rem;
+      font-weight: 700;
+      color: #9BA3B5;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+    }
+
+    /* Teammate health mini-list (team modes, in game). */
+    .mates-card {
+      background: var(--hud-card);
+      border: 1.5px solid var(--hud-border);
+      border-radius: 12px;
+      padding: 12px 14px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .mate-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .mate-row img:not(.player-num-badge) {
+      width: 34px;
+      height: 34px;
+      border-radius: 7px;
+      background: #232A38;
+      border: 1px solid var(--hud-border);
+      object-fit: contain;
+      padding: 2px;
+    }
+
+    .mate-name {
+      font-weight: 800;
+      font-size: 0.9rem;
+      min-width: 0;
+      flex: 0 0 auto;
+      text-transform: uppercase;
+    }
+
+    .mate-hp-pills {
+      flex: 1;
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      min-width: 0;
+    }
+
+    .mate-hp-pill {
+      flex: 1;
+      height: 10px;
+      max-width: 28px;
+      border-radius: 3px;
+      background: #252C3B;
+      border: 1px solid #384157;
+    }
+
+    .mate-hp-pill.on {
+      background: var(--team-green);
+      border-color: var(--team-green);
+    }
+
+    .mate-hp-pill.low {
+      background: var(--team-red);
+      border-color: var(--team-red);
+    }
+
+    .ammo-bar-grid {
+      display: flex;
+      align-items: center;
+      gap: 3px;
+      margin-top: 8px;
+    }
+
+    .ammo-pill {
+      flex: 1;
+      height: 8px;
+      border-radius: 3px;
+      background: #252C3B;
+      border: 1px solid #384157;
+    }
+
+    .ammo-pill.on {
+      background: #2D8CFF;
+      border-color: #2D8CFF;
+    }
+
+    .clips-pip-grid {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      margin-top: 8px;
+      flex-wrap: wrap;
+    }
+
+    .clip-pip {
+      width: 10px;
+      height: 16px;
+      border-radius: 3px;
+      border: 1.5px solid #4A556E;
+      background: transparent;
+    }
+
+    .clip-pip.on {
+      border-color: var(--bt-orange-bright);
+      background: var(--bt-orange-bright);
+    }
+
+    .mate-hp-text {
+      font-family: var(--font-display);
+      font-size: 0.9rem;
+      font-variant-numeric: tabular-nums;
+      flex: 0 0 auto;
+    }
+
+    .mate-out {
+      font-size: 0.68rem;
+      font-weight: 800;
+      color: #FF8575;
+      text-transform: uppercase;
+      flex: 0 0 auto;
+    }
+
+    /* Inline Team Color Picker (Game Selection screen only, team modes only) */
+    .hud-team-picker {
+      background: var(--hud-card);
+      border: 1.5px solid var(--hud-border);
+      border-radius: 12px;
+      padding: 10px 12px;
+      display: none;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .hud-team-picker-head {
+      font-size: 0.7rem;
+      font-weight: 800;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      color: #8C95A6;
+    }
+
+    .hud-team-icons {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 8px;
+    }
+
+    .hud-team-icon-btn {
+      appearance: none;
+      border: 2px solid transparent;
+      border-radius: 10px;
+      padding: 8px 4px;
+      cursor: pointer;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 2px;
+      font-family: var(--font-display);
+      font-size: 0.85rem;
+      line-height: 1.1;
+      text-transform: uppercase;
+      opacity: 0.72;
+      transition: transform 0.1s ease, opacity 0.12s ease, border-color 0.12s ease;
+    }
+
+    .hud-team-icon-btn.selected {
+      opacity: 1;
+      border-color: #FFFFFF;
+      box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.25);
+      transform: scale(1.03);
+    }
+
+    .hud-team-icon-btn .t-sub {
+      font-family: var(--font-sans);
+      font-size: 0.62rem;
+      font-weight: 800;
+      opacity: 0.9;
+    }
+
+    .impatient-wrap {
+      margin-top: 10px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 4px;
+    }
+    .impatient-btn {
+      width: 100%;
+      appearance: none;
+      border: 1.5px solid #F26314;
+      border-radius: 12px;
+      padding: 12px 16px;
+      background: rgba(242, 99, 20, 0.14);
+      color: #FB8119;
+      font-family: var(--font-display);
+      font-size: 0.95rem;
+      font-weight: 700;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+      cursor: pointer;
+      transition: background 0.12s ease, opacity 0.15s ease, transform 0.08s ease;
+    }
+    .impatient-btn:active:not(:disabled) {
+      transform: scale(0.985);
+      background: rgba(242, 99, 20, 0.28);
+    }
+    .impatient-btn:disabled {
+      border-color: #3A4254;
+      background: #1C212D;
+      color: #6B7488;
+      opacity: 0.72;
+      cursor: not-allowed;
+    }
+    .impatient-sub {
+      font-size: 0.74rem;
+      color: #6B7488;
+      text-align: center;
+      min-height: 1em;
+    }
+
+    /* Post-game summary. */
+    .gameover-card {
+      background: var(--hud-card);
+      border: 2px solid var(--bt-orange);
+      border-radius: 12px;
+      padding: 16px 14px;
+      text-align: center;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .gameover-head {
+      font-family: var(--font-display);
+      font-size: 1.5rem;
+      letter-spacing: 0.04em;
+    }
+
+    .gameover-rank {
+      font-family: var(--font-display);
+      font-size: 1.1rem;
+      color: var(--bt-orange-bright);
+    }
+
+    .gameover-stats {
+      font-size: 0.85rem;
+      font-weight: 700;
+      color: #9BA3B5;
+    }
+
+    .gameover-note {
+      font-size: 0.78rem;
+      color: #8E97AB;
+      margin-top: 4px;
+    }
+
+    /* Contextual footer hint (modes with ammo/life only). */
+    .hud-foot-hint {
+      text-align: center;
+      font-size: 0.78rem;
+      font-weight: 600;
+      color: #8E97AB;
+      padding: 2px 8px 6px;
+    }
+
+    /* Profile lock note (dark theme: the old light inline styles made
+       the text unreadable — undefined light-theme variables). */
+    .profile-lock-note {
+      display: none;
+      padding: 8px 10px;
+      background: #232A38;
+      border: 1px solid #3D4863;
+      border-radius: 6px;
+      font-size: 0.8rem;
+      font-weight: 600;
+      color: #9BA3B5;
+    }
+
+    /* Full-screen cover when this phone's gun is not paired: the HUD is
+       locked to the gun number from the URL, so there is nothing to
+       show until that gun pairs (or the QR code is rescanned). */
+    #notPairedOverlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      z-index: 60;
+      background: var(--hud-bg);
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      padding: 24px;
+      line-height: 1.6;
+    }
+    #notPairedOverlay .big { font-size: 2rem; }
+    #notPairedOverlay .title {
+      font-family: var(--font-display);
+      font-size: 1.3rem;
+      letter-spacing: 0.05em;
+      margin: 10px 0 6px;
+    }
+    #notPairedOverlay p { color: #9BA3B5; margin: 0; }
+
+    .dlg-save-row {
+      display: flex;
+      gap: 10px;
+      align-items: center;
+      margin-top: 14px;
+    }
+    .dlg-save-btn {
+      appearance: none;
+      border: none;
+      border-radius: 8px;
+      background: var(--bt-orange);
+      color: #fff;
+      font-family: var(--font-display);
+      font-size: 0.95rem;
+      letter-spacing: 0.04em;
+      padding: 10px 22px;
+      cursor: pointer;
+    }
+    .dlg-save-btn:disabled { opacity: 0.45; cursor: default; }
+    .dlg-status {
+      font-size: 0.85rem;
+      font-weight: 600;
+      color: #9BA3B5;
+      min-height: 1.2em;
+    }
+    .dlg-status.ok { color: #7BD88A; }
+    .dlg-status.err { color: #FF8575; }
+    .ui-icon {
+      width: 1.08em;
+      height: 1.08em;
+      vertical-align: -0.16em;
+      display: inline-block;
+      flex: 0 0 auto;
+    }
+    .vital-title, .sub-vital .t-label, .sim-tap-btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+    }
+  </style>
+</head>
+<body>
+  <div id="reconnectPill">Connection lost — reconnecting…</div>
+  <div id="hitFlash"></div>
+  <div id="notPairedOverlay">
+    <div>
+      <div class="big"><svg class="ui-icon" style="width:1.1em;height:1.1em;" viewBox="0 0 24 24" fill="none" stroke="var(--bt-orange-bright)" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="8"/><circle cx="12" cy="12" r="2.5" fill="var(--bt-orange-bright)" stroke="none"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3"/></svg></div>
+      <div class="title" id="notPairedTitle">PLAYER NOT PAIRED</div>
+      <p>This phone is tied to a T-Blaster that isn't paired.<br />Pair the gun on the Arena Master, or scan the QR code again to pick another player.</p>
+    </div>
+  </div>
+
+  <!-- Player Header -->
+  <header id="playerHeader" class="player-header">
+    <div class="player-header-left">
+      <div class="avatar-with-badge">
+        <img id="hudAvatar" class="hud-avatar" src="/static/assets/textures/Avatars/256x/Dragon.png" alt="Avatar" />
+        <span id="hudNumBadge"></span>
+      </div>
+      <div>
+        <div id="hudName" class="hud-callsign">PLAYER 1</div>
+        <span id="hudTeam" class="hud-team-pill">RED TEAM</span>
+        <div id="hudVest" class="hud-vest-line"></div>
+        <div id="hudSignal" class="hud-signal-warn" style="display: none;">T-Blaster not responding — check the blaster</div>
+      </div>
+    </div>
+    <button type="button" class="edit-btn" id="editProfileBtn" onclick="openProfileDialog()">✎ Edit</button>
+  </header>
+
+  <!-- Inline Team Color Picker (Game Selection screen + team modes only) -->
+  <section id="hudTeamPicker" class="hud-team-picker" aria-label="Choose Team">
+    <div class="hud-team-picker-head">SELECT TEAM</div>
+    <div id="hudTeamIcons" class="hud-team-icons"></div>
+  </section>
+
+  <!-- Alert Banner (Out of HP / Tagged By) -->
+  <div id="hudAlert" class="alert-banner"></div>
+
+  <!-- Big Countdown -->
+  <section id="countdownHero" class="countdown-hero" style="display: none;">
+    <div class="countdown-label">GET READY</div>
+    <div class="countdown-num" id="countdownNum">10</div>
+    <div class="countdown-sub" id="countdownSub"></div>
+  </section>
+
+  <!-- Pre-game waiting card (shown before the first round starts) -->
+  <section id="hudWaitingCard" class="gameover-card" style="display: none; border-color: var(--hud-border); background: var(--hud-card);">
+    <div id="hudWaitingHead" class="gameover-head" style="color: #7BD88A;">READY TO PLAY</div>
+    <div id="hudWaitingNote" class="gameover-note">Waiting for the Arena Master to launch the first match…</div>
+  </section>
+
+  <!-- Clock, Rank, Score -->
+  <section class="top-telemetry" id="hudTelemetry">
+    <div class="t-box">
+      <span class="t-label" id="hudModeLabel">FREE FRAG</span>
+      <div class="t-val" id="hudClock">03:00</div>
+    </div>
+    <div class="t-box" id="hudRankBox">
+      <span class="t-label">RANK</span>
+      <div class="t-val" id="hudRank">#1</div>
+    </div>
+    <div class="t-box" id="hudScoreBox">
+      <span class="t-label">SCORE</span>
+      <div class="t-val" id="hudScore" style="color: var(--bt-orange-bright);">0</div>
+    </div>
+  </section>
+
+  <!-- Health & Ammo Vitals -->
+  <section class="vitals-card" id="hudVitals">
+    <div>
+      <div class="vital-row-head">
+        <span class="vital-title"><svg class="ui-icon" style="color:#EF4444;" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 21s-6.8-4.35-9.4-8.36C.7 9.7 1.85 5.4 5.5 4.25c2.1-.66 4.4.12 5.75 1.8L12 7l.75-.95c1.35-1.68 3.65-2.46 5.75-1.8 3.65 1.15 4.8 5.45 2.9 8.39C18.8 16.65 12 21 12 21z"/></svg> LIFE POINTS</span>
+        <span class="vital-number" id="hudLifeText">∞</span>
+      </div>
+      <div id="hudHpBar" class="hp-bar-grid"></div>
+    </div>
+
+    <div class="ammo-grid">
+      <div class="sub-vital">
+        <div style="width: 100%;">
+          <div style="display: flex; align-items: baseline; justify-content: space-between; gap: 6px;">
+            <div class="t-label"><svg class="ui-icon" style="color:#38BDF8;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 10h14l2-2h3v4h-3l-1 2H11l-2 6H6l1.5-6H4l-2-2v-2z" fill="currentColor" fill-opacity="0.2"/><path d="M2 10h14l2-2h3v4h-3l-1 2H11l-2 6H6l1.5-6H4l-2-2v-2z"/><path d="M13 14v2.5"/></svg> AMMO IN CLIP</div>
+            <div class="vital-number" id="hudAmmoText" style="font-size: 1.2rem;">∞</div>
+          </div>
+          <div id="hudAmmoBar" class="ammo-bar-grid"></div>
+        </div>
+      </div>
+      <div class="sub-vital">
+        <div style="width: 100%;">
+          <div style="display: flex; align-items: baseline; justify-content: space-between; gap: 6px;">
+            <div class="t-label"><svg class="ui-icon" style="color:#F59E0B;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 4h10l1 3v12a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2V7l1-3z" fill="currentColor" fill-opacity="0.18"/><path d="M7 4h10l1 3v12a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2V7l1-3z"/><path d="M9 10h6M9 14h6"/></svg> CLIPS LEFT</div>
+            <div class="vital-number" id="hudClipsText" style="font-size: 1.2rem;">∞</div>
+          </div>
+          <div id="hudClipsPips" class="clips-pip-grid"></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Teammate Health (team modes, in game) -->
+  <section id="matesCard" class="mates-card" style="display: none;">
+    <div class="t-label">SQUAD — TEAMMATE HEALTH</div>
+    <div id="matesList" style="display: flex; flex-direction: column; gap: 8px;"></div>
+  </section>
+
+  <!-- 4-Stat Strip (icon + label, matching Arena Master) -->
+  <section class="stats-4grid" id="hudStatsGrid">
+    <div class="mini-stat" title="Current Streak">
+      <div class="mini-stat-icon" aria-label="Streak">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2c.5 3.5 3 5.5 3 9a3 3 0 1 1-6 0c0-1.5.6-2.8 1.5-3.8C8.5 8.5 7 10.6 7 13a5 5 0 0 0 10 0c0-4.2-2.6-7.2-5-11z"/></svg>
+        <span class="t-label">STREAK</span>
+      </div>
+      <div class="val" id="hudStreak">0</div>
+    </div>
+    <div class="mini-stat" title="Hits Landed">
+      <div class="mini-stat-icon" aria-label="Hits Landed">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3"/></svg>
+        <span class="t-label">HITS</span>
+      </div>
+      <div class="val" id="hudHits">0</div>
+    </div>
+    <div class="mini-stat" title="Frags">
+      <div class="mini-stat-icon" aria-label="Frags">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2L4 14h7l-1 8 9-12h-7l1-8z"/></svg>
+        <span class="t-label">FRAGS</span>
+      </div>
+      <div class="val" id="hudFrags">0</div>
+    </div>
+    <div class="mini-stat" title="Accuracy">
+      <div class="mini-stat-icon" aria-label="Accuracy">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 12l5-5"/><circle cx="12" cy="12" r="1.5" fill="currentColor"/></svg>
+        <span class="t-label">ACC</span>
+      </div>
+      <div class="val" id="hudAcc">0%</div>
+    </div>
+  </section>
+
+  <!-- Match complete, waiting for Arena Master to reveal results -->
+  <section id="hudWaitingResultsCard" class="gameover-card" style="display: none; border-color: var(--hud-border); background: var(--hud-card);">
+    <div class="gameover-head" style="color: var(--bt-orange-bright);">MATCH COMPLETE</div>
+    <div class="gameover-note">Waiting for the Arena Master to reveal the final results…</div>
+  </section>
+
+  <!-- Post-Game Summary -->
+  <section id="gameOverCard" class="gameover-card" style="display: none;">
+    <div class="gameover-head" id="gameOverHead">MATCH OVER</div>
+    <div class="gameover-rank" id="gameOverRank"></div>
+    <div class="gameover-stats" id="gameOverStats"></div>
+    <div class="hud-chart-box">
+      <div class="hud-chart-wrap"><canvas id="hudScoreChart"></canvas></div>
+      <div id="hudChartLegend" class="hud-chart-legend"></div>
+    </div>
+    <div id="hudMatchups" class="hud-h2h-wrap"></div>
+    <div class="gameover-note">Scores are final. Head back to the Arena Master for the next match.</div>
+  </section>
+
+  <!-- Simulator Touch Controls -->
+  <section id="phoneSimSection" class="phone-sim-card">
+    <div class="t-label">SIMULATOR QUICK TRIGGERS</div>
+    <div id="phoneSimBtns" class="phone-sim-btns"></div>
+  </section>
+
+  <!-- Pre-game Impatient Jeer Button -->
+  <div id="impatientWrap" class="impatient-wrap" style="display: none;">
+    <button type="button" id="impatientBtn" class="impatient-btn" onclick="sendImpatient()">I'm Impatient</button>
+    <div id="impatientSub" class="impatient-sub"></div>
+  </div>
+
+  <!-- Contextual Footer Hint -->
+  <div id="footHint" class="hud-foot-hint" style="display: none;"></div>
+
+  <!-- Profile Edit Dialog -->
+  <dialog id="profileDialog" closedby="any" aria-labelledby="profileDlgTitle">
+    <div class="dlg-head">
+      <span id="profileDlgTitle">CUSTOMIZE MY T-BLASTER</span>
+      <button type="button" id="profileDoneBtn" class="edit-btn" style="padding: 4px 10px;" onclick="saveMyProfile()">Done</button>
+    </div>
+    <div class="dlg-body">
+      <div id="profileLockNote" class="profile-lock-note">
+        Profiles are locked while a match is running. You can edit your callsign, team, and avatar again between matches.
+      </div>
+      <div>
+        <label class="t-label" for="callsignInput">CALLSIGN (MAX 14 CHARS)</label>
+        <input id="callsignInput" class="hud-input" type="text" maxlength="14" />
+      </div>
+      <div>
+        <div class="t-label" style="margin-bottom: 6px;">ANIMAL AVATAR</div>
+        <div id="avatarGrid12" class="avatar-grid-12"></div>
+      </div>
+      <div class="dlg-save-row">
+        <span class="dlg-status" id="profileSaveStatus"></span>
+      </div>
+      <p style="font-size: 0.78rem; color: #6B7488; margin: 10px 0 0;">Saving writes your callsign and avatar straight into your T-Blaster.</p>
+    </div>
+  </dialog>
+
+  <script>
+    // Safari fallback for <dialog closedby="any">
+    if (!('closedBy' in HTMLDialogElement.prototype)) {
+      document.querySelectorAll('dialog[closedby="any"]').forEach((dialog) => {
+        dialog.addEventListener('click', (event) => {
+          if (event.target !== dialog) return;
+          const rect = dialog.getBoundingClientRect();
+          const inside = (
+            rect.top <= event.clientY &&
+            event.clientY <= rect.top + rect.height &&
+            rect.left <= event.clientX &&
+            event.clientX <= rect.left + rect.width
+          );
+          if (!inside) dialog.close();
+        });
+      });
+    }
+
+    // This HUD is locked to the gun number in the URL (/player/N), chosen
+    // on the join page after scanning the QR code. There is no way to
+    // switch guns from here: changing players means rescanning the QR
+    // code, which lands back on the picker.
+    const pathMatch = location.pathname.match(/\/player\/(\d+)/);
+    if (!pathMatch) location.replace('/join');
+    const selectedGunNum = pathMatch ? parseInt(pathMatch[1], 10) : 1;
+    let latestState = null;
+
+    // Last tag seen for the viewed gun: a fresh tag is one whose timer
+    // (re)entered the first 1.5 s, came from a new shooter, or jumped
+    // backwards (a new tag resetting the timer). Fires the hit flash +
+    // haptics exactly once per tag.
+    let prevTagBy = null;
+    let prevTagAgo = null;
+
+    function fireTagFeedback() {
+      const flash = document.getElementById('hitFlash');
+      flash.classList.remove('flash');
+      void flash.offsetWidth; // restart the animation
+      flash.classList.add('flash');
+      if (navigator.vibrate) {
+        try { navigator.vibrate(150); } catch (e) {}
+      }
+    }
+
+    // Keep the phone awake mid-match: a HUD that sleeps is useless. The
+    // lock is re-requested whenever the page becomes visible again;
+    // unsupported browsers (older iOS Safari) silently skip it.
+    let wakeLock = null;
+    async function requestWakeLock() {
+      if (!('wakeLock' in navigator)) return;
+      try { wakeLock = await navigator.wakeLock.request('screen'); } catch (e) { wakeLock = null; }
+    }
+    document.addEventListener('visibilitychange', () => {
+      if (document.visibilityState === 'visible') requestWakeLock();
+    });
+    requestWakeLock();
+
+    // Profiles lock during UPLOADING / COUNTDOWN / PLAYING (the server
+    // enforces the same rule): the team is baked into the gun's config, and
+    // names/avatars must not change mid-game. Names/avatars are editable
+    // only while the Arena Master is on the pairing page (wizard step 1);
+    // team changes stay open through game selection, between matches.
+    function profilesLocked(state) {
+      return !!state && ['UPLOADING', 'WAIT_TRIGGER', 'COUNTDOWN', 'PLAYING'].includes(state.phase);
+    }
+
+    function profilesEditable(state) {
+      return !!state && !profilesLocked(state) && state.wizard_step === 1;
+    }
+
+    // Readable label color on top of a team swatch: dark text on light
+    // colors (yellow), white text everywhere else.
+    function teamTextColor(hex) {
+      const c = hex.replace('#', '');
+      const lum = (0.299 * parseInt(c.substr(0, 2), 16)
+        + 0.587 * parseInt(c.substr(2, 2), 16)
+        + 0.114 * parseInt(c.substr(4, 2), 16)) / 255;
+      return lum > 0.6 ? '#1A1A1A' : '#FFFFFF';
+    }
+
+    // Pending editor state: the dialog edits a draft; nothing is sent
+    // until Save, which writes the callsign/avatar to the gun.
+    let pendingAvatar = null;
+    let dialogSaving = false;
+
+    function openProfileDialog() {
+      if (!profilesEditable(latestState)) return;
+      const me = latestState ? latestState.players.find((p) => p.gun_num === selectedGunNum) : null;
+      if (!me) return;
+      pendingAvatar = me.avatar;
+      dialogSaving = false;
+      const doneBtn = document.getElementById('profileDoneBtn');
+      if (doneBtn) doneBtn.disabled = false;
+      const input = document.getElementById('callsignInput');
+      input.value = (me.name || '').toUpperCase();
+      setDialogStatus('', '');
+      const dlg = document.getElementById('profileDialog');
+      if (dlg && !dlg.open) dlg.showModal();
+    }
+
+    function selectPendingAvatar(av) {
+      pendingAvatar = av;
+      document.querySelectorAll('#avatarGrid12 .av-choice').forEach((btn) => {
+        btn.classList.toggle('selected', btn.dataset.avatar === av);
+      });
+    }
+
+    function setDialogStatus(text, kind) {
+      const el = document.getElementById('profileSaveStatus');
+      el.textContent = text;
+      el.className = 'dlg-status' + (kind ? ' ' + kind : '');
+    }
+
+    async function saveMyProfile() {
+      if (dialogSaving) return;
+      const name = document.getElementById('callsignInput').value.trim().toUpperCase();
+      const avatar = pendingAvatar;
+      const doneBtn = document.getElementById('profileDoneBtn');
+      dialogSaving = true;
+      if (doneBtn) doneBtn.disabled = true;
+      setDialogStatus('Saving to your T-Blaster…', '');
+      try {
+        const res = await fetch(`/api/players/${selectedGunNum}/write-profile`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ name, avatar }),
+        });
+        const body = await res.json().catch(() => ({}));
+        if (!res.ok) {
+          dialogSaving = false;
+          if (doneBtn) doneBtn.disabled = false;
+          setDialogStatus(body.detail || 'Could not save.', 'err');
+          return;
+        }
+        if (body.unchanged) {
+          dialogSaving = false;
+          if (doneBtn) doneBtn.disabled = false;
+          const dlg = document.getElementById('profileDialog');
+          if (dlg && dlg.open) dlg.close();
+          return;
+        }
+        // Queued: the status line follows the snapshot (see
+        // syncProfileDialogStatus, called from renderHud).
+      } catch (err) {
+        dialogSaving = false;
+        if (doneBtn) doneBtn.disabled = false;
+        setDialogStatus('Could not save.', 'err');
+      }
+    }
+
+    function syncProfileDialogStatus(state) {
+      const dlg = document.getElementById('profileDialog');
+      if (!dlg || !dlg.open || !dialogSaving) return;
+      const st = (state.profile_write_status || {})[String(selectedGunNum)];
+      if (!st) return;
+      const doneBtn = document.getElementById('profileDoneBtn');
+      if (st.state === 'saved') {
+        dialogSaving = false;
+        if (doneBtn) doneBtn.disabled = false;
+        setDialogStatus('Saved to your T-Blaster ✓', 'ok');
+        setTimeout(() => {
+          if (dlg.open && !dialogSaving) dlg.close();
+        }, 700);
+      } else if (st.state === 'failed') {
+        dialogSaving = false;
+        if (doneBtn) doneBtn.disabled = false;
+        setDialogStatus(st.detail || 'Save failed.', 'err');
+      }
+    }
+
+    async function updateMyProfile(patch) {
+      const res = await fetch('/api/profile', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ gun_num: selectedGunNum, ...patch }),
+      });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        alert(err.detail || 'Cannot change that profile right now.');
+      }
+    }
+
+    async function triggerSim(action, payload) {
+      await fetch('/api/sim/action', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action, ...payload }),
+      });
+    }
+
+    function playerNumIcon(gunNum, px = 18) {
+      const scaled = Math.round(px * 1.6);
+      return `<img src="/static/assets/textures/Ui/Pictograms/64x/Hud_${gunNum}.png" alt="P${gunNum}" style="width:${scaled}px;height:${scaled}px;object-fit:contain;vertical-align:middle;flex-shrink:0;" />`;
+    }
+
+    function playerNumBadge(gunNum, px = 22) {
+      return `<img class="player-num-badge" src="/static/assets/textures/Ui/Pictograms/64x/Hud_${gunNum}.png" alt="P${gunNum}" style="width:${px}px;height:${px}px;object-fit:contain;" />`;
+    }
+
+    let redirectingToJoin = false;
+
+    function renderHud(state) {
+      latestState = state;
+      const allPlayers = [...state.players].sort((a, b) => a.gun_num - b.gun_num);
+      const me = state.players.find((p) => p.gun_num === selectedGunNum) || null;
+      const overlay = document.getElementById('notPairedOverlay');
+      if (!me) {
+        if (!redirectingToJoin) {
+          redirectingToJoin = true;
+          window.location.replace('/join');
+        }
+        return;
+      }
+      overlay.style.display = 'none';
+
+      // Header. Team identity only shows in team modes; solo modes get
+      // Solo modes (no teams) and the lobby pairing page (wizard_step === 1)
+      // use the plain orange treatment and no team label. Team info appears
+      // on game selection and stays visible through the round/results, then
+      // clears upon returning to the lobby pairing page.
+      const isTeamMode = !!state.mode.teams;
+      const isGameSelection = state.phase === 'LOBBY' && state.wizard_step === 2;
+      const showTeamInfo = isTeamMode && (isGameSelection || ['UPLOADING', 'WAIT_TRIGGER', 'COUNTDOWN', 'PLAYING', 'GAME_OVER'].includes(state.phase));
+      const header = document.getElementById('playerHeader');
+      header.style.borderColor = showTeamInfo ? me.team_color : 'var(--bt-orange)';
+      document.getElementById('hudAvatar').src = me.avatar_url;
+      document.getElementById('hudName').textContent = (me.name || '').toUpperCase();
+      const numBadge = document.getElementById('hudNumBadge');
+      if (numBadge) numBadge.innerHTML = playerNumBadge(me.gun_num, 28);
+      const teamPill = document.getElementById('hudTeam');
+      teamPill.style.display = 'inline-flex';
+      teamPill.style.alignItems = 'center';
+      teamPill.style.gap = '6px';
+      teamPill.innerHTML = showTeamInfo
+        ? `<span>TEAM ${me.team_id} · ${me.team_short}</span>`
+        : `<span>PLAYER</span>`;
+      teamPill.style.background = showTeamInfo ? me.team_color : 'var(--bt-orange)';
+      teamPill.style.color = showTeamInfo ? teamTextColor(me.team_color) : '#FFFFFF';
+
+      const teamPicker = document.getElementById('hudTeamPicker');
+      if (isGameSelection && isTeamMode) {
+        teamPicker.style.display = 'flex';
+        document.getElementById('hudTeamIcons').innerHTML = (state.team_catalog || []).map((t) => {
+          const tid = parseInt(t.id, 10);
+          return `
+          <button type="button" class="hud-team-icon-btn ${tid === me.team_id ? 'selected' : ''}"
+              style="background: ${t.color}; color: ${teamTextColor(t.color)};"
+              onclick="updateMyProfile({ team_id: ${tid} })">
+            <span>T${tid}</span>
+            <span class="t-sub">${t.short}</span>
+          </button>`;
+        }).join('');
+      } else {
+        teamPicker.style.display = 'none';
+      }
+      const vestEl = document.getElementById('hudVest');
+      vestEl.textContent = me.vest_ok ? 'Vest connected' : 'Vest not detected';
+      vestEl.style.color = me.vest_ok ? '#7BD88A' : '#FF8575';
+      const signalEl = document.getElementById('hudSignal');
+      if (signalEl) {
+        signalEl.style.display = (state.phase === 'PLAYING' && me.signal_lost) ? '' : 'none';
+      }
+
+      const isRoundActive = ['UPLOADING', 'WAIT_TRIGGER', 'COUNTDOWN', 'PLAYING', 'GAME_OVER'].includes(state.phase);
+      const hasPrevStats = Array.isArray(state.match_history) && state.match_history.length > 0;
+      const showGameStats = isRoundActive || (hasPrevStats && !isGameSelection);
+      const resultsRevealed = !!state.results_revealed
+        && (state.phase === 'GAME_OVER' || (state.phase === 'LOBBY' && hasPrevStats && !isGameSelection));
+      const hideRankAndScore = (state.phase === 'PLAYING' && state.remaining_seconds <= 20)
+        || (state.phase === 'GAME_OVER' && !resultsRevealed);
+
+      document.getElementById('hudWaitingCard').style.display = showGameStats ? 'none' : 'flex';
+      if (!showGameStats) {
+        const waitHead = document.getElementById('hudWaitingHead');
+        const waitNote = document.getElementById('hudWaitingNote');
+        if (waitHead && waitNote) {
+          if (me.vest_ok) {
+            waitHead.textContent = 'READY TO PLAY';
+            waitHead.style.color = '#7BD88A';
+            waitNote.textContent = 'Waiting for the Arena Master to launch the first match…';
+          } else {
+            waitHead.textContent = 'Please Connect Your Vest';
+            waitHead.style.color = '#F59E0B';
+            waitNote.textContent = 'Hint: pretend the cord is a tail pointed down on your back to properly wear your vest.';
+          }
+        }
+      }
+      document.getElementById('hudTelemetry').style.display = showGameStats ? 'grid' : 'none';
+      // Hide Life/Ammo/Clips once results are shown
+      document.getElementById('hudVitals').style.display = (showGameStats && !resultsRevealed) ? 'flex' : 'none';
+      // Hits, frags, streak, and accuracy belong on the end-of-game stats page, not active HUD
+      document.getElementById('hudStatsGrid').style.display = 'none';
+      document.getElementById('hudRankBox').classList.toggle('hud-fade-hidden', hideRankAndScore);
+      document.getElementById('hudScoreBox').classList.toggle('hud-fade-hidden', hideRankAndScore);
+
+      // Clock, Rank, Score. Rank is score order (competition ranking:
+      // equal scores share a place), not gun-number order. After a match
+      // ends, freeze rank/score/stats to the recorded final standings so
+      // turning off a T-Blaster never shifts anyone's placement.
+      const lastMatch = (state.match_history && state.match_history.length > 0)
+        ? state.match_history[state.match_history.length - 1]
+        : null;
+      const finalStandings = (resultsRevealed && lastMatch && Array.isArray(lastMatch.standings) && lastMatch.standings.length > 0)
+        ? lastMatch.standings
+        : null;
+      const rankPool = finalStandings || state.players;
+      const rankMe = finalStandings
+        ? (finalStandings.find((p) => p.gun_id === me.gun_id || p.gun_num === me.gun_num) || me)
+        : me;
+      const rank = 1 + rankPool.filter((p) => p.score > rankMe.score).length;
+      document.getElementById('hudModeLabel').textContent = state.mode.title;
+      document.getElementById('hudClock').textContent = state.phase === 'COUNTDOWN'
+        ? `00:${String(state.countdown_remaining).padStart(2, '0')}`
+        : state.clock;
+      document.getElementById('hudRank').textContent = `#${rank}`;
+      document.getElementById('hudScore').textContent = rankMe.score;
+
+      // Big countdown treatment while the guns count down (or waiting on P1 trigger).
+      const hero = document.getElementById('countdownHero');
+      if (state.phase === 'COUNTDOWN') {
+        hero.style.display = 'block';
+        document.getElementById('countdownNum').textContent = state.countdown_remaining;
+        document.getElementById('countdownSub').textContent = `${state.mode.title} — raise your blaster`;
+      } else if (state.phase === 'WAIT_TRIGGER') {
+        hero.style.display = 'block';
+        document.getElementById('countdownNum').textContent = 'READY';
+        document.getElementById('countdownSub').textContent = me.gun_num === 1
+          ? 'Pull your T-Blaster trigger to start the countdown!'
+          : 'Waiting for Player 1 to pull their trigger…';
+      } else {
+        hero.style.display = 'none';
+      }
+
+      // New-tag detection: flash + haptics the moment a fresh tag lands.
+      const tagAgo = me.last_tagged_by_ago;
+      const tagBy = me.last_tagged_by;
+      if (state.phase === 'PLAYING' && tagBy && tagAgo !== null && tagAgo !== undefined && tagAgo < 1.5) {
+        const isNew = prevTagAgo === null || prevTagAgo === undefined
+          || prevTagAgo >= 1.5 || prevTagBy !== tagBy || tagAgo < prevTagAgo - 0.5;
+        if (isNew) fireTagFeedback();
+      }
+      prevTagBy = tagBy;
+      prevTagAgo = tagAgo;
+
+      // Alert Banner (active match only)
+      const alertEl = document.getElementById('hudAlert');
+      const showLife = ['TeamFrag', 'FreeForAll', 'LastManStanding'].includes(state.mode.id);
+      if (state.phase === 'PLAYING' && showLife && me.life_points <= 0) {
+        alertEl.className = 'alert-banner visible';
+        alertEl.textContent = state.mode.id === 'LastManStanding'
+          ? '⚠️ ELIMINATED — OUT OF LIVES'
+          : `⚠️ OUT OF ACTION — SCAN ${me.team_short} T-BASE TO RESPAWN!`;
+      } else if (state.phase === 'PLAYING' && me.last_tagged_by && me.last_tagged_by_ago !== null && me.last_tagged_by_ago < 6) {
+        alertEl.className = 'alert-banner visible';
+        alertEl.textContent = `⚡ TAGGED BY ${(me.last_tagged_by || '').toUpperCase()}`;
+      } else {
+        alertEl.className = 'alert-banner';
+      }
+
+      // Life Points & Ammo
+      document.getElementById('hudLifeText').textContent = showLife ? `${me.life_points}/${me.max_life}` : '∞';
+      const hpBar = document.getElementById('hudHpBar');
+      hpBar.innerHTML = showLife
+        ? Array.from({ length: Math.min(10, me.max_life) }, (_, i) =>
+            `<div class="hp-segment ${i < me.life_points ? 'active' : ''}"></div>`
+          ).join('')
+        : `<div class="hp-segment active" style="grid-column: 1 / -1; background: var(--team-green);"></div>`;
+
+      const showAmmo = ['TeamFrag', 'FreeForAll', 'LastManStanding', 'StarterFrag', 'OldFashionDuel'].includes(state.mode.id);
+      const showClips = showAmmo && state.mode.id !== 'OldFashionDuel';
+      document.getElementById('hudAmmoText').textContent = showAmmo ? `${me.ammo}/${me.max_ammo}` : '∞';
+      const ammoBar = document.getElementById('hudAmmoBar');
+      if (ammoBar) {
+        if (showAmmo) {
+          const cap = Math.min(12, Math.max(1, me.max_ammo));
+          const filled = me.max_ammo <= 12 ? me.ammo : Math.round((me.ammo / Math.max(1, me.max_ammo)) * cap);
+          ammoBar.innerHTML = Array.from({ length: cap }, (_, i) =>
+            `<div class="ammo-pill ${i < filled ? 'on' : ''}"></div>`
+          ).join('');
+        } else {
+          ammoBar.innerHTML = `<div class="ammo-pill on"></div>`;
+        }
+      }
+      document.getElementById('hudClipsText').textContent = showClips ? `${me.clips}` : '∞';
+      const clipsPips = document.getElementById('hudClipsPips');
+      if (clipsPips) {
+        if (showClips) {
+          const cap = Math.min(8, Math.max(me.clips, 1));
+          clipsPips.innerHTML = Array.from({ length: cap }, (_, i) =>
+            `<div class="clip-pip ${i < me.clips ? 'on' : ''}"></div>`
+          ).join('') + (me.clips > 8 ? `<span style="font-size: 0.72rem; font-weight: 800; color: var(--bt-orange-bright);">+${me.clips - 8}</span>` : '');
+        } else {
+          clipsPips.innerHTML = `<div class="clip-pip on"></div>`;
+        }
+      }
+
+      // Stats
+      document.getElementById('hudStreak').textContent = me.streak;
+      document.getElementById('hudHits').textContent = me.hits_landed;
+      document.getElementById('hudFrags').textContent = me.frags;
+      document.getElementById('hudAcc').textContent = `${me.accuracy}%`;
+
+      // Teammate health mini-list (team modes, while a match is live).
+      const matesCard = document.getElementById('matesCard');
+      const mates = isTeamMode
+        ? state.players.filter((p) => p.team_id === me.team_id && p.gun_id !== me.gun_id)
+            .sort((a, b) => a.gun_num - b.gun_num)
+        : [];
+      if (mates.length > 0 && ['COUNTDOWN', 'PLAYING'].includes(state.phase)) {
+        matesCard.style.display = 'flex';
+        document.getElementById('matesList').innerHTML = mates.map((m) => {
+          const out = showLife && m.life_points <= 0;
+          const cap = Math.min(10, Math.max(1, m.max_life));
+          const filled = m.max_life <= 10 ? m.life_points : Math.round((m.life_points / Math.max(1, m.max_life)) * cap);
+          const pillCls = m.life_points <= 1 ? 'low' : 'on';
+          const pillsHtml = Array.from({ length: cap }, (_, i) =>
+            `<div class="mate-hp-pill ${i < filled ? pillCls : ''}"></div>`
+          ).join('');
+          return `
+          <div class="mate-row">
+            <span class="avatar-with-badge">
+              <img src="${m.avatar_url}" alt="${m.avatar}" />
+              ${playerNumBadge(m.gun_num, 19)}
+            </span>
+            <span class="mate-name">${(m.name || '').toUpperCase()}</span>
+            ${showLife ? `
+              <div class="mate-hp-pills">${pillsHtml}</div>
+              <span class="mate-hp-text">${m.life_points}/${m.max_life}</span>
+              ${out ? '<span class="mate-out">OUT</span>' : ''}
+            ` : ''}
+          </div>`;
+        }).join('');
+      } else {
+        matesCard.style.display = 'none';
+      }
+
+      // Post-game summary: wait until results_revealed is true on the main screen.
+      const waitResultsCard = document.getElementById('hudWaitingResultsCard');
+      const overCard = document.getElementById('gameOverCard');
+      if (state.phase === 'GAME_OVER' && !resultsRevealed) {
+        waitResultsCard.style.display = 'flex';
+        overCard.style.display = 'none';
+      } else if (resultsRevealed) {
+        waitResultsCard.style.display = 'none';
+        overCard.style.display = 'flex';
+        const won = rankMe.status_badge === 'WINNER';
+        document.getElementById('gameOverHead').textContent = won ? '🏆 VICTORY!' : 'MATCH OVER';
+        document.getElementById('gameOverRank').textContent = `Final rank #${rank} · ${rankMe.score} point${rankMe.score === 1 ? '' : 's'}`;
+        document.getElementById('gameOverStats').innerHTML = `
+          <span class="hud-stat-chip" title="Hits Landed">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3"/></svg>
+            ${rankMe.hits_landed} hits
+          </span>
+          <span class="hud-stat-chip" title="Frags">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2L4 14h7l-1 8 9-12h-7l1-8z"/></svg>
+            ${rankMe.frags} frags
+          </span>
+          <span class="hud-stat-chip" title="Accuracy">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 12l5-5"/><circle cx="12" cy="12" r="1.5" fill="currentColor"/></svg>
+            ${rankMe.accuracy}% acc
+          </span>
+          <span class="hud-stat-chip" title="Best Streak">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2c.5 3.5 3 5.5 3 9a3 3 0 1 1-6 0c0-1.5.6-2.8 1.5-3.8C8.5 8.5 7 10.6 7 13a5 5 0 0 0 10 0c0-4.2-2.6-7.2-5-11z"/></svg>
+            ${rankMe.best_streak} streak
+          </span>`;
+        drawHudScoreChart(state);
+        renderHudMatchups(state, rankMe, finalStandings);
+      } else {
+        waitResultsCard.style.display = 'none';
+        overCard.style.display = 'none';
+      }
+
+      // Contextual footer hint (only where the mechanics apply).
+      const hintEl = document.getElementById('footHint');
+      let hint = '';
+      if (state.phase === 'PLAYING') {
+        if (state.mode.id === 'TeamFrag' || state.mode.id === 'FreeForAll') {
+          hint = `Ammo boxes reload · Scan your ${me.team_short} T-Base to respawn`;
+        } else if (state.mode.id === 'LastManStanding') {
+          hint = 'Ammo boxes reload · No respawns — stay alive';
+        } else if (state.mode.id === 'StarterFrag') {
+          hint = 'Ammo boxes reload your clip';
+        }
+      }
+      hintEl.textContent = hint;
+      hintEl.style.display = hint ? 'block' : 'none';
+
+      // Simulator buttons
+      const simSec = document.getElementById('phoneSimSection');
+      if (state.use_simulator) {
+        simSec.style.display = 'flex';
+        const enemies = state.players.filter((p) => p.gun_id !== me.gun_id);
+        const baseCode = `RF0${me.team_id + 2}`;
+        const simTargetIcon = `<svg class="ui-icon" style="color:var(--bt-orange-bright);" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="8"/><circle cx="12" cy="12" r="2.2" fill="currentColor" stroke="none"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3"/></svg>`;
+        const simAmmoIcon = `<svg class="ui-icon" style="color:#4ADE80;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M7 4h10l1 3v12a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2V7l1-3z" fill="currentColor" fill-opacity="0.18"/><path d="M7 4h10l1 3v12a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2V7l1-3z"/><path d="M9 10h6M9 14h6"/></svg>`;
+        const simBaseIcon = `<svg class="ui-icon" style="color:#38BDF8;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3L4 8v8l8 5 8-5V8l-8-5z" fill="currentColor" fill-opacity="0.15"/><path d="M12 3L4 8v8l8 5 8-5V8l-8-5z"/><circle cx="12" cy="12" r="2.5" fill="currentColor" stroke="none"/></svg>`;
+        document.getElementById('phoneSimBtns').innerHTML = [
+          ...enemies.map((e) =>
+            `<button type="button" class="sim-tap-btn" onclick="triggerSim('hit', { shooter_gid: ${me.gun_id}, target_gid: ${e.gun_id} })">${simTargetIcon} Tag P${e.gun_num} · ${(e.name || '').toUpperCase()}</button>`
+          ),
+          `<button type="button" class="sim-tap-btn" onclick="triggerSim('rfid', { gun_id: ${me.gun_id}, rfid_code: 'RF01' })">${simAmmoIcon} Scan Ammo</button>`,
+          `<button type="button" class="sim-tap-btn" onclick="triggerSim('rfid', { gun_id: ${me.gun_id}, rfid_code: '${baseCode}' })">${simBaseIcon} Scan Base (${baseCode})</button>`,
+        ].join('');
+      } else {
+        simSec.style.display = 'none';
+      }
+
+      // Impatient button: visible only in Lobby, Game Mode selection, or waiting for P1 trigger
+      const impatientWrap = document.getElementById('impatientWrap');
+      if (impatientWrap) {
+        const showImpatient = state.phase === 'LOBBY' || state.phase === 'WAIT_TRIGGER';
+        impatientWrap.style.display = showImpatient ? 'flex' : 'none';
+        if (showImpatient) {
+          const st = (state.impatient_status || {})[String(selectedGunNum)];
+          if (st) {
+            impatientRemaining = st.remaining ?? 10;
+            impatientResetAtMs = st.reset_in > 0 ? (Date.now() + st.reset_in * 1000) : 0;
+          }
+          updateImpatientButton();
+        }
+      }
+
+      // Sync Profile Dialog controls. Name/avatar editing needs the
+      // pairing page (wizard step 1) as well as a non-running match;
+      // team changes stay open through game selection, between matches.
+      const locked = profilesLocked(state);
+      const editable = profilesEditable(state);
+      const dlg = document.getElementById('profileDialog');
+      const lockNote = document.getElementById('profileLockNote');
+      const editBtn = document.getElementById('editProfileBtn');
+      editBtn.style.display = editable ? '' : 'none';
+      editBtn.disabled = !editable;
+      if (!editable && dlg && dlg.open && !dialogSaving) {
+        dlg.close();
+      }
+      if (locked) {
+        lockNote.style.display = 'block';
+        lockNote.textContent = 'Profiles are locked while a match is running. You can edit your callsign and avatar again on the pairing screen.';
+      } else if (!editable) {
+        lockNote.style.display = 'block';
+        lockNote.textContent = 'Callsign and avatar can only be changed while the Arena Master is on the pairing screen.';
+      } else {
+        lockNote.style.display = 'none';
+      }
+      const nameInput = document.getElementById('callsignInput');
+      nameInput.disabled = !editable;
+      if (document.activeElement !== nameInput && !dialogSaving) {
+        nameInput.value = (me.name || '').toUpperCase();
+      }
+      const doneBtn = document.getElementById('profileDoneBtn');
+      if (doneBtn) doneBtn.disabled = !editable || dialogSaving;
+      // Avatar grid: while the dialog is open the selection follows the
+      // pending draft, not the gun's current avatar.
+      const shownAvatar = (dlg.open && pendingAvatar) ? pendingAvatar : me.avatar;
+      document.getElementById('avatarGrid12').innerHTML = state.avatars.map((av) => `
+        <button type="button" class="av-choice ${av === shownAvatar ? 'selected' : ''}" ${!editable ? 'disabled' : ''} data-avatar="${av}" onclick="selectPendingAvatar('${av}')">
+          <img src="/static/assets/textures/Avatars/80x/${av}.png" alt="${av}" />
+          <span>${av}</span>
+        </button>
+      `).join('');
+      syncProfileDialogStatus(state);
+    }
+
+    let impatientRemaining = 10;
+    let impatientResetAtMs = 0;
+    let impatientGlobalUntilMs = 0;
+    let impatientSending = false;
+
+    function formatCooldownShort(sec) {
+      const s = Math.max(0, Math.ceil(sec));
+      const m = Math.floor(s / 60);
+      const r = s % 60;
+      return m > 0 ? `${m}:${String(r).padStart(2, '0')}` : `${r}s`;
+    }
+
+    function updateImpatientButton() {
+      const btn = document.getElementById('impatientBtn');
+      const sub = document.getElementById('impatientSub');
+      if (!btn || !sub) return;
+      const now = Date.now();
+      const rateWait = impatientResetAtMs > now ? (impatientResetAtMs - now) / 1000 : 0;
+      const globalWait = impatientGlobalUntilMs > now ? (impatientGlobalUntilMs - now) / 1000 : 0;
+
+      if (impatientRemaining <= 0 && rateWait > 0) {
+        btn.disabled = true;
+        btn.textContent = `I'm Impatient · Wait ${formatCooldownShort(rateWait)}`;
+        sub.textContent = 'Limit reached (10 per 2 minutes)';
+      } else if (globalWait > 0 || impatientSending) {
+        btn.disabled = true;
+        btn.textContent = "I'm Impatient";
+        sub.textContent = `${impatientRemaining} of 10 left`;
+      } else {
+        if (impatientRemaining <= 0 && rateWait <= 0) {
+          impatientRemaining = 10;
+          impatientResetAtMs = 0;
+        }
+        btn.disabled = false;
+        btn.textContent = "I'm Impatient";
+        sub.textContent = `${impatientRemaining} of 10 left`;
+      }
+    }
+
+    setInterval(() => {
+      const wrap = document.getElementById('impatientWrap');
+      if (wrap && wrap.style.display !== 'none') updateImpatientButton();
+    }, 500);
+
+    async function sendImpatient() {
+      if (impatientSending) return;
+      impatientSending = true;
+      updateImpatientButton();
+      try {
+        const res = await fetch(`/api/players/${selectedGunNum}/impatient`, { method: 'POST' });
+        const data = await res.json().catch(() => ({}));
+        if (typeof data.remaining === 'number') impatientRemaining = data.remaining;
+        if (res.ok) {
+          impatientGlobalUntilMs = Date.now() + 2500;
+        } else if (res.status === 429) {
+          if (data.reason === 'rate_limit' && data.retry_after) {
+            impatientResetAtMs = Date.now() + data.retry_after * 1000;
+          } else if (data.reason === 'global_cooldown' && data.retry_after) {
+            impatientGlobalUntilMs = Date.now() + data.retry_after * 1000;
+          }
+        }
+      } catch (err) {
+        console.error('Impatient failed:', err);
+      } finally {
+        impatientSending = false;
+        updateImpatientButton();
+      }
+    }
+
+    function connectWs() {
+      const proto = location.protocol === 'https:' ? 'wss:' : 'ws:';
+      const ws = new WebSocket(`${proto}//${location.host}/ws`);
+      ws.onopen = () => {
+        document.getElementById('reconnectPill').style.display = 'none';
+      };
+      ws.onmessage = (ev) => {
+        try {
+          const msg = JSON.parse(ev.data);
+          if (msg.type === 'state') renderHud(msg.data);
+        } catch (e) {}
+      };
+      ws.onclose = () => {
+        document.getElementById('reconnectPill').style.display = 'block';
+        setTimeout(connectWs, 1500);
+      };
+    }
+
+    function drawHudScoreChart(state) {
+      const canvas = document.getElementById('hudScoreChart');
+      const legendEl = document.getElementById('hudChartLegend');
+      if (!canvas || !legendEl) return;
+
+      const players = [...(state.players || [])].sort((a, b) => a.gun_num - b.gun_num);
+      const isTeamMode = !!state.mode.teams;
+      let history = Array.isArray(state.score_history) ? state.score_history.slice() : [];
+      if (history.length === 0) {
+        history = [{ t: 0, scores: Object.fromEntries(players.map((p) => [String(p.gun_num), 0])) }];
+      }
+      if (history.length === 1) {
+        const endT = Math.max(10, history[0].t || 10);
+        history.push({ t: endT, scores: Object.fromEntries(players.map((p) => [String(p.gun_num), p.score])) });
+      }
+
+      const soloPalette = ['#FB8119', '#0767C5', '#1E8E3E', '#8E44AD', '#D41900', '#00A896', '#D49B00', '#E84393'];
+      const seriesList = [];
+      if (isTeamMode) {
+        const teamById = {};
+        (state.team_catalog || []).forEach((t) => { teamById[parseInt(t.id, 10)] = t; });
+        const byTeam = {};
+        players.forEach((p) => { (byTeam[p.team_id] = byTeam[p.team_id] || []).push(p); });
+        Object.keys(byTeam).map((id) => parseInt(id, 10)).sort((a, b) => a - b).forEach((teamId) => {
+          const members = byTeam[teamId];
+          const tInfo = teamById[teamId];
+          const totalScore = members.reduce((s, m) => s + m.score, 0);
+          seriesList.push({
+            label: `T${teamId}`,
+            color: (tInfo && tInfo.color) || '#FB8119',
+            finalScore: totalScore,
+            valueAt: (pt) => members.reduce((s, m) => s + ((pt.scores && pt.scores[String(m.gun_num)]) || 0), 0),
+          });
+        });
+      } else {
+        players.forEach((p, idx) => {
+          seriesList.push({
+            label: `P${p.gun_num}`,
+            color: soloPalette[idx % soloPalette.length],
+            finalScore: p.score,
+            valueAt: (pt) => (pt.scores && pt.scores[String(p.gun_num)] !== undefined) ? pt.scores[String(p.gun_num)] : p.score,
+          });
+        });
+      }
+
+      const dpr = window.devicePixelRatio || 1;
+      const rect = canvas.getBoundingClientRect();
+      const w = Math.max(180, Math.round(rect.width || 240));
+      const h = Math.max(130, Math.round(rect.height || 150));
+      canvas.width = Math.round(w * dpr);
+      canvas.height = Math.round(h * dpr);
+
+      const ctx = canvas.getContext('2d');
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      ctx.clearRect(0, 0, w, h);
+
+      const pad = { top: 10, right: 24, bottom: 22, left: 26 };
+      const plotW = Math.max(30, w - pad.left - pad.right);
+      const plotH = Math.max(30, h - pad.top - pad.bottom);
+
+      const maxT = Math.max(1, history[history.length - 1].t || 1);
+      let maxScore = 1;
+      for (const pt of history) {
+        for (const ser of seriesList) {
+          const val = ser.valueAt(pt);
+          if (val > maxScore) maxScore = val;
+        }
+      }
+      for (const ser of seriesList) {
+        if (ser.finalScore > maxScore) maxScore = ser.finalScore;
+      }
+      const yMax = Math.max(4, Math.ceil(maxScore * 1.15));
+      const xFor = (t) => pad.left + (t / maxT) * plotW;
+      const yFor = (s) => pad.top + plotH - (s / yMax) * plotH;
+
+      ctx.font = '700 9px "Inter", -apple-system, BlinkMacSystemFont, sans-serif';
+      ctx.textBaseline = 'middle';
+      const ySteps = Math.min(4, yMax);
+      for (let i = 0; i <= ySteps; i++) {
+        const val = Math.round((yMax / ySteps) * i);
+        const y = yFor(val);
+        ctx.strokeStyle = i === 0 ? 'rgba(255,255,255,0.18)' : 'rgba(255,255,255,0.07)';
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.moveTo(pad.left, y);
+        ctx.lineTo(pad.left + plotW, y);
+        ctx.stroke();
+        ctx.fillStyle = '#9BA3B5';
+        ctx.textAlign = 'right';
+        ctx.fillText(String(val), pad.left - 5, y);
+      }
+
+      const fmtT = (sec) => {
+        const s = Math.max(0, Math.round(sec));
+        return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`;
+      };
+      ctx.textBaseline = 'top';
+      ctx.textAlign = 'center';
+      for (let i = 0; i <= 2; i++) {
+        const t = (maxT / 2) * i;
+        ctx.fillStyle = '#9BA3B5';
+        ctx.fillText(fmtT(t), xFor(t), pad.top + plotH + 6);
+      }
+
+      const legendHtml = [];
+      const lastPt = history[history.length - 1];
+      for (const ser of seriesList) {
+        ctx.save();
+        ctx.strokeStyle = ser.color;
+        ctx.lineWidth = 2.4;
+        ctx.lineJoin = 'round';
+        ctx.lineCap = 'round';
+        ctx.beginPath();
+        history.forEach((pt, idx) => {
+          const x = xFor(pt.t);
+          const y = yFor(ser.valueAt(pt));
+          if (idx === 0) ctx.moveTo(x, y);
+          else ctx.lineTo(x, y);
+        });
+        ctx.stroke();
+        ctx.restore();
+
+        const lastX = xFor(lastPt.t);
+        const lastY = yFor(ser.valueAt(lastPt));
+        ctx.fillStyle = ser.color;
+        ctx.font = '800 9px "Inter", -apple-system, BlinkMacSystemFont, sans-serif';
+        ctx.textAlign = 'left';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(ser.label, Math.min(w - 20, lastX + 4), lastY);
+
+        legendHtml.push(`
+          <div class="hud-legend-item">
+            <span class="hud-legend-swatch" style="border-top-color: ${ser.color};"></span>
+            <span>${ser.label}</span>
+          </div>
+        `);
+      }
+      legendEl.innerHTML = legendHtml.join('');
+    }
+
+    function renderHudMatchups(state, me, standings = null) {
+      const container = document.getElementById('hudMatchups');
+      if (!container) return;
+      const others = [...(standings || state.players || [])]
+        .filter((q) => q.gun_num !== me.gun_num)
+        .sort((a, b) => a.gun_num - b.gun_num);
+      const dealt = me.hits_dealt_to || {};
+      const taken = me.hits_taken_from || {};
+
+      let favTarget = null;
+      let favCount = 0;
+      let nemesis = null;
+      let nemesisCount = 0;
+      for (const o of others) {
+        const d = dealt[String(o.gun_num)] || 0;
+        const t = taken[String(o.gun_num)] || 0;
+        if (d > favCount) { favCount = d; favTarget = o; }
+        if (t > nemesisCount) { nemesisCount = t; nemesis = o; }
+      }
+
+      const rows = others.map((o) => {
+        const d = dealt[String(o.gun_num)] || 0;
+        const t = taken[String(o.gun_num)] || 0;
+        const net = d - t;
+        const netColor = net > 0 ? '#7BD88A' : (net < 0 ? '#FF8575' : '#9BA3B5');
+        return `
+          <tr>
+            <td><div style="display:flex;align-items:center;gap:6px;">${playerNumIcon(o.gun_num, 16)}<span>${(o.name || '').toUpperCase()}</span></div></td>
+            <td>${d}</td>
+            <td>${t}</td>
+            <td style="color: ${netColor}; font-weight: 800;">${net > 0 ? '+' + net : net}</td>
+          </tr>`;
+      }).join('');
+
+      container.innerHTML = `
+        <div class="hud-h2h-badges">
+          <div class="hud-h2h-badge">
+            <div class="hud-h2h-badge-lbl">Favorite Target</div>
+            <div class="hud-h2h-badge-val">${favTarget ? (favTarget.name || `P${favTarget.gun_num}`).toUpperCase() : '—'}</div>
+          </div>
+          <div class="hud-h2h-badge">
+            <div class="hud-h2h-badge-lbl">Picked On You Most</div>
+            <div class="hud-h2h-badge-val">${nemesis ? (nemesis.name || `P${nemesis.gun_num}`).toUpperCase() : '—'}</div>
+          </div>
+        </div>
+        <table class="hud-h2h-table">
+          <thead><tr><th>Opponent</th><th>Hit</th><th>Taken</th><th>Net</th></tr></thead>
+          <tbody>${rows || '<tr><td colspan="4" style="color: var(--hud-muted);">No opponents</td></tr>'}</tbody>
+        </table>
+      `;
+    }
+
+    connectWs();
+  </script>
+</body>
+</html>
+

@@ -1,0 +1,49 @@
+# Virtual environment
+.venv/
+venv/
+ENV/
+env/
+
+# Python cache & build artifacts
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.pytest_cache/
+.coverage
+htmlcov/
+build/
+dist/
+*.egg-info/
+
+# macOS system files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+
+# Large binary archives & video files exceeding GitHub 100MB limit
+*.zip
+*.bik
+*.mkv
+
+# Runtime hardware logs
+logs/
+
+# Extracted Ubisoft fonts & textures (keep custom UbiConnect icons)
+battletag/static/assets/fonts/
+battletag/static/assets/textures/Avatars/
+battletag/static/assets/textures/Components/
+battletag/static/assets/textures/Packages/
+battletag/static/assets/textures/Ui/*
+!battletag/static/assets/textures/Ui/ubiconnect-connected.png
+!battletag/static/assets/textures/Ui/ubiconnect-disconnected.png
+
+# Local dev / handoff / test files (not shipped to GitHub)
+battle-tag-antigravity-handoff/
+macos-app/Docs/
+scripts/
+tests/
+pytest.ini
+

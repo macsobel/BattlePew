@@ -1,0 +1,35 @@
+# BattlePew macOS app — runtime dependencies ONLY.
+#
+# Source of truth for versions: the repo-root requirements.txt (pip freeze).
+# This file is that list minus everything the shipped server never uses:
+#   dropped: pytest + iniconfig + pluggy + Pygments (tests),
+#            pygame (declared but never imported anywhere in battletag/),
+#            python-dotenv + PyYAML (never imported),
+#            watchfiles (uvicorn reload only; the app runs reload=False).
+#   kept:    opentelemetry-api (present in the freeze; harmless, kept to
+#            avoid guessing about transitive imports).
+#
+# How to regenerate: diff a fresh `pip freeze` from a working dev venv
+# against this file and re-apply the drop rule above. Keep the == pins:
+# the .app build must be reproducible, and unpinned installs drift.
+annotated-doc==0.0.6
+annotated-types==0.8.0
+anyio==4.16.0
+click==8.5.1
+fastapi==0.162.5
+h11==0.16.0
+hidapi==0.15.0
+httptools==0.9.0
+idna==3.20
+opentelemetry-api==1.45.2
+packaging==26.3
+pillow==13.0.0
+pydantic==2.14.3
+pydantic_core==2.50.4
+qrcode==8.2
+starlette==1.10.0
+typing-inspection==0.4.5
+typing_extensions==4.16.0
+uvicorn==0.54.0
+uvloop==0.23.0; sys_platform != 'win32'
+websockets==17.4

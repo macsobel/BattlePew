@@ -1,0 +1,2634 @@
+{
+  "_7E5622B814913AB31A1026B59B14BE0E": {
+    "kind": "audio",
+    "dest": "Data/Audio/Ui/Back.wav"
+  },
+  "_7D8C350BB914D3D4C841CBD862B57692": {
+    "kind": "audio",
+    "dest": "Data/Audio/Ui/ChangeValue.wav"
+  },
+  "_26531BCEC2C1B5177D762C7BFB1EB228": {
+    "kind": "audio",
+    "dest": "Data/Audio/Ui/CloseWindow.wav"
+  },
+  "_1FAF5D82AAD4283A0F4431416AC9AF50": {
+    "kind": "audio",
+    "dest": "Data/Audio/Ui/GunDetect.wav"
+  },
+  "_65456678013630BD8BC8A40A7DAAA374": {
+    "kind": "audio",
+    "dest": "Data/Audio/Ui/OpenWindow.wav"
+  },
+  "_E63A1297F565FB5B40C58EED1FE8E83D": {
+    "kind": "audio",
+    "dest": "Data/Audio/Ui/Ranking.wav"
+  },
+  "_CF5CAB0828F779021C369F8C2511E4B2": {
+    "kind": "audio",
+    "dest": "Data/Audio/Ui/Rollover.wav"
+  },
+  "_EE513309585958BE0496AFB544319679": {
+    "kind": "audio",
+    "dest": "Data/Audio/Ui/Rollover2.wav"
+  },
+  "_CEC3E0DE6446749D8CD6E8208BB587BC": {
+    "kind": "audio",
+    "dest": "Data/Audio/Ui/Validation.wav"
+  },
+  "_CB82846AABEB05229BDA3590BE9D4673": {
+    "kind": "audio",
+    "dest": "Data/Audio/musicingame.ogg"
+  },
+  "_65047B7DF2C7C43543F3B5739E732A4E": {
+    "kind": "audio",
+    "dest": "Data/Audio/musicintroduction.ogg"
+  },
+  "_6BEFF9E74DEBC37894AA2D6F5DAA0E46": {
+    "kind": "audio",
+    "dest": "Data/Audio/musicmenu.ogg"
+  },
+  "_578D005BBEECE0CCFAB2E8A07378CD03": {
+    "kind": "audio",
+    "dest": "System/Locale/En/Audio/GameMaster/DLG_GM_FRAG_SURVIVAL_01.wav"
+  },
+  "_B67CD4DD4ABCAC3E655508F8199FFF1D": {
+    "kind": "audio",
+    "dest": "System/Locale/En/Audio/GameMaster/DLG_GM_FRAG_SURVIVAL_02.wav"
+  },
+  "_7BE4DFF49C542AD3D4DE1B2BE3B2187E": {
+    "kind": "audio",
+    "dest": "System/Locale/En/Audio/GameMaster/DLG_GM_FRAG_SURVIVAL_03.wav"
+  },
+  "_5D1279F6828306A305D013BA015FD861": {
+    "kind": "audio",
+    "dest": "System/Locale/En/Audio/GameMaster/DLG_GM_FRAG_SURVIVAL_04.wav"
+  },
+  "_395BDD24C304CFF2CA93931B0C85990C": {
+    "kind": "audio",
+    "dest": "System/Locale/En/Audio/GameMaster/DLG_GM_FRAG_SURVIVAL_05.wav"
+  },
+  "_446CDAFEC756FD287053B33984B109E9": {
+    "kind": "audio",
+    "dest": "System/Locale/En/Audio/GameMaster/DLG_GM_FRAG_SURVIVAL_06.wav"
+  },
+  "_F4C547BB3FB75CA152FB2985CEDB4545": {
+    "kind": "audio",
+    "dest": "System/Locale/En/Audio/GameMaster/DLG_GM_FRAG_SURVIVAL_07.wav"
+  },
+  "_22B6F792E42F0D01B59FBD1E1DADBBE7": {
+    "kind": "audio",
+    "dest": "System/Locale/En/Audio/GameMaster/DLG_GM_FRAG_SURVIVAL_08.wav"
+  },
+  "_B6385D83F8C764E4AE607E4A6CBE3146": {
+    "kind": "audio",
+    "dest": "System/Locale/En/Audio/GameMaster/DLG_GM_FRAG_SURVIVAL_09.wav"
+  },
+  "_9DC630CA5061EE8D413AEA50C8BB8633": {
+    "kind": "audio",
+    "dest": "System/Locale/En/Audio/GameMaster/DLG_GM_FRAG_SURVIVAL_10.wav"
+  },
+  "_98AA16313DC3BCB3C293BB0C35E5870E": {
+    "kind": "audio",
+    "dest": "System/Locale/En/Audio/GameMaster/DLG_GM_FRAG_SURVIVAL_11.wav"
+  },
+  "_CB214E574A45C70E3818E776248A3BBF": {
+    "kind": "audio",
+    "dest": "System/Locale/En/Audio/GameMaster/DLG_GM_FRAG_SURVIVAL_12.wav"
+  },
+  "_AC69615CB4FCCF2006C1F879AACC46BE": {
+    "kind": "audio",
+    "dest": "System/Locale/En/Audio/GameMaster/DLG_GM_FRAG_TEAM_01.wav"
+  },
+  "_FBFCD18B7E4AB63E97B10B3C8EE2B1E8": {
+    "kind": "audio",
+    "dest": "System/Locale/En/Audio/GameMaster/DLG_GM_FRAG_TEAM_02.wav"
+  },
+  "_2972566C382E54E8CEC0218F97DD8E7F": {
+    "kind": "audio",
+    "dest": "System/Locale/En/Audio/GameMaster/DLG_GM_FRAG_TEAM_03.wav"
+  },
+  "_7819F979F82CC8EF8A1120B1E20D6761": {
+    "kind": "audio",
+    "dest": "System/Locale/En/Audio/GameMaster/DLG_GM_FRAG_TEAM_04.wav"
+  },
+  "_598E7491BE24B21BF376CCD0F91D7D7C": {
+    "kind": "audio",
+    "dest": "System/Locale/En/Audio/GameMaster/DLG_GM_FRAG_TEAM_05.wav"
+  },
+  "_0ACD37724D335748FF02F17AC76EDD07": {
+    "kind": "audio",
+    "dest": "System/Locale/En/Audio/GameMaster/DLG_GM_FRAG_TEAM_06.wav"
+  },
+  "_4EC83E9949592DF88EFA3C2B3F71EF8F": {
+    "kind": "audio",
+    "dest": "System/Locale/En/Audio/GameMaster/DLG_GM_FRAG_TEAM_07.wav"
+  },
+  "_1C5A6B3892C35A07E25BF102604AF1BF": {
+    "kind": "audio",
+    "dest": "System/Locale/En/Audio/GameMaster/DLG_GM_FRAG_TEAM_08.wav"
+  },
+  "_61528A8939E5183613CA54EBF8AAB493": {
+    "kind": "audio",
+    "dest": "System/Locale/En/Audio/GameMaster/DLG_GM_GLOBAL_01.wav"
+  },
+  "_C6F74551A7FB50AC86340A597C66744E": {
+    "kind": "audio",
+    "dest": "System/Locale/En/Audio/GameMaster/DLG_GM_GLOBAL_02.wav"
+  },
+  "_351BAA09A05F00A3A2B00AD4DBDF3FAB": {
+    "kind": "audio",
+    "dest": "System/Locale/En/Audio/GameMaster/DLG_GM_GLOBAL_03.wav"
+  },
+  "_A8483BB7C76ED53C02F0505BD4D98EB2": {
+    "kind": "audio",
+    "dest": "System/Locale/En/Audio/GameMaster/DLG_GM_GLOBAL_04.wav"
+  },
+  "_3F9CA0D808F42B31399376326E65C64E": {
+    "kind": "audio",
+    "dest": "System/Locale/En/Audio/GameMaster/DLG_GM_GLOBAL_05.wav"
+  },
+  "_78CB3DF7A64DF3DCCAE3D5524FA75235": {
+    "kind": "audio",
+    "dest": "System/Locale/En/Audio/GameMaster/DLG_GM_GLOBAL_06.wav"
+  },
+  "_2FEA8DA4E9C6425D7DACB3E2EE0CBD37": {
+    "kind": "audio",
+    "dest": "System/Locale/En/Audio/GameMaster/DLG_GM_GLOBAL_07.wav"
+  },
+  "_A2C8EF7831535E297940C81F1C0AB2DB": {
+    "kind": "audio",
+    "dest": "System/Locale/En/Audio/GameMaster/DLG_GM_GLOBAL_08.wav"
+  },
+  "_9AE839F3930A08EF898792CE3EC2DDC0": {
+    "kind": "audio",
+    "dest": "System/Locale/En/Audio/GameMaster/DLG_GM_GLOBAL_09.wav"
+  },
+  "_1D11EBD0C0E9932AF53CEB52E951AC13": {
+    "kind": "audio",
+    "dest": "System/Locale/En/Audio/GameMaster/DLG_GM_GLOBAL_10.wav"
+  },
+  "_81610A2ECD41ED52E29D6B43504CF922": {
+    "kind": "audio",
+    "dest": "System/Locale/En/Audio/GameMaster/DLG_GM_GLOBAL_100.wav"
+  },
+  "_A53FF9B91E2E57A53D88505E3C7E889D": {
+    "kind": "audio",
+    "dest": "System/Locale/En/Audio/GameMaster/DLG_GM_GLOBAL_101.wav"
+  },
+  "_0B74D7AAA00D35DA536773B28DF39244": {
+    "kind": "audio",
+    "dest": "System/Locale/En/Audio/GameMaster/DLG_GM_GLOBAL_102.wav"
+  },
+  "_911F02D8AF0C15938261ABA75C594680": {
+    "kind": "audio",
+    "dest": "System/Locale/En/Audio/GameMaster/DLG_GM_GLOBAL_103.wav"
+  },
+  "_A06F32047207F04E0D1B5C7FC89AD897": {
+    "kind": "audio",
+    "dest": "System/Locale/En/Audio/GameMaster/DLG_GM_GLOBAL_104.wav"
+  },
+  "_11B50360A92DF366B3CCC3D2D26DEF7D": {
+    "kind": "audio",
+    "dest": "System/Locale/En/Audio/GameMaster/DLG_GM_GLOBAL_11.wav"
+  },
+  "_639EDD6F7B50E822C4433BC140601110": {
+    "kind": "audio",
+    "dest": "System/Locale/En/Audio/GameMaster/DLG_GM_GLOBAL_113.wav"
+  },
+  "_E0BD3B2FB24FFC9147C71AF3A5FC0E59": {
+    "kind": "audio",
+    "dest": "System/Locale/En/Audio/GameMaster/DLG_GM_GLOBAL_114.wav"
+  },
+  "_FCC940C64ACB17BAF9E054422CBEDF07": {
+    "kind": "audio",
+    "dest": "System/Locale/En/Audio/GameMaster/DLG_GM_GLOBAL_115.wav"
+  },
+  "_C450F3A331EDEB947C0FD1CE41232516": {
+    "kind": "audio",
+    "dest": "System/Locale/En/Audio/GameMaster/DLG_GM_GLOBAL_116.wav"
+  },
+  "_2B8326883DEAE3A4658B52FDE1B037A8": {
+    "kind": "audio",
+    "dest": "System/Locale/En/Audio/GameMaster/DLG_GM_GLOBAL_118.wav"
+  },
+  "_203F1B60A56436936C09D579642C98CD": {
+    "kind": "audio",
+    "dest": "System/Locale/En/Audio/GameMaster/DLG_GM_GLOBAL_119.wav"
+  },
+  "_31F7CF319ECFD00BBA7DB63179BBA7EB": {
+    "kind": "audio",
+    "dest": "System/Locale/En/Audio/GameMaster/DLG_GM_GLOBAL_12.wav"
+  },
+  "_A4FCA3294CABCBB1BC4532195F164794": {
+    "kind": "audio",
+    "dest": "System/Locale/En/Audio/GameMaster/DLG_GM_GLOBAL_13.wav"
+  },
+  "_670C2867AA6348FA2C3945EF1CF66A38": {
+    "kind": "audio",
+    "dest": "System/Locale/En/Audio/GameMaster/DLG_GM_GLOBAL_14.wav"
+  },
+  "_998242BA8F2D33C234DA1CB81F539DF8": {
+    "kind": "audio",
+    "dest": "System/Locale/En/Audio/GameMaster/DLG_GM_GLOBAL_15.wav"
+  },
+  "_A9D3D134C1B581FD73C1C162FB8E2A25": {
+    "kind": "audio",
+    "dest": "System/Locale/En/Audio/GameMaster/DLG_GM_GLOBAL_16.wav"
+  },
+  "_0D4BEBC536F0F93F4CCF00B34B76F63A": {
+    "kind": "audio",
+    "dest": "System/Locale/En/Audio/GameMaster/DLG_GM_GLOBAL_17.wav"
+  },
+  "_AC9C98F6E29FBDC1513AD13DCF74844F": {
+    "kind": "audio",
+    "dest": "System/Locale/En/Audio/GameMaster/DLG_GM_GLOBAL_18.wav"
+  },
+  "_0B54CA5D7122DAC25AAADE84ADD61909": {
+    "kind": "audio",
+    "dest": "System/Locale/En/Audio/GameMaster/DLG_GM_GLOBAL_19.wav"
+  },
+  "_B007D2494B371F3E1D23E3DD1D24E5EB": {
+    "kind": "audio",
+    "dest": "System/Locale/En/Audio/GameMaster/DLG_GM_GLOBAL_20.wav"
+  },
+  "_95FA4DD0E255291719226383195FA153": {
+    "kind": "audio",
+    "dest": "System/Locale/En/Audio/GameMaster/DLG_GM_GLOBAL_21.wav"
+  },
+  "_F94750F1A11C7D582EECAD3107AD5AE0": {
+    "kind": "audio",
+    "dest": "System/Locale/En/Audio/GameMaster/DLG_GM_GLOBAL_22.wav"
+  },
+  "_77B51FAF22CBBB4174AF6334C2EF4DDC": {
+    "kind": "audio",
+    "dest": "System/Locale/En/Audio/GameMaster/DLG_GM_GLOBAL_23.wav"
+  },
+  "_954B78F5FBE8E25891AB29FC4BD39A80": {
+    "kind": "audio",
+    "dest": "System/Locale/En/Audio/GameMaster/DLG_GM_GLOBAL_24.wav"
+  },
+  "_0B790A60C76888E9E71535C8AB73D52B": {
+    "kind": "audio",
+    "dest": "System/Locale/En/Audio/GameMaster/DLG_GM_GLOBAL_25.wav"
+  },
+  "_6DC7140324C48ABE4F3FEC9985507957": {
+    "kind": "audio",
+    "dest": "System/Locale/En/Audio/GameMaster/DLG_GM_GLOBAL_26.wav"
+  },
+  "_4F16C0F27FEBFC443C5DA18AE5358294": {
+    "kind": "audio",
+    "dest": "System/Locale/En/Audio/GameMaster/DLG_GM_GLOBAL_27.wav"
+  },
+  "_BE77D3AE6326E8702BB6A5AAE0500D1B": {
+    "kind": "audio",
+    "dest": "System/Locale/En/Audio/GameMaster/DLG_GM_GLOBAL_28.wav"
+  },
+  "_13A15E0F0D954D9986A9E7D2FD6D966F": {
+    "kind": "audio",
+    "dest": "System/Locale/En/Audio/GameMaster/DLG_GM_GLOBAL_29.wav"
+  },
+  "_A1BB18DE7D6CF5DF42A8CA4193A9165B": {
+    "kind": "audio",
+    "dest": "System/Locale/En/Audio/GameMaster/DLG_GM_GLOBAL_30.wav"
+  },
+  "_2D9AED937824442F44CCB1FDD84EEF09": {
+    "kind": "audio",
+    "dest": "System/Locale/En/Audio/GameMaster/DLG_GM_GLOBAL_31.wav"
+  },
+  "_463508FC5534B0623274A0568B2E7843": {
+    "kind": "audio",
+    "dest": "System/Locale/En/Audio/GameMaster/DLG_GM_GLOBAL_32.wav"
+  },
+  "_954A539C7797E8E1DB9FB1BCB6A2968B": {
+    "kind": "audio",
+    "dest": "System/Locale/En/Audio/GameMaster/DLG_GM_GLOBAL_33.wav"
+  },
+  "_9F3D1E2B54CA02B4F49EA5BBA5131C35": {
+    "kind": "audio",
+    "dest": "System/Locale/En/Audio/GameMaster/DLG_GM_GLOBAL_34.wav"
+  },
+  "_2989DCE8566E9DF93B452B694C9787D2": {
+    "kind": "audio",
+    "dest": "System/Locale/En/Audio/GameMaster/DLG_GM_GLOBAL_35.wav"
+  },
+  "_0F1438228DEB7542CBB442CA1C14A1AD": {
+    "kind": "audio",
+    "dest": "System/Locale/En/Audio/GameMaster/DLG_GM_GLOBAL_36.wav"
+  },
+  "_C47F213E69B882C74EEC63A9D235AB03": {
+    "kind": "audio",
+    "dest": "System/Locale/En/Audio/GameMaster/DLG_GM_GLOBAL_37.wav"
+  },
+  "_9FF49924EFC426E4D6575CA16009F30E": {
+    "kind": "audio",
+    "dest": "System/Locale/En/Audio/GameMaster/DLG_GM_GLOBAL_38.wav"
+  },
+  "_F6E6E85C2ED25498929DF2EDAA0C8089": {
+    "kind": "audio",
+    "dest": "System/Locale/En/Audio/GameMaster/DLG_GM_GLOBAL_39.wav"
+  },
+  "_747B147175C1EDB1DD91FD226708985B": {
+    "kind": "audio",
+    "dest": "System/Locale/En/Audio/GameMaster/DLG_GM_GLOBAL_40.wav"
+  },
+  "_AA443DF62ADCEEB67C52B4BD1B9745EA": {
+    "kind": "audio",
+    "dest": "System/Locale/En/Audio/GameMaster/DLG_GM_GLOBAL_41.wav"
+  },
+  "_3C7598C9077DC95490D180B9441B51A5": {
+    "kind": "audio",
+    "dest": "System/Locale/En/Audio/GameMaster/DLG_GM_GLOBAL_42.wav"
+  },
+  "_9D8880EC8751B9600B26A8F64B26E840": {
+    "kind": "audio",
+    "dest": "System/Locale/En/Audio/GameMaster/DLG_GM_GLOBAL_43.wav"
+  },
+  "_5C159BC97D69907D8E4F9EF2878F5128": {
+    "kind": "audio",
+    "dest": "System/Locale/En/Audio/GameMaster/DLG_GM_GLOBAL_44.wav"
+  },
+  "_3A3DAB1C529D5CE6F829CCA48723A5A5": {
+    "kind": "audio",
+    "dest": "System/Locale/En/Audio/GameMaster/DLG_GM_GLOBAL_45.wav"
+  },
+  "_2B23A9E5AE4B44A49D2959E191E128D0": {
+    "kind": "audio",
+    "dest": "System/Locale/En/Audio/GameMaster/DLG_GM_GLOBAL_46.wav"
+  },
+  "_E963A5C16903F9D1B71F78639EC33E83": {
+    "kind": "audio",
+    "dest": "System/Locale/En/Audio/GameMaster/DLG_GM_GLOBAL_47.wav"
+  },
+  "_E1137FCFAED7EDC941CC439B2CFCCAD9": {
+    "kind": "audio",
+    "dest": "System/Locale/En/Audio/GameMaster/DLG_GM_GLOBAL_48.wav"
+  },
+  "_686F535641E76C91AA498A8B9F8F3D60": {
+    "kind": "audio",
+    "dest": "System/Locale/En/Audio/GameMaster/DLG_GM_GLOBAL_49.wav"
+  },
+  "_40CEEE7D2DFCDD178FCD38031EA052D3": {
+    "kind": "audio",
+    "dest": "System/Locale/En/Audio/GameMaster/DLG_GM_GLOBAL_50.wav"
+  },
+  "_86F65D74FC6C9BF9838CB2A51C102654": {
+    "kind": "audio",
+    "dest": "System/Locale/En/Audio/GameMaster/DLG_GM_GLOBAL_51.wav"
+  },
+  "_1B043FED48A7EF325E5363BC8F7435D7": {
+    "kind": "audio",
+    "dest": "System/Locale/En/Audio/GameMaster/DLG_GM_GLOBAL_52.wav"
+  },
+  "_651050617F3FD5946C7741E0342427EC": {
+    "kind": "audio",
+    "dest": "System/Locale/En/Audio/GameMaster/DLG_GM_GLOBAL_53.wav"
+  },
+  "_1EB9FB6B2E5180ED00E2C33C4F90CC60": {
+    "kind": "audio",
+    "dest": "System/Locale/En/Audio/GameMaster/DLG_GM_GLOBAL_54.wav"
+  },
+  "_E57FAC6A77D3603DE8E7F0B94BC44FC0": {
+    "kind": "audio",
+    "dest": "System/Locale/En/Audio/GameMaster/DLG_GM_GLOBAL_55.wav"
+  },
+  "_A27EE65BBD3FD030383A887AA17B1476": {
+    "kind": "audio",
+    "dest": "System/Locale/En/Audio/GameMaster/DLG_GM_GLOBAL_56.wav"
+  },
+  "_C4669544B5AD367E25A1B560A9A12ED0": {
+    "kind": "audio",
+    "dest": "System/Locale/En/Audio/GameMaster/DLG_GM_GLOBAL_57.wav"
+  },
+  "_C3AF149488C7D22E554CCC6AA1D3E755": {
+    "kind": "audio",
+    "dest": "System/Locale/En/Audio/GameMaster/DLG_GM_GLOBAL_58.wav"
+  },
+  "_FC99F46A54BAED0CA25BC9AE72B5161D": {
+    "kind": "audio",
+    "dest": "System/Locale/En/Audio/GameMaster/DLG_GM_GLOBAL_59.wav"
+  },
+  "_C7902E3985320A52D96E2CB92660CB8C": {
+    "kind": "audio",
+    "dest": "System/Locale/En/Audio/GameMaster/DLG_GM_GLOBAL_60.wav"
+  },
+  "_AC9140211526E4D49FC444C8647E90FB": {
+    "kind": "audio",
+    "dest": "System/Locale/En/Audio/GameMaster/DLG_GM_GLOBAL_61.wav"
+  },
+  "_663BFE1FFF8EB6DE54050EC681DBF953": {
+    "kind": "audio",
+    "dest": "System/Locale/En/Audio/GameMaster/DLG_GM_GLOBAL_62.wav"
+  },
+  "_7538B74A6608FD7A22B66E1643E1F5AB": {
+    "kind": "audio",
+    "dest": "System/Locale/En/Audio/GameMaster/DLG_GM_GLOBAL_63.wav"
+  },
+  "_0D0DBE595FA7B6198B5DF265E2BAD318": {
+    "kind": "audio",
+    "dest": "System/Locale/En/Audio/GameMaster/DLG_GM_GLOBAL_64.wav"
+  },
+  "_963D9F755790A463DC61EF077A9B3EF4": {
+    "kind": "audio",
+    "dest": "System/Locale/En/Audio/GameMaster/DLG_GM_GLOBAL_65.wav"
+  },
+  "_68C8CE30DF3B52C6E3624123238B8D1A": {
+    "kind": "audio",
+    "dest": "System/Locale/En/Audio/GameMaster/DLG_GM_GLOBAL_66.wav"
+  },
+  "_BA311214250C700B637EEEAC8D02EA41": {
+    "kind": "audio",
+    "dest": "System/Locale/En/Audio/GameMaster/DLG_GM_GLOBAL_67.wav"
+  },
+  "_8450B3E799B492ED6038F84B5AD6F24F": {
+    "kind": "audio",
+    "dest": "System/Locale/En/Audio/GameMaster/DLG_GM_GLOBAL_68.wav"
+  },
+  "_39EA465B9E26EAC0F938043BD4374C0A": {
+    "kind": "audio",
+    "dest": "System/Locale/En/Audio/GameMaster/DLG_GM_GLOBAL_69.wav"
+  },
+  "_CC43057E5191F4CD54B1BAB5061042D9": {
+    "kind": "audio",
+    "dest": "System/Locale/En/Audio/GameMaster/DLG_GM_GLOBAL_70.wav"
+  },
+  "_401926CCB3AD73D68CEB1598B75215E4": {
+    "kind": "audio",
+    "dest": "System/Locale/En/Audio/GameMaster/DLG_GM_GLOBAL_71.wav"
+  },
+  "_FC93A68D1F0F1986155B7B890C157211": {
+    "kind": "audio",
+    "dest": "System/Locale/En/Audio/GameMaster/DLG_GM_GLOBAL_72.wav"
+  },
+  "_DC82A537264453FB37D1AD5FD1789254": {
+    "kind": "audio",
+    "dest": "System/Locale/En/Audio/GameMaster/DLG_GM_GLOBAL_73.wav"
+  },
+  "_238E13CA505EF90D1055BC040CF735A5": {
+    "kind": "audio",
+    "dest": "System/Locale/En/Audio/GameMaster/DLG_GM_GLOBAL_74.wav"
+  },
+  "_F847F901337E149F8295570E760691FB": {
+    "kind": "audio",
+    "dest": "System/Locale/En/Audio/GameMaster/DLG_GM_GLOBAL_75.wav"
+  },
+  "_036DD3FE1234A45AD77265F71900AB4B": {
+    "kind": "audio",
+    "dest": "System/Locale/En/Audio/GameMaster/DLG_GM_GLOBAL_76.wav"
+  },
+  "_C30FD9D7573A9D515A1B2A800BAB0238": {
+    "kind": "audio",
+    "dest": "System/Locale/En/Audio/GameMaster/DLG_GM_GLOBAL_77.wav"
+  },
+  "_B3662944ABABC16D597FBBC2D665ACD1": {
+    "kind": "audio",
+    "dest": "System/Locale/En/Audio/GameMaster/DLG_GM_GLOBAL_78.wav"
+  },
+  "_34DCEAEDFFC3C0F65E907BFBFF5C4C85": {
+    "kind": "audio",
+    "dest": "System/Locale/En/Audio/GameMaster/DLG_GM_GLOBAL_79.wav"
+  },
+  "_4EE5F0AE85378039423FF245E0E5B2C0": {
+    "kind": "audio",
+    "dest": "System/Locale/En/Audio/GameMaster/DLG_GM_GLOBAL_80.wav"
+  },
+  "_25C69AC25883ABCE73F998FCD855FAF8": {
+    "kind": "audio",
+    "dest": "System/Locale/En/Audio/GameMaster/DLG_GM_GLOBAL_81.wav"
+  },
+  "_B18D559DB4A22154462C9B6C75E0FE67": {
+    "kind": "audio",
+    "dest": "System/Locale/En/Audio/GameMaster/DLG_GM_GLOBAL_82.wav"
+  },
+  "_28004C544CDAB17194113755C993D29E": {
+    "kind": "audio",
+    "dest": "System/Locale/En/Audio/GameMaster/DLG_GM_GLOBAL_83.wav"
+  },
+  "_F3300C0F793FBCA817DB5C04D52850C0": {
+    "kind": "audio",
+    "dest": "System/Locale/En/Audio/GameMaster/DLG_GM_GLOBAL_84.wav"
+  },
+  "_72F94254AD0D23EEA5A80AC6492AFFF0": {
+    "kind": "audio",
+    "dest": "System/Locale/En/Audio/GameMaster/DLG_GM_GLOBAL_85.wav"
+  },
+  "_B5A735C19472720156ED828DE875E36B": {
+    "kind": "audio",
+    "dest": "System/Locale/En/Audio/GameMaster/DLG_GM_GLOBAL_86.wav"
+  },
+  "_7ECE167E6E3BA255752530EF45B3D219": {
+    "kind": "audio",
+    "dest": "System/Locale/En/Audio/GameMaster/DLG_GM_GLOBAL_87.wav"
+  },
+  "_805FF86332C9DDFAC9D098592FB82BDB": {
+    "kind": "audio",
+    "dest": "System/Locale/En/Audio/GameMaster/DLG_GM_GLOBAL_88.wav"
+  },
+  "_C9F7AEDB8C74B10C3AFBD4148953F1BC": {
+    "kind": "audio",
+    "dest": "System/Locale/En/Audio/GameMaster/DLG_GM_GLOBAL_89.wav"
+  },
+  "_65E63BB486253556DC03F6940972FA53": {
+    "kind": "audio",
+    "dest": "System/Locale/En/Audio/GameMaster/DLG_GM_GLOBAL_90.wav"
+  },
+  "_3853F603FBD4B3A230EB6B73C6170122": {
+    "kind": "audio",
+    "dest": "System/Locale/En/Audio/GameMaster/DLG_GM_GLOBAL_91.wav"
+  },
+  "_1F6EC4112D1906188B81D5FCB2149E0F": {
+    "kind": "audio",
+    "dest": "System/Locale/En/Audio/GameMaster/DLG_GM_GLOBAL_92.wav"
+  },
+  "_D520B1627A4DCEA0866832ECF792BC40": {
+    "kind": "audio",
+    "dest": "System/Locale/En/Audio/GameMaster/DLG_GM_GLOBAL_93.wav"
+  },
+  "_FA685607FF16C8C8ACFC61FA39F5375C": {
+    "kind": "audio",
+    "dest": "System/Locale/En/Audio/GameMaster/DLG_GM_GLOBAL_94.wav"
+  },
+  "_7D7DF90C74ABDD59AB22C87939CB27E9": {
+    "kind": "audio",
+    "dest": "System/Locale/En/Audio/GameMaster/DLG_GM_GLOBAL_95.wav"
+  },
+  "_11953151F38BC58382847E8D1990E1E2": {
+    "kind": "audio",
+    "dest": "System/Locale/En/Audio/GameMaster/DLG_GM_GLOBAL_96.wav"
+  },
+  "_9E6C7CCA3BA709090F4235B319F340A4": {
+    "kind": "audio",
+    "dest": "System/Locale/En/Audio/GameMaster/DLG_GM_GLOBAL_97.wav"
+  },
+  "_78B1F7A8D43D58BD7A999784D7D9297E": {
+    "kind": "audio",
+    "dest": "System/Locale/En/Audio/GameMaster/DLG_GM_GLOBAL_98.wav"
+  },
+  "_564B4A50BFB933B46AE86CF408E16070": {
+    "kind": "audio",
+    "dest": "System/Locale/En/Audio/GameMaster/DLG_GM_GLOBAL_99.wav"
+  },
+  "_3AEDB4F178AB161CF953D5AA77216131": {
+    "kind": "audio",
+    "dest": "System/Locale/En/Audio/GameMaster/DLG_GM_INIT_01.wav"
+  },
+  "_A7DBD7C412E9627BF83B202C93322D9A": {
+    "kind": "audio",
+    "dest": "System/Locale/En/Audio/GameMaster/DLG_GM_INIT_02.wav"
+  },
+  "_2A7E3F67D891A5A06CDD806ECCDB37D5": {
+    "kind": "audio",
+    "dest": "System/Locale/En/Audio/GameMaster/DLG_GM_INIT_03.wav"
+  },
+  "_EA8371E12A3B4B480F001E0ED9090707": {
+    "kind": "audio",
+    "dest": "System/Locale/En/Audio/GameMaster/DLG_GM_INIT_04.wav"
+  },
+  "_2FCA71F8FD8517500EEB714F40D28B51": {
+    "kind": "audio",
+    "dest": "System/Locale/En/Audio/GameMaster/DLG_GM_INIT_05.wav"
+  },
+  "_2C81555DFDC9FEE9D16C7023EC868803": {
+    "kind": "audio",
+    "dest": "System/Locale/En/Audio/GameMaster/DLG_GM_INIT_06.wav"
+  },
+  "_60726B32AE51181716AA7D84C77C92FB": {
+    "kind": "audio",
+    "dest": "System/Locale/En/Audio/GameMaster/DLG_GM_INIT_07.wav"
+  },
+  "_CAE18FA26817127D30A59024684E60FD": {
+    "kind": "audio",
+    "dest": "System/Locale/En/Audio/GameMaster/DLG_GM_INIT_08.wav"
+  },
+  "_83DBC5460B6631886F25FD95E85F3F90": {
+    "kind": "audio",
+    "dest": "System/Locale/En/Audio/GameMaster/DLG_GM_INIT_09.wav"
+  },
+  "_5595EA3596632B98D8D8BA6D7AE548FE": {
+    "kind": "audio",
+    "dest": "System/Locale/En/Audio/GameMaster/DLG_GM_INIT_10.wav"
+  },
+  "_F8BF47C83A6F2C0ED35CA314B1B40EA8": {
+    "kind": "audio",
+    "dest": "System/Locale/En/Audio/GameMaster/DLG_GM_INIT_11.wav"
+  },
+  "_BE4CCF06C594BB2A4A0FFDC76561B1C3": {
+    "kind": "audio",
+    "dest": "System/Locale/En/Audio/GameMaster/DLG_GM_INIT_12.wav"
+  },
+  "_B3F800D228B8F2ECDE128C14704A45CC": {
+    "kind": "audio",
+    "dest": "System/Locale/En/Audio/GameMaster/DLG_GM_INIT_13.wav"
+  },
+  "_7C0E5B3C3CD88076665DAF4F63A07665": {
+    "kind": "audio",
+    "dest": "System/Locale/En/Audio/GameMaster/DLG_GM_INIT_14.wav"
+  },
+  "_BCEEF68FEA97077F1C55B70E64D8775A": {
+    "kind": "audio",
+    "dest": "System/Locale/En/Audio/GameMaster/DLG_GM_INIT_15.wav"
+  },
+  "_9B1A09BAF39174BCE929A5B2B3EDD513": {
+    "kind": "audio",
+    "dest": "System/Locale/En/Audio/GameMaster/DLG_GM_INIT_17.wav"
+  },
+  "_585B2C9FD0521950BBEF4DA444B14B7D": {
+    "kind": "audio",
+    "dest": "System/Locale/En/Audio/GameMaster/DLG_GM_INIT_18.wav"
+  },
+  "_C6BEF6B6216EE460CE5CAC1A554F6D80": {
+    "kind": "audio",
+    "dest": "System/Locale/En/Audio/GameMaster/DLG_GM_INIT_19.wav"
+  },
+  "_0300DAFA61BD644774C6454A0FB54B0F": {
+    "kind": "audio",
+    "dest": "System/Locale/En/Audio/GameMaster/DLG_GM_INIT_20.wav"
+  },
+  "_7CD97D8C55904396D6B6A4E7A91246E8": {
+    "kind": "audio",
+    "dest": "System/Locale/En/Audio/GameMaster/DLG_GM_INIT_21.wav"
+  },
+  "_7CCF878187EE235F552C87F6694FA73A": {
+    "kind": "audio",
+    "dest": "System/Locale/En/Audio/GameMaster/DLG_GM_INIT_22.wav"
+  },
+  "_6108336595A4BDA46E771290202859AA": {
+    "kind": "audio",
+    "dest": "System/Locale/En/Audio/GameMaster/DLG_GM_INIT_23.wav"
+  },
+  "_903BC35E688579EC4BFD4F8D6AA98F7D": {
+    "kind": "audio",
+    "dest": "System/Locale/En/Audio/GameMaster/DLG_GM_OW_DUEL_01.wav"
+  },
+  "_F91257BF7C44CB200BBC2CC17562B073": {
+    "kind": "audio",
+    "dest": "System/Locale/En/Audio/GameMaster/DLG_GM_OW_DUEL_02.wav"
+  },
+  "_5D3365DE42B56F2A04382CD51C9769A6": {
+    "kind": "audio",
+    "dest": "System/Locale/En/Audio/GameMaster/DLG_GM_OW_DUEL_03.wav"
+  },
+  "_1257554B992ECE961CDF683370172E74": {
+    "kind": "audio",
+    "dest": "System/Locale/En/Audio/GameMaster/DLG_GM_OW_DUEL_04.wav"
+  },
+  "_461BB497D2909CBFDB13C773F103DE9A": {
+    "kind": "audio",
+    "dest": "System/Locale/En/Audio/GameMaster/DLG_GM_OW_DUEL_05.wav"
+  },
+  "_2BC38210622B77527CA3C41BCD995384": {
+    "kind": "audio",
+    "dest": "System/Locale/En/Audio/GameMaster/DLG_GM_OW_DUEL_06.wav"
+  },
+  "_5524535B5EFB7F38196D570E5DC73634": {
+    "kind": "audio",
+    "dest": "System/Locale/En/Audio/GameMaster/DLG_GM_OW_DUEL_07.wav"
+  },
+  "_D547B5ABD7BEDF95892E1584BE4A0DA0": {
+    "kind": "audio",
+    "dest": "System/Locale/En/Audio/GameMaster/DLG_GM_OW_DUEL_08.wav"
+  },
+  "_349535CB221D0B89C831A839353C91A9": {
+    "kind": "audio",
+    "dest": "System/Locale/En/Audio/GameMaster/DLG_GM_OW_DUEL_09.wav"
+  },
+  "_F52CBC4F4515E37B5A7B76D41F4F153E": {
+    "kind": "font",
+    "dest": "fonts/UbiTTB.ttf"
+  },
+  "_E0C0E7AC04B4FFF3E9CE8A4F2FAC0D2C": {
+    "kind": "font",
+    "dest": "fonts/UbiTTL.ttf"
+  },
+  "_A5729C08E2F8D5DB5EBCE102D8EFF7BC": {
+    "kind": "texture",
+    "dest": "textures/Avatars/256x/Bear.png"
+  },
+  "_4373F94E2A558E4BA4040AFD2B76DB30": {
+    "kind": "texture",
+    "dest": "textures/Avatars/256x/Bird.png"
+  },
+  "_318430709B1CE05D34F1A06C07274146": {
+    "kind": "texture",
+    "dest": "textures/Avatars/256x/Bull.png"
+  },
+  "_CAA14930CBF6D4689EE090850CD5D30C": {
+    "kind": "texture",
+    "dest": "textures/Avatars/256x/Cat.png"
+  },
+  "_F2D0D343168FD2B02A1B1A6132F060F8": {
+    "kind": "texture",
+    "dest": "textures/Avatars/256x/Dog.png"
+  },
+  "_C0F70CE927539ED39E2AD586F6B48CE6": {
+    "kind": "texture",
+    "dest": "textures/Avatars/256x/Dragon.png"
+  },
+  "_03C831C433E7D60CE742B28ACCFCE88E": {
+    "kind": "texture",
+    "dest": "textures/Avatars/256x/Eagle.png"
+  },
+  "_96D0BB9248DF6E5196A663D80C53684C": {
+    "kind": "texture",
+    "dest": "textures/Avatars/256x/Lion.png"
+  },
+  "_3F4A4E0CD8F10674D8B431FE9B089DDC": {
+    "kind": "texture",
+    "dest": "textures/Avatars/256x/Panda.png"
+  },
+  "_08DD93CB7AAF9D8266621F78017A4444": {
+    "kind": "texture",
+    "dest": "textures/Avatars/256x/Puma.png"
+  },
+  "_DD3861CBF59C37B533BF51DEAD860238": {
+    "kind": "texture",
+    "dest": "textures/Avatars/256x/Shark.png"
+  },
+  "_33484561FB1E76C2D3289A12D43DD28D": {
+    "kind": "texture",
+    "dest": "textures/Avatars/256x/Snake.png"
+  },
+  "_D115B9BAE32C57899ACD54A582C0DB1D": {
+    "kind": "texture",
+    "dest": "textures/Avatars/32x/Bear.png"
+  },
+  "_F154528764FEFC87FCA40F6D3229C106": {
+    "kind": "texture",
+    "dest": "textures/Avatars/32x/Bear_Out.png"
+  },
+  "_158371DCA237DE9541B7380372F9F646": {
+    "kind": "texture",
+    "dest": "textures/Avatars/32x/Bird.png"
+  },
+  "_C5F237B6EB6B3AFE926356AD332E2C70": {
+    "kind": "texture",
+    "dest": "textures/Avatars/32x/Bird_Out.png"
+  },
+  "_8505DC8B0B925DBAF2FBF7F322E42971": {
+    "kind": "texture",
+    "dest": "textures/Avatars/32x/Bull.png"
+  },
+  "_7223CFDDE970CD26C5177741498FEAD2": {
+    "kind": "texture",
+    "dest": "textures/Avatars/32x/Bull_Out.png"
+  },
+  "_C96858BC4D3AE3C689D393A0B488326F": {
+    "kind": "texture",
+    "dest": "textures/Avatars/32x/Cat.png"
+  },
+  "_50C9B699D44BA08E5B5E879BA282C32A": {
+    "kind": "texture",
+    "dest": "textures/Avatars/32x/Cat_Out.png"
+  },
+  "_6E97793826B0F8A1D1C1B1EE1D130F35": {
+    "kind": "texture",
+    "dest": "textures/Avatars/32x/Dog.png"
+  },
+  "_C976B9E40D5AA2FC0FE68A0DD49381B4": {
+    "kind": "texture",
+    "dest": "textures/Avatars/32x/Dog_Out.png"
+  },
+  "_9D5F05C56854A8E010C370E49AACB391": {
+    "kind": "texture",
+    "dest": "textures/Avatars/32x/Dragon.png"
+  },
+  "_A250A0BA49A2F565D8CC98AB3C5443CE": {
+    "kind": "texture",
+    "dest": "textures/Avatars/32x/Dragon_Out.png"
+  },
+  "_5F863D7E3A879458F514E4B931234F87": {
+    "kind": "texture",
+    "dest": "textures/Avatars/32x/Eagle.png"
+  },
+  "_2D4526DB91C90B04F25A38FBB3C12F6F": {
+    "kind": "texture",
+    "dest": "textures/Avatars/32x/Eagle_Out.png"
+  },
+  "_E5554F1D855C8F3282F513EF6071E113": {
+    "kind": "texture",
+    "dest": "textures/Avatars/32x/Lion.png"
+  },
+  "_F72DA41D13A6BB6760CBDC6B2330A8AE": {
+    "kind": "texture",
+    "dest": "textures/Avatars/32x/Lion_Out.png"
+  },
+  "_1FC3F4886BD8F47EC915E7D012608772": {
+    "kind": "texture",
+    "dest": "textures/Avatars/32x/Panda.png"
+  },
+  "_75AC82464E315F6C91F8D3120BE7942F": {
+    "kind": "texture",
+    "dest": "textures/Avatars/32x/Panda_Out.png"
+  },
+  "_3F1FEA733EC1D8F720B6429C89C6267F": {
+    "kind": "texture",
+    "dest": "textures/Avatars/32x/Puma.png"
+  },
+  "_0B519136E1DD15BB0F5B7F966B50FDF8": {
+    "kind": "texture",
+    "dest": "textures/Avatars/32x/Puma_Out.png"
+  },
+  "_4166EBA17D27ECC5575AF7FF28D76494": {
+    "kind": "texture",
+    "dest": "textures/Avatars/32x/Shark.png"
+  },
+  "_456945AACFBE0DF24EB874BD4480C31D": {
+    "kind": "texture",
+    "dest": "textures/Avatars/32x/Shark_Out.png"
+  },
+  "_94E020221394221E9D61C9458CED00C5": {
+    "kind": "texture",
+    "dest": "textures/Avatars/32x/Snake.png"
+  },
+  "_61FD2945FB3AFE2066E7A70FF014076F": {
+    "kind": "texture",
+    "dest": "textures/Avatars/32x/Snake_Out.png"
+  },
+  "_6EA3D06DB23B6ED68FE95B78614FC2F2": {
+    "kind": "texture",
+    "dest": "textures/Avatars/42x/Bear.png"
+  },
+  "_EDF8795AD1E8A3BD00776E6F31F3600F": {
+    "kind": "texture",
+    "dest": "textures/Avatars/42x/Bird.png"
+  },
+  "_1AC71F68D385C4C61FCC98BA460675D9": {
+    "kind": "texture",
+    "dest": "textures/Avatars/42x/Bull.png"
+  },
+  "_3BC1E74753861C8F10B659B53CA0A39E": {
+    "kind": "texture",
+    "dest": "textures/Avatars/42x/Cat.png"
+  },
+  "_2B9588C7E3187F83286449A8D02E6E02": {
+    "kind": "texture",
+    "dest": "textures/Avatars/42x/Dog.png"
+  },
+  "_EE03BCF3E16040BEC3D4935D055C2E16": {
+    "kind": "texture",
+    "dest": "textures/Avatars/42x/Dragon.png"
+  },
+  "_59C784AC70782F882B4092D38B3511AC": {
+    "kind": "texture",
+    "dest": "textures/Avatars/42x/Eagle.png"
+  },
+  "_ECA0B8B3E9CFC20BB1CDC9A0D2FF9E8D": {
+    "kind": "texture",
+    "dest": "textures/Avatars/42x/Lion.png"
+  },
+  "_28E25988B6E200549F901C85DD8C225A": {
+    "kind": "texture",
+    "dest": "textures/Avatars/42x/Panda.png"
+  },
+  "_DE76676C874FAD4EDFC3DF929F99B0CA": {
+    "kind": "texture",
+    "dest": "textures/Avatars/42x/Puma.png"
+  },
+  "_1D16ABAB41BD825ED4AF60E29AAC820B": {
+    "kind": "texture",
+    "dest": "textures/Avatars/42x/Shark.png"
+  },
+  "_5CF5D88DB17AAC7434D4728A5484149D": {
+    "kind": "texture",
+    "dest": "textures/Avatars/42x/Snake.png"
+  },
+  "_7BEE43CF465834C2AFFC697A73D9CB9E": {
+    "kind": "texture",
+    "dest": "textures/Avatars/64x/Bear.png"
+  },
+  "_4BB4D2D21AC5BF03CA94673A6ABAD003": {
+    "kind": "texture",
+    "dest": "textures/Avatars/64x/Bear_Out.png"
+  },
+  "_142334E5AD2BEF4A57DBBAC8E8A150D6": {
+    "kind": "texture",
+    "dest": "textures/Avatars/64x/Bird.png"
+  },
+  "_77445CEB95F6375295E57DDC5782C8FC": {
+    "kind": "texture",
+    "dest": "textures/Avatars/64x/Bird_Out.png"
+  },
+  "_DA2B97C3C9F4297AABB219D29AA5B5A7": {
+    "kind": "texture",
+    "dest": "textures/Avatars/64x/Bull.png"
+  },
+  "_3E953DE37CB0FC0D84BB33967F1C3129": {
+    "kind": "texture",
+    "dest": "textures/Avatars/64x/Bull_Out.png"
+  },
+  "_8F20821B60F7749E217646B516887EBF": {
+    "kind": "texture",
+    "dest": "textures/Avatars/64x/Cat.png"
+  },
+  "_D9F4157B85633A77BC426F57BC54E1FE": {
+    "kind": "texture",
+    "dest": "textures/Avatars/64x/Cat_Out.png"
+  },
+  "_709235168CD5918FFC37BF1DFE67CC3B": {
+    "kind": "texture",
+    "dest": "textures/Avatars/64x/Dog.png"
+  },
+  "_2C81A2D88B4841F428C54529E8586D50": {
+    "kind": "texture",
+    "dest": "textures/Avatars/64x/Dog_Out.png"
+  },
+  "_F1155BF31DB4E55CF864A2F67A0C0419": {
+    "kind": "texture",
+    "dest": "textures/Avatars/64x/Dragon.png"
+  },
+  "_F38CE6A7468277592BDB0537B53E6BA6": {
+    "kind": "texture",
+    "dest": "textures/Avatars/64x/Dragon_Out.png"
+  },
+  "_B39D34F2FD9432E7CBA56DDC97D5999C": {
+    "kind": "texture",
+    "dest": "textures/Avatars/64x/Eagle.png"
+  },
+  "_AD70CC579DB516A8D78117120A333970": {
+    "kind": "texture",
+    "dest": "textures/Avatars/64x/Eagle_Out.png"
+  },
+  "_155E385159187897B43DF108EC3BA906": {
+    "kind": "texture",
+    "dest": "textures/Avatars/64x/Lion.png"
+  },
+  "_5CD98DBBF3F0E72F185F2F69265D0A9F": {
+    "kind": "texture",
+    "dest": "textures/Avatars/64x/Lion_Out.png"
+  },
+  "_6CC2ACBAAE5753E991241946DE551FF9": {
+    "kind": "texture",
+    "dest": "textures/Avatars/64x/Panda.png"
+  },
+  "_218DAE5374AC8BBD9A90388BAFEE7BE8": {
+    "kind": "texture",
+    "dest": "textures/Avatars/64x/Panda_Out.png"
+  },
+  "_BBCF7E7CB2F0AAEBA398ADE71392A613": {
+    "kind": "texture",
+    "dest": "textures/Avatars/64x/Puma.png"
+  },
+  "_C731A97B2B610A6903CD01C5EC3DA1D9": {
+    "kind": "texture",
+    "dest": "textures/Avatars/64x/Puma_Out.png"
+  },
+  "_F1151F249B7FEB209213CB79749007D8": {
+    "kind": "texture",
+    "dest": "textures/Avatars/64x/Shark.png"
+  },
+  "_786CA61478BBFA12A5DE04D321EEA6DB": {
+    "kind": "texture",
+    "dest": "textures/Avatars/64x/Shark_Out.png"
+  },
+  "_8D186B714F39F131FD3F7607BB4ABE1A": {
+    "kind": "texture",
+    "dest": "textures/Avatars/64x/Snake.png"
+  },
+  "_4C73125D896035E548E78F97CD253895": {
+    "kind": "texture",
+    "dest": "textures/Avatars/64x/Snake_Out.png"
+  },
+  "_2C4778A44AF098A75138CFCB7BF584D6": {
+    "kind": "texture",
+    "dest": "textures/Avatars/80x/Bear.png"
+  },
+  "_1CB023FC3DCF07207FB750DEE533D186": {
+    "kind": "texture",
+    "dest": "textures/Avatars/80x/Bear_Out.png"
+  },
+  "_0F818CD6FEFD37684ABF948D4540A370": {
+    "kind": "texture",
+    "dest": "textures/Avatars/80x/Bird.png"
+  },
+  "_A9FB976E191615DEA9B882842D45868D": {
+    "kind": "texture",
+    "dest": "textures/Avatars/80x/Bird_Out.png"
+  },
+  "_9DDF9B874F1699625BA983E4560AF3C4": {
+    "kind": "texture",
+    "dest": "textures/Avatars/80x/Bull.png"
+  },
+  "_412F43623ADE6EB0BD4A48C748543345": {
+    "kind": "texture",
+    "dest": "textures/Avatars/80x/Bull_Out.png"
+  },
+  "_A51BACDC9B6DBE4BA949EFFBC4E44F6D": {
+    "kind": "texture",
+    "dest": "textures/Avatars/80x/Cat.png"
+  },
+  "_CBF4E5182F23C74718793FA52B3FEA1E": {
+    "kind": "texture",
+    "dest": "textures/Avatars/80x/Cat_Out.png"
+  },
+  "_4CE0441A2EBF1FC732CDEC7F1E6A1157": {
+    "kind": "texture",
+    "dest": "textures/Avatars/80x/Dog.png"
+  },
+  "_4FB141558DD210120A31865647FB9A3A": {
+    "kind": "texture",
+    "dest": "textures/Avatars/80x/Dog_Out.png"
+  },
+  "_5BA6709D7CEC27541CD6F2C97E08C0E5": {
+    "kind": "texture",
+    "dest": "textures/Avatars/80x/Dragon.png"
+  },
+  "_9660FB6F508B24B378E5CCCEC81FF520": {
+    "kind": "texture",
+    "dest": "textures/Avatars/80x/Dragon_Out.png"
+  },
+  "_60AC37285D282E234ECC6F94A3159BF7": {
+    "kind": "texture",
+    "dest": "textures/Avatars/80x/Eagle.png"
+  },
+  "_32C595D0D9406343439A369C54EE9A31": {
+    "kind": "texture",
+    "dest": "textures/Avatars/80x/Eagle_Out.png"
+  },
+  "_F1BBE150A069E9DB23FF0A4E53413AB1": {
+    "kind": "texture",
+    "dest": "textures/Avatars/80x/Lion.png"
+  },
+  "_073E870880FDAF555196ECF2863CE2CD": {
+    "kind": "texture",
+    "dest": "textures/Avatars/80x/Lion_Out.png"
+  },
+  "_43EB50CCBA917E5ED96050B0D9480864": {
+    "kind": "texture",
+    "dest": "textures/Avatars/80x/Panda.png"
+  },
+  "_7FBD11AA0C65098206FAC64A92BBF5C5": {
+    "kind": "texture",
+    "dest": "textures/Avatars/80x/Panda_Out.png"
+  },
+  "_DF6D068149943861722E2ADA4F50F7CC": {
+    "kind": "texture",
+    "dest": "textures/Avatars/80x/Puma.png"
+  },
+  "_937AFDD447C59139AA2034B119B22A15": {
+    "kind": "texture",
+    "dest": "textures/Avatars/80x/Puma_Out.png"
+  },
+  "_8F506CF22008039818ED4165A53E0B55": {
+    "kind": "texture",
+    "dest": "textures/Avatars/80x/Shark.png"
+  },
+  "_900D3555BDFCDF82EA856042F01CD26E": {
+    "kind": "texture",
+    "dest": "textures/Avatars/80x/Shark_Out.png"
+  },
+  "_379FBBCD43C2F612FB5DC5E9EBAFB158": {
+    "kind": "texture",
+    "dest": "textures/Avatars/80x/Snake.png"
+  },
+  "_C8F98DDEEAAC3C28522DB715EEA881C3": {
+    "kind": "texture",
+    "dest": "textures/Avatars/80x/Snake_Out.png"
+  },
+  "_6FB9FFEB2ABF90C1AE847D7BC0C1864E": {
+    "kind": "texture",
+    "dest": "textures/Packages/FreeForAll/Ui/Loading_FreeForAll.png"
+  },
+  "_35E9AC796CB50F2B3C97AB46CF3884BF": {
+    "kind": "texture",
+    "dest": "textures/Packages/FreeFrag/Ui/Loading_FreeFrag.png"
+  },
+  "_AA8302EA77B0B7D71C313D8B69771900": {
+    "kind": "texture",
+    "dest": "textures/Packages/Introduction/Ui/Loading_Introduction.png"
+  },
+  "_DAF7987726B59A182114871AE6645E97": {
+    "kind": "texture",
+    "dest": "textures/Packages/Introduction/Ui/Seq_Batteries01.png"
+  },
+  "_A7891382564F7130CB6DAE90D33DA0E7": {
+    "kind": "texture",
+    "dest": "textures/Packages/Introduction/Ui/Seq_Batteries02.png"
+  },
+  "_9EF2AD7D8FCD1F0C1BBF3B8C1F436725": {
+    "kind": "texture",
+    "dest": "textures/Packages/Introduction/Ui/Seq_Batteries03.png"
+  },
+  "_ED6C668E685E92121E44B88BC1AE767F": {
+    "kind": "texture",
+    "dest": "textures/Packages/Introduction/Ui/Seq_Pairing01.png"
+  },
+  "_1C9A9B7C6D1A145882F33852674174D1": {
+    "kind": "texture",
+    "dest": "textures/Packages/Introduction/Ui/Seq_PlayersManagement01.png"
+  },
+  "_98D8818F50C12DE76CCF90F98161E447": {
+    "kind": "texture",
+    "dest": "textures/Packages/Introduction/Ui/Seq_Ready01.png"
+  },
+  "_7A7F2388A73AA3F9AA0834BA9F51952C": {
+    "kind": "texture",
+    "dest": "textures/Packages/Introduction/Ui/Seq_RoundLoop_Stage1.png"
+  },
+  "_6177BBB82420D550180053700B71D8CD": {
+    "kind": "texture",
+    "dest": "textures/Packages/Introduction/Ui/Seq_RoundLoop_Stage2.png"
+  },
+  "_A88E82364FBE15E810578F8D68D7510D": {
+    "kind": "texture",
+    "dest": "textures/Packages/Introduction/Ui/Seq_RoundLoop_Stage3.png"
+  },
+  "_BC988CE65713C32123878B1C74DEFB2E": {
+    "kind": "texture",
+    "dest": "textures/Packages/Introduction/Ui/Seq_RoundLoop_Stage4.png"
+  },
+  "_F4CB6465A7910F6DE3C6CF93EF65D957": {
+    "kind": "texture",
+    "dest": "textures/Packages/Introduction/Ui/Seq_RoundLoop_Stage5Left.png"
+  },
+  "_1E090B2B5AD0A0FC8B37855BB4392FB2": {
+    "kind": "texture",
+    "dest": "textures/Packages/Introduction/Ui/Seq_RoundLoop_Stage5Right.png"
+  },
+  "_08296F40AA646A9541AE8D1621129737": {
+    "kind": "texture",
+    "dest": "textures/Packages/Introduction/Ui/Seq_RoundLoop_Stage6.png"
+  },
+  "_085FC45B2E7799C1E51CE31034B0039D": {
+    "kind": "texture",
+    "dest": "textures/Packages/Introduction/Ui/Seq_Welcome.png"
+  },
+  "_8979630F6B7C5D3603F68659C6513891": {
+    "kind": "texture",
+    "dest": "textures/Packages/LastManStanding/Ui/Loading_LastManStanding.png"
+  },
+  "_C366ED1E7A26EC5B7BCF43E8820B6D04": {
+    "kind": "texture",
+    "dest": "textures/Packages/OldFashionDuel/Ui/Duel_Arrow_Left.png"
+  },
+  "_02CDC753E2EE5F9A5BDC3140C0375DDA": {
+    "kind": "texture",
+    "dest": "textures/Packages/OldFashionDuel/Ui/Duel_Arrow_Right.png"
+  },
+  "_64037FD1EF666FE14FFF1AB4ACB67DCD": {
+    "kind": "texture",
+    "dest": "textures/Packages/OldFashionDuel/Ui/Duel_Border.png"
+  },
+  "_98B872EF074245A6423B14B4BA3FE97C": {
+    "kind": "texture",
+    "dest": "textures/Packages/OldFashionDuel/Ui/Duel_RoundBackgroundGrey.png"
+  },
+  "_6DE4058A7E262EF042DAF74F520D1530": {
+    "kind": "texture",
+    "dest": "textures/Packages/OldFashionDuel/Ui/Duel_RoundBackgroundOrange.png"
+  },
+  "_13194E17154BFC030707B4757EFAFF81": {
+    "kind": "texture",
+    "dest": "textures/Packages/OldFashionDuel/Ui/Duel_Versus.png"
+  },
+  "_1347FCFF0D7489B83935441C3DEF2250": {
+    "kind": "texture",
+    "dest": "textures/Packages/OldFashionDuel/Ui/Loading_OldFashionDuel.png"
+  },
+  "_739AC7BE233615F8096F5200B1ED73DC": {
+    "kind": "texture",
+    "dest": "textures/Packages/StarterFrag/Ui/Loading_StarterFrag.png"
+  },
+  "_9C57E6C38A90990BA9E038567C2822F8": {
+    "kind": "texture",
+    "dest": "textures/Packages/TagThenShoot/Ui/Loading_TagNShoot.png"
+  },
+  "_6BB64474306DD3448877ABF49FEC8EC2": {
+    "kind": "texture",
+    "dest": "textures/Packages/TeamFrag/Ui/Loading_TeamFrag.png"
+  },
+  "_457F653E99C766FCF6A437E4AAFA3BFF": {
+    "kind": "texture",
+    "dest": "textures/Ui/Afp_Background01.png"
+  },
+  "_11AD75DFA04220CD4B81EF7C95534F04": {
+    "kind": "texture",
+    "dest": "textures/Ui/Afp_EventArrow.png"
+  },
+  "_B3E0C5B9CAF63F5735489F49896644D6": {
+    "kind": "texture",
+    "dest": "textures/Ui/Afp_EventFooter.png"
+  },
+  "_D7A1E5B9F21EE18C5D77698C9AF81703": {
+    "kind": "texture",
+    "dest": "textures/Ui/Afp_EventHeader.png"
+  },
+  "_EC35E66EB0914EE3F520A3EEFBA3B49D": {
+    "kind": "texture",
+    "dest": "textures/Ui/Afp_EventLine.png"
+  },
+  "_7E5F4389483EFD312FB39AACA12705ED": {
+    "kind": "texture",
+    "dest": "textures/Ui/Afp_Number_0.png"
+  },
+  "_60988A08B8545B1F9882FEDB7D9B7F64": {
+    "kind": "texture",
+    "dest": "textures/Ui/Afp_Number_1.png"
+  },
+  "_34F94D31AC45969C2A7291AE2193C55D": {
+    "kind": "texture",
+    "dest": "textures/Ui/Afp_Number_2.png"
+  },
+  "_5AE594C585895DC432564D4E7DE492D8": {
+    "kind": "texture",
+    "dest": "textures/Ui/Afp_Number_3.png"
+  },
+  "_41CBDA69247F9D2FF281069B4A7CACCC": {
+    "kind": "texture",
+    "dest": "textures/Ui/Afp_Number_4.png"
+  },
+  "_C697E445FED59488E13F6336511A3D20": {
+    "kind": "texture",
+    "dest": "textures/Ui/Afp_Number_5.png"
+  },
+  "_68B97C71C349A4B606411E1E0031906A": {
+    "kind": "texture",
+    "dest": "textures/Ui/Afp_Number_6.png"
+  },
+  "_DC2BDEDF64434D39532AB914359E7526": {
+    "kind": "texture",
+    "dest": "textures/Ui/Afp_Number_7.png"
+  },
+  "_9738161ED574234C534E8E6E2216069B": {
+    "kind": "texture",
+    "dest": "textures/Ui/Afp_Number_8.png"
+  },
+  "_AB24C7C2AF3F5328ED10F30273B4D68B": {
+    "kind": "texture",
+    "dest": "textures/Ui/Afp_Number_9.png"
+  },
+  "_D898BD7C3EAC659A081AB7C07A0BE838": {
+    "kind": "texture",
+    "dest": "textures/Ui/Afp_TimerBackground.png"
+  },
+  "_BF3D84D219B1FE58666BD12084070092": {
+    "kind": "texture",
+    "dest": "textures/Ui/Afp_TimerReflection.png"
+  },
+  "_08E03BC629E8649B463EBC19DD8001BA": {
+    "kind": "texture",
+    "dest": "textures/Ui/Background01.png"
+  },
+  "_BD35AE429FD13C3B9C486D1664BDB922": {
+    "kind": "texture",
+    "dest": "textures/Ui/Basics00.png"
+  },
+  "_61CB8B626281FAD51E72076090DE119C": {
+    "kind": "texture",
+    "dest": "textures/Ui/Basics01.png"
+  },
+  "_68D8D3B8C7C38DD24A50F5E7E5394B6F": {
+    "kind": "texture",
+    "dest": "textures/Ui/Basics02.png"
+  },
+  "_D0245C070A9888665D7115CD1DEBAA62": {
+    "kind": "texture",
+    "dest": "textures/Ui/Basics03A.png"
+  },
+  "_8839625996EFE564B7F024A80A6E70F6": {
+    "kind": "texture",
+    "dest": "textures/Ui/Basics03B.png"
+  },
+  "_9BBD37F14719B5DB4B9DADBE21A9861D": {
+    "kind": "texture",
+    "dest": "textures/Ui/Basics03C.png"
+  },
+  "_F1CBB252522C0D158A1C42195B4EDBED": {
+    "kind": "texture",
+    "dest": "textures/Ui/Basics03D.png"
+  },
+  "_C8A486C06F280EB79440BD91AC2AE722": {
+    "kind": "texture",
+    "dest": "textures/Ui/Basics03E.png"
+  },
+  "_8EEFB737B2EE3D3219AF0012D22C3033": {
+    "kind": "texture",
+    "dest": "textures/Ui/Basics03F.png"
+  },
+  "_59A78773FDFA106FD4ED6595803215A5": {
+    "kind": "texture",
+    "dest": "textures/Ui/Basics03G.png"
+  },
+  "_917550E325F81069A32800474A6C67AD": {
+    "kind": "texture",
+    "dest": "textures/Ui/Basics03H.png"
+  },
+  "_8B057E2ED491F7DC5BDD9BB4760ED56C": {
+    "kind": "texture",
+    "dest": "textures/Ui/Basics04_1.png"
+  },
+  "_AAA61E4124FA2D09D426E514110FE20A": {
+    "kind": "texture",
+    "dest": "textures/Ui/Basics04_2.png"
+  },
+  "_1BB1EB22E8B1BEA2AA5812CCA89AB37C": {
+    "kind": "texture",
+    "dest": "textures/Ui/Basics04_3.png"
+  },
+  "_DB0A2683F533BC07FC283D1B720DB576": {
+    "kind": "texture",
+    "dest": "textures/Ui/Basics04_4.png"
+  },
+  "_CF030DAAEEA6391466D8AB0BB5C8D340": {
+    "kind": "texture",
+    "dest": "textures/Ui/Basics04_5.png"
+  },
+  "_5DA724A3BC0F335A7514452482A8A0DC": {
+    "kind": "texture",
+    "dest": "textures/Ui/Basics04_6.png"
+  },
+  "_4EEA6325DEFD239382D36F5F2EA7620F": {
+    "kind": "texture",
+    "dest": "textures/Ui/Basics04_7.png"
+  },
+  "_83BA0A324E2277F3540384A8E64E85FE": {
+    "kind": "texture",
+    "dest": "textures/Ui/Basics05.png"
+  },
+  "_1B4C228BA0F134B8053ED3B70E4A52F4": {
+    "kind": "texture",
+    "dest": "textures/Ui/Basics06.png"
+  },
+  "_301D81C0BCF90B01432A565C515CA513": {
+    "kind": "texture",
+    "dest": "textures/Ui/Basics07.png"
+  },
+  "_D5BF5B9F8EC8838B1FB160C2FE1E25BC": {
+    "kind": "texture",
+    "dest": "textures/Ui/Basics08.png"
+  },
+  "_38D3E2D561851F5A8F57FE8FCC427CB2": {
+    "kind": "texture",
+    "dest": "textures/Ui/Basics09.png"
+  },
+  "_64929B0E3953B128AD4D21C7439A505C": {
+    "kind": "texture",
+    "dest": "textures/Ui/Basics10.png"
+  },
+  "_C3CA624F97374778D9770A29B371C8BC": {
+    "kind": "texture",
+    "dest": "textures/Ui/Basics11.png"
+  },
+  "_7A07C38038F543CF785815C5CCB0D3CE": {
+    "kind": "texture",
+    "dest": "textures/Ui/Basics12.png"
+  },
+  "_4C8AED35BD4B926701688D9D03A08F8C": {
+    "kind": "texture",
+    "dest": "textures/Ui/Basics13.png"
+  },
+  "_CA3560BAEB18AC615DBF913AB82C4FCE": {
+    "kind": "texture",
+    "dest": "textures/Ui/Basics14_1.png"
+  },
+  "_02A1E2ECE2D0AAD5258D00AA0A64E5A2": {
+    "kind": "texture",
+    "dest": "textures/Ui/Basics14_10.png"
+  },
+  "_28F1FECE9D71D2DE82B0680F89767DF1": {
+    "kind": "texture",
+    "dest": "textures/Ui/Basics14_11.png"
+  },
+  "_80C8AC2C735FCA212745038A1E446362": {
+    "kind": "texture",
+    "dest": "textures/Ui/Basics14_2.png"
+  },
+  "_8FD457D99C2A3B504DEA3D10CEC9ED6C": {
+    "kind": "texture",
+    "dest": "textures/Ui/Basics14_3.png"
+  },
+  "_3CCE5CA777771910C813C9C48A98F013": {
+    "kind": "texture",
+    "dest": "textures/Ui/Basics14_4.png"
+  },
+  "_646B7C8EA2041FCE4625194C6C5A7F58": {
+    "kind": "texture",
+    "dest": "textures/Ui/Basics14_5.png"
+  },
+  "_D20B652EE94E31D6E716C89F1990783E": {
+    "kind": "texture",
+    "dest": "textures/Ui/Basics14_6.png"
+  },
+  "_AF8FFB111E7ECBD0B224F41B6F1BF5D3": {
+    "kind": "texture",
+    "dest": "textures/Ui/Basics14_7.png"
+  },
+  "_9C7EC55598EB9084600F24648A4A3119": {
+    "kind": "texture",
+    "dest": "textures/Ui/Basics14_8.png"
+  },
+  "_A69A403DC9B7B93624590E72FAC33E3F": {
+    "kind": "texture",
+    "dest": "textures/Ui/Basics14_9.png"
+  },
+  "_B394D79677DDBBF468E1EC2CE7E673B6": {
+    "kind": "texture",
+    "dest": "textures/Ui/Basics15.png"
+  },
+  "_9C565E0CF2B0297BB18C0B022509FF6E": {
+    "kind": "texture",
+    "dest": "textures/Ui/BasicsTmp.png"
+  },
+  "_8BB88CE24B65949514BD74022AB21588": {
+    "kind": "texture",
+    "dest": "textures/Ui/BasicsTmp2.png"
+  },
+  "_31C0EE967326E774F57A13B8C60363A6": {
+    "kind": "texture",
+    "dest": "textures/Ui/BasicsTmp3.png"
+  },
+  "_4CA71913F6118859703F6FD13710AEDD": {
+    "kind": "texture",
+    "dest": "textures/Ui/Components/UIBlueSlot_01.png"
+  },
+  "_3AE9835F858C00DDF2EA72B7691E65A4": {
+    "kind": "texture",
+    "dest": "textures/Ui/Components/UIBlueSlot_02.png"
+  },
+  "_93FBAC3785622EFC5AC977340601C7CC": {
+    "kind": "texture",
+    "dest": "textures/Ui/Components/UIButton_ArrowDown.png"
+  },
+  "_611DA2F66A2CDF5DD104DEA116710F93": {
+    "kind": "texture",
+    "dest": "textures/Ui/Components/UIButton_ArrowDown_Disabled.png"
+  },
+  "_18208A913A2F85EE4E6E66E33C02E5DB": {
+    "kind": "texture",
+    "dest": "textures/Ui/Components/UIButton_ArrowDown_Entered.png"
+  },
+  "_4D613DAA69ABAD632FFD6940A37499E4": {
+    "kind": "texture",
+    "dest": "textures/Ui/Components/UIButton_ArrowDown_Focused.png"
+  },
+  "_004534546EFBC6EC7E29D5FE185F1299": {
+    "kind": "texture",
+    "dest": "textures/Ui/Components/UIButton_ArrowLeft.png"
+  },
+  "_EA31095A840EBF975AB460DC68BF8118": {
+    "kind": "texture",
+    "dest": "textures/Ui/Components/UIButton_ArrowLeft_Disabled.png"
+  },
+  "_491AE0DFC3FBFE9E20A120D0DFD4D5C3": {
+    "kind": "texture",
+    "dest": "textures/Ui/Components/UIButton_ArrowLeft_Entered.png"
+  },
+  "_68FC5685534FC9261F6E8B89C08C404A": {
+    "kind": "texture",
+    "dest": "textures/Ui/Components/UIButton_ArrowLeft_Focused.png"
+  },
+  "_547C39965DBF9ED61CB025A08DDA8E47": {
+    "kind": "texture",
+    "dest": "textures/Ui/Components/UIButton_ArrowRight.png"
+  },
+  "_98628FBC56B7952F9E600422602CBFC5": {
+    "kind": "texture",
+    "dest": "textures/Ui/Components/UIButton_ArrowRight_Disabled.png"
+  },
+  "_43646661F913F14EE9F38DDE082A5181": {
+    "kind": "texture",
+    "dest": "textures/Ui/Components/UIButton_ArrowRight_Entered.png"
+  },
+  "_35BEC2E5B90796B9CCD1A8421DEFDCE7": {
+    "kind": "texture",
+    "dest": "textures/Ui/Components/UIButton_ArrowRight_Focused.png"
+  },
+  "_E646D34C3C3B10046C5AA08C6FD5317D": {
+    "kind": "texture",
+    "dest": "textures/Ui/Components/UIButton_ArrowUp.png"
+  },
+  "_0828B2BB19418EF2A6AC125A12098BC0": {
+    "kind": "texture",
+    "dest": "textures/Ui/Components/UIButton_ArrowUp_Disabled.png"
+  },
+  "_3904EF834BB8EFE24EEE5DA53CDF540B": {
+    "kind": "texture",
+    "dest": "textures/Ui/Components/UIButton_ArrowUp_Entered.png"
+  },
+  "_ACB304A5EA04BE456B6332D43FA4236D": {
+    "kind": "texture",
+    "dest": "textures/Ui/Components/UIButton_ArrowUp_Focused.png"
+  },
+  "_33343C57ACB3E7FCC7BBCA57AEBE5655": {
+    "kind": "texture",
+    "dest": "textures/Ui/Components/UIButton_MainMenu.png"
+  },
+  "_8FA83CD2D6D6E3CAE23CB9F07245E7D4": {
+    "kind": "texture",
+    "dest": "textures/Ui/Components/UIButton_MainMenu_Focused.png"
+  },
+  "_351B892CD5DCE42A4966000CEBABFE96": {
+    "kind": "texture",
+    "dest": "textures/Ui/Components/UIButton_Menu.png"
+  },
+  "_29ABF7028B7CFB7AD9BA4890CF7E0A9E": {
+    "kind": "texture",
+    "dest": "textures/Ui/Components/UIButton_Menu_Disabled.png"
+  },
+  "_F0BC8B5D5EC1D997F1F22757BDC2E814": {
+    "kind": "texture",
+    "dest": "textures/Ui/Components/UIButton_Menu_Entered.png"
+  },
+  "_758057119B3691AED0ECA3ECEED28265": {
+    "kind": "texture",
+    "dest": "textures/Ui/Components/UIButton_Menu_Focused.png"
+  },
+  "_CD2EF02B5A7A649B666114C61D12826F": {
+    "kind": "texture",
+    "dest": "textures/Ui/Components/UIButton_More_disabled.png"
+  },
+  "_BC76E05C645082AB591E4B40D685AFA9": {
+    "kind": "texture",
+    "dest": "textures/Ui/Components/UIButton_More_entered.png"
+  },
+  "_5AF8329EB14A394265CCC3B32490B9B0": {
+    "kind": "texture",
+    "dest": "textures/Ui/Components/UIButton_More_focused.png"
+  },
+  "_235386037AB2A61F1FC658F11C33AF1E": {
+    "kind": "texture",
+    "dest": "textures/Ui/Components/UIGreenSlot_01.png"
+  },
+  "_4F3877A5596700B17ECFD069F1A376D7": {
+    "kind": "texture",
+    "dest": "textures/Ui/Components/UIGreenSlot_02.png"
+  },
+  "_607714462297DE37C0A5BDF5A706D3BE": {
+    "kind": "texture",
+    "dest": "textures/Ui/Components/UIGridLine_Background01.png"
+  },
+  "_09BA42C1C8D12BB85B546090D7D37396": {
+    "kind": "texture",
+    "dest": "textures/Ui/Components/UIGridLine_Background02.png"
+  },
+  "_5932919C293295D7E4E4E8D170ECA3D2": {
+    "kind": "texture",
+    "dest": "textures/Ui/Components/UIGridLine_Background03.png"
+  },
+  "_1FE83B2A48BEA73EF9FA06FAD31A665F": {
+    "kind": "texture",
+    "dest": "textures/Ui/Components/UILeaderboardPlayerPanel.png"
+  },
+  "_4BCC34A2FE80CE154A76144BA5520B7A": {
+    "kind": "texture",
+    "dest": "textures/Ui/Components/UILeaderboardPlayerSmallPanel.png"
+  },
+  "_A98A90281418D14846FA9608F2148BC8": {
+    "kind": "texture",
+    "dest": "textures/Ui/Components/UILeaderboardPlayerTeamPanel.png"
+  },
+  "_3AEE4D752A07348085BDF5A18F45C800": {
+    "kind": "texture",
+    "dest": "textures/Ui/Components/UIPanel01.png"
+  },
+  "_164E6F5AC2FA32B136035CE573725E86": {
+    "kind": "texture",
+    "dest": "textures/Ui/Components/UIPanel02.png"
+  },
+  "_4822DDD4F7350D07B4B0498452DD726D": {
+    "kind": "texture",
+    "dest": "textures/Ui/Components/UIPanel03.png"
+  },
+  "_CEA9F47890DF184491D6D4D69EB53DFD": {
+    "kind": "texture",
+    "dest": "textures/Ui/Components/UIPanel04.png"
+  },
+  "_5A567E44D6B9106F4F0DC1D34D72D69C": {
+    "kind": "texture",
+    "dest": "textures/Ui/Components/UIPanel05.png"
+  },
+  "_52558F8C4DC771AE44B359421DD7B6A2": {
+    "kind": "texture",
+    "dest": "textures/Ui/Components/UIPanel06.png"
+  },
+  "_7FB89CAC618B2F01DB2653BB16A101D3": {
+    "kind": "texture",
+    "dest": "textures/Ui/Components/UIPanel07.png"
+  },
+  "_B1C3C68A9C1F37BF144977340D79C844": {
+    "kind": "texture",
+    "dest": "textures/Ui/Components/UIPanel08.png"
+  },
+  "_E3BB859DF48A0B31026242AF6F4ACA02": {
+    "kind": "texture",
+    "dest": "textures/Ui/Components/UIPanel09.png"
+  },
+  "_EC29AFA7D4F2703E2A27B4B7DCFA44C3": {
+    "kind": "texture",
+    "dest": "textures/Ui/Components/UIPanel10.png"
+  },
+  "_9FA18BEA360074866084C98182AE91E1": {
+    "kind": "texture",
+    "dest": "textures/Ui/Components/UIPanel11.png"
+  },
+  "_7E20EF3CE14F3A433079476E995A1682": {
+    "kind": "texture",
+    "dest": "textures/Ui/Components/UIPanel12.png"
+  },
+  "_9899A6575AEE1A8EC8D5F1E32E8A880B": {
+    "kind": "texture",
+    "dest": "textures/Ui/Components/UIPanel13.png"
+  },
+  "_54E5A311F07B71B18FDACD73A3906D63": {
+    "kind": "texture",
+    "dest": "textures/Ui/Components/UIPlayerSlot_Background.png"
+  },
+  "_895AD4CB87BDE0A788D18677888DB674": {
+    "kind": "texture",
+    "dest": "textures/Ui/Components/UIPlayerSlot_Background_Disabled.png"
+  },
+  "_7977D6428A1D49B5AA47BB607FF39643": {
+    "kind": "texture",
+    "dest": "textures/Ui/Components/UIPlayerSlot_Background_Entered.png"
+  },
+  "_E15ABAD7CCA5477756648E3CA65C23AE": {
+    "kind": "texture",
+    "dest": "textures/Ui/Components/UIPlayerSlot_Line_Off.png"
+  },
+  "_76E74975BB8D6CA5941F3F3A74AA56CB": {
+    "kind": "texture",
+    "dest": "textures/Ui/Components/UIPlayerSlot_Line_On.png"
+  },
+  "_9CFDDE35B1424FE11928B4F275361656": {
+    "kind": "texture",
+    "dest": "textures/Ui/Components/UIRadioButton_House.png"
+  },
+  "_D8D70BEC72D4AAD9766403ECC55E9ED3": {
+    "kind": "texture",
+    "dest": "textures/Ui/Components/UIRadioButton_Infinity.png"
+  },
+  "_E1C7370FF431D446D665026F50E9DF6F": {
+    "kind": "texture",
+    "dest": "textures/Ui/Components/UIRadioButton_Large_Off.png"
+  },
+  "_BB454D6636C74170979877B3979FB9A3": {
+    "kind": "texture",
+    "dest": "textures/Ui/Components/UIRadioButton_Large_On.png"
+  },
+  "_BE9E32C77DECF865FA70C2116D8A8965": {
+    "kind": "texture",
+    "dest": "textures/Ui/Components/UIRadioButton_Off.png"
+  },
+  "_761BA0AA4784C9848FB31AFEFBDB1F31": {
+    "kind": "texture",
+    "dest": "textures/Ui/Components/UIRadioButton_On.png"
+  },
+  "_0EB28AE96F62C4FC8402545C91C6106A": {
+    "kind": "texture",
+    "dest": "textures/Ui/Components/UIRadioButton_Sun.png"
+  },
+  "_B07B03134D54C0C952345914704205A1": {
+    "kind": "texture",
+    "dest": "textures/Ui/Components/UIRadioButton_TBase.png"
+  },
+  "_B023B939B3CABBA7323777DA75269AC4": {
+    "kind": "texture",
+    "dest": "textures/Ui/Components/UIRadioButton_Ubiconnect.png"
+  },
+  "_C544A268C7D24FE2EF51C09764671B1E": {
+    "kind": "texture",
+    "dest": "textures/Ui/Components/UIRedSlot_01.png"
+  },
+  "_DD675DADFF90FD238A0F6A3BC9E853C6": {
+    "kind": "texture",
+    "dest": "textures/Ui/Components/UIRedSlot_02.png"
+  },
+  "_5EFE3F911C038B4ED9A19E9B9A088880": {
+    "kind": "texture",
+    "dest": "textures/Ui/Components/UIWindow_Main.png"
+  },
+  "_DD01E1254EBB81672E8813132B1586A4": {
+    "kind": "texture",
+    "dest": "textures/Ui/Components/UIWindow_Message.png"
+  },
+  "_E54E7ECA1D9445890A8CB43E6E041721": {
+    "kind": "texture",
+    "dest": "textures/Ui/Components/UIWindow_Popup.png"
+  },
+  "_DA9D5C5F27D5ED95724DB0732E6E32BA": {
+    "kind": "texture",
+    "dest": "textures/Ui/Components/UIWindow_Popup2.png"
+  },
+  "_D65F326CBD94548BDBC5E587E78DF6B3": {
+    "kind": "texture",
+    "dest": "textures/Ui/Components/UIWindow_Popup_Large.png"
+  },
+  "_0A5CEEE467D781E4792DDC2FD6F31486": {
+    "kind": "texture",
+    "dest": "textures/Ui/Components/UIYellowSlot_01.png"
+  },
+  "_AB551178F2D5FC6E7F39AAD9125C03C0": {
+    "kind": "texture",
+    "dest": "textures/Ui/Components/UIYellowSlot_02.png"
+  },
+  "_7CEFF2B3EF07FE8EB2F89D6EFD005B37": {
+    "kind": "texture",
+    "dest": "textures/Ui/Connection_PluggedIn.png"
+  },
+  "_1F212650BD26EA05CFA021D52CB0CC85": {
+    "kind": "texture",
+    "dest": "textures/Ui/Connection_Plugin.png"
+  },
+  "_EBCF29127A41DED34F05BF63DC431B2B": {
+    "kind": "texture",
+    "dest": "textures/Ui/Countdown_0.png"
+  },
+  "_A448D6C99C13A33F57185229468D8F7B": {
+    "kind": "texture",
+    "dest": "textures/Ui/Countdown_1.png"
+  },
+  "_13692606CC60054FFF41B291B8CA3689": {
+    "kind": "texture",
+    "dest": "textures/Ui/Countdown_2.png"
+  },
+  "_D5769C06B43451821F9B339143AAFD47": {
+    "kind": "texture",
+    "dest": "textures/Ui/Countdown_3.png"
+  },
+  "_05238F51F30F2AAC675AAC9D3ACE2850": {
+    "kind": "texture",
+    "dest": "textures/Ui/Countdown_4.png"
+  },
+  "_4D17A2C3994EF4405C4F80A9205F93B1": {
+    "kind": "texture",
+    "dest": "textures/Ui/Countdown_5.png"
+  },
+  "_13F02DF936EBAD4BD1BBB7C07D7DC389": {
+    "kind": "texture",
+    "dest": "textures/Ui/Countdown_6.png"
+  },
+  "_7913B5048D1BE71446F696C4D71ACC38": {
+    "kind": "texture",
+    "dest": "textures/Ui/Countdown_7.png"
+  },
+  "_2D9C11C1AA2D9B71743ECC5FA46CF4D3": {
+    "kind": "texture",
+    "dest": "textures/Ui/Countdown_8.png"
+  },
+  "_2572DBF798B045D57848585FA22C0A57": {
+    "kind": "texture",
+    "dest": "textures/Ui/Countdown_9.png"
+  },
+  "_E8FE09A1D3170F610F785CD884BB5C24": {
+    "kind": "texture",
+    "dest": "textures/Ui/Countdown_Bottom.png"
+  },
+  "_C4E2199836D99A3980E7C52264A5943B": {
+    "kind": "texture",
+    "dest": "textures/Ui/Countdown_Mask.png"
+  },
+  "_03D67CED50A2BC7C19149BDD1132D097": {
+    "kind": "texture",
+    "dest": "textures/Ui/Countdown_Spotlight.png"
+  },
+  "_331BC8755BF69C3C281CEE1FD726382F": {
+    "kind": "texture",
+    "dest": "textures/Ui/Countdown_Top.png"
+  },
+  "_FB331A82D405244553CBCB8045A361EA": {
+    "kind": "texture",
+    "dest": "textures/Ui/GameOver_Bottom.png"
+  },
+  "_7851BD21112504B05898922C96401CD3": {
+    "kind": "texture",
+    "dest": "textures/Ui/GameOver_Top.png"
+  },
+  "_5C7A88757A44788F3DC780581720C4DD": {
+    "kind": "texture",
+    "dest": "textures/Ui/GunButton1.png"
+  },
+  "_BF02AD4BBFE3E12B395D1D126F0BF869": {
+    "kind": "texture",
+    "dest": "textures/Ui/GunButton2.png"
+  },
+  "_85FE06E87B52241D8119CB49DCF0EB4B": {
+    "kind": "texture",
+    "dest": "textures/Ui/Icons/16x/Ammunition.png"
+  },
+  "_FD0E2870513E297EBFF50CB8F39A0791": {
+    "kind": "texture",
+    "dest": "textures/Ui/Icons/16x/BlueStar.png"
+  },
+  "_95FBFB6431D930731B5927907FE7F108": {
+    "kind": "texture",
+    "dest": "textures/Ui/Icons/16x/Bullet.png"
+  },
+  "_80111DBCCA5B61F57C5899AFF2D99290": {
+    "kind": "texture",
+    "dest": "textures/Ui/Icons/16x/Death.png"
+  },
+  "_5E9F61192EFA6ED26A68D7920B5C9EF7": {
+    "kind": "texture",
+    "dest": "textures/Ui/Icons/16x/DeathBlue.png"
+  },
+  "_D9EADC087D5EB0726B1E168A62A691E9": {
+    "kind": "texture",
+    "dest": "textures/Ui/Icons/16x/DeathGreen.png"
+  },
+  "_41273B59BDE36A126317767A734E18F6": {
+    "kind": "texture",
+    "dest": "textures/Ui/Icons/16x/DeathRed.png"
+  },
+  "_EBFF71981B4A1271497869D05E6C3B47": {
+    "kind": "texture",
+    "dest": "textures/Ui/Icons/16x/DeathYellow.png"
+  },
+  "_C561830DD119D7FB4BBC95B261A584F6": {
+    "kind": "texture",
+    "dest": "textures/Ui/Icons/16x/GreenStar.png"
+  },
+  "_98DDDC57320FF3095C4C760887407DB2": {
+    "kind": "texture",
+    "dest": "textures/Ui/Icons/16x/Heart.png"
+  },
+  "_930BC5AD397FC5177534CC785BA6EB34": {
+    "kind": "texture",
+    "dest": "textures/Ui/Icons/16x/Hit.png"
+  },
+  "_A6D90C7C368390AF4C9467B614BED431": {
+    "kind": "texture",
+    "dest": "textures/Ui/Icons/16x/HitBlue.png"
+  },
+  "_9C5CBBD22FDF003F3EB4DB4696826878": {
+    "kind": "texture",
+    "dest": "textures/Ui/Icons/16x/HitGreen.png"
+  },
+  "_762520F1966E5D22BB632B1C95652764": {
+    "kind": "texture",
+    "dest": "textures/Ui/Icons/16x/HitRed.png"
+  },
+  "_249095F0B7C0BBF75D4D9F7113CB538A": {
+    "kind": "texture",
+    "dest": "textures/Ui/Icons/16x/HitYellow.png"
+  },
+  "_613ED3CC457D76DEBD228586F9C3BBFB": {
+    "kind": "texture",
+    "dest": "textures/Ui/Icons/16x/Ok.png"
+  },
+  "_798F2224285668533897007B2B400888": {
+    "kind": "texture",
+    "dest": "textures/Ui/Icons/16x/RedStar.png"
+  },
+  "_219B86A1E50BD997A2E255C1CF831ED0": {
+    "kind": "texture",
+    "dest": "textures/Ui/Icons/16x/Respawn.png"
+  },
+  "_D0654A20DB6BD3EF6BA73CCA57354A63": {
+    "kind": "texture",
+    "dest": "textures/Ui/Icons/16x/YellowStar.png"
+  },
+  "_3A1563C17FC0021C223A06481954D9A3": {
+    "kind": "texture",
+    "dest": "textures/Ui/Icons/32x/Ammunition.png"
+  },
+  "_98EA02E976C5C4FB30259BE4ECDBA806": {
+    "kind": "texture",
+    "dest": "textures/Ui/Icons/32x/Death.png"
+  },
+  "_B84F657E8CAA7FD5EB34122741CBB79A": {
+    "kind": "texture",
+    "dest": "textures/Ui/Icons/32x/GunHud.png"
+  },
+  "_957A0C15EE329F612526FF70BBBCD4E0": {
+    "kind": "texture",
+    "dest": "textures/Ui/Icons/32x/GunHud_Grey.png"
+  },
+  "_4ED19EFE0F2FF445BB7711FE4A4942FA": {
+    "kind": "texture",
+    "dest": "textures/Ui/Icons/32x/Harness.png"
+  },
+  "_095883D3A2117D8EEF8E2BED890F611C": {
+    "kind": "texture",
+    "dest": "textures/Ui/Icons/32x/Harness_Off.png"
+  },
+  "_8F095A75602983EA2B29A2053A0AE3A3": {
+    "kind": "texture",
+    "dest": "textures/Ui/Icons/32x/Harness_On.png"
+  },
+  "_007B4264125D0E1B4D8626FE5679AA7F": {
+    "kind": "texture",
+    "dest": "textures/Ui/Icons/32x/Heart.png"
+  },
+  "_F0E1BCE2BA7949664DD8D31EC84A726E": {
+    "kind": "texture",
+    "dest": "textures/Ui/Icons/32x/Hit.png"
+  },
+  "_001DD45633798EF8914FA2805408608B": {
+    "kind": "texture",
+    "dest": "textures/Ui/Icons/32x/Precision.png"
+  },
+  "_C0FF802D7BF7A0EF439408CB50FE1D06": {
+    "kind": "texture",
+    "dest": "textures/Ui/Icons/32x/Score.png"
+  },
+  "_1DFBCC6E4B7783B83C8765B6392BD530": {
+    "kind": "texture",
+    "dest": "textures/Ui/Icons/32x/TickBox_ticked.png"
+  },
+  "_8C0847083496114C4D9898CBF06C3AD5": {
+    "kind": "texture",
+    "dest": "textures/Ui/Icons/32x/TickBox_unticked.png"
+  },
+  "_B0C6CBEBF2C2C1AADC0627B402F4E718": {
+    "kind": "texture",
+    "dest": "textures/Ui/Icons/64x/Cross.png"
+  },
+  "_02DE4365572A1317A5416A622752D03D": {
+    "kind": "texture",
+    "dest": "textures/Ui/Icons/64x/Star.png"
+  },
+  "_DD15618486025412CDDE9358E3F719CB": {
+    "kind": "texture",
+    "dest": "textures/Ui/Icons/64x/flag.png"
+  },
+  "_7667EAC22053C86D5F8696452250F5E0": {
+    "kind": "texture",
+    "dest": "textures/Ui/Leaderboard_BlueLeader.png"
+  },
+  "_A315240CEE0FE3775E720F66D8E49412": {
+    "kind": "texture",
+    "dest": "textures/Ui/Leaderboard_BlueLine.png"
+  },
+  "_2AC0CE7DBD73D27F21DD63873DC71288": {
+    "kind": "texture",
+    "dest": "textures/Ui/Leaderboard_BlueLine_Duel.png"
+  },
+  "_565DBF24056D88E205FD4A66E8326963": {
+    "kind": "texture",
+    "dest": "textures/Ui/Leaderboard_BlueTeam.png"
+  },
+  "_2F4C31187808AB88791C8304BDEC8245": {
+    "kind": "texture",
+    "dest": "textures/Ui/Leaderboard_GreenLeader.png"
+  },
+  "_7E3273D6592F9F7FA183BE2E65B02D7E": {
+    "kind": "texture",
+    "dest": "textures/Ui/Leaderboard_GreenLine.png"
+  },
+  "_9F8F0AF2D0A0EF0E2299714449FD5B4F": {
+    "kind": "texture",
+    "dest": "textures/Ui/Leaderboard_GreenTeam.png"
+  },
+  "_17EC60B738BF1B49F31AEB4CEC5931A8": {
+    "kind": "texture",
+    "dest": "textures/Ui/Leaderboard_RedLeader.png"
+  },
+  "_E9858A9A0BE1B748CEFC8D612455A525": {
+    "kind": "texture",
+    "dest": "textures/Ui/Leaderboard_RedLine.png"
+  },
+  "_BEA0DB94C6EA923115F00F79127D703D": {
+    "kind": "texture",
+    "dest": "textures/Ui/Leaderboard_RedLine_Inv.png"
+  },
+  "_DD37335A4601124DAEBB6948CDCE6FC8": {
+    "kind": "texture",
+    "dest": "textures/Ui/Leaderboard_RedTeam.png"
+  },
+  "_B65EAD1EC3B9AD46B9B283E0241B203A": {
+    "kind": "texture",
+    "dest": "textures/Ui/Leaderboard_Slot4.png"
+  },
+  "_D7D66368B2343E39946FFC0514A0F44D": {
+    "kind": "texture",
+    "dest": "textures/Ui/Leaderboard_YellowLeader.png"
+  },
+  "_A9A24A0E45B5C2B4751C530BC3146BA0": {
+    "kind": "texture",
+    "dest": "textures/Ui/Leaderboard_YellowLine.png"
+  },
+  "_5F9517C8594ABD06C3A61715E90B1DF2": {
+    "kind": "texture",
+    "dest": "textures/Ui/Leaderboard_YellowTeam.png"
+  },
+  "_A10A0DA054EE8E20201F033FE9CBF464": {
+    "kind": "texture",
+    "dest": "textures/Ui/LoadingGrey.png"
+  },
+  "_1D70536D059442E04ED34DE2E0F2BB7F": {
+    "kind": "texture",
+    "dest": "textures/Ui/LoadingOrange.png"
+  },
+  "_775993C13D673225B19BEC30D2387F37": {
+    "kind": "texture",
+    "dest": "textures/Ui/LoadingRed.png"
+  },
+  "_06CFCFA6E18ED3E21879B275CBF67959": {
+    "kind": "texture",
+    "dest": "textures/Ui/Loading_Logo.png"
+  },
+  "_E66B7543D577BA4A2352C72C83356C9A": {
+    "kind": "texture",
+    "dest": "textures/Ui/MainMenu_Line.png"
+  },
+  "_97D064E37CBA6EF9F2E22B24319DFACE": {
+    "kind": "texture",
+    "dest": "textures/Ui/MainMenu_LineLight.png"
+  },
+  "_C1A1A91EE82E2292869076A5C8B39D16": {
+    "kind": "texture",
+    "dest": "textures/Ui/MainMenu_SpotLignt.png"
+  },
+  "_395C3488DB287867EA84178AE977708C": {
+    "kind": "texture",
+    "dest": "textures/Ui/Mainmenu_Background.png"
+  },
+  "_D08D9E17CE8BDE09B8AD77AA293B6A00": {
+    "kind": "texture",
+    "dest": "textures/Ui/Mainmenu_Basics.png"
+  },
+  "_189AF677F6AB1E7AB81E13634BDE0850": {
+    "kind": "texture",
+    "dest": "textures/Ui/Mainmenu_Games.png"
+  },
+  "_9629C994EF787D9B40491CB970EC4BC1": {
+    "kind": "texture",
+    "dest": "textures/Ui/Mainmenu_Play.png"
+  },
+  "_363C9FBA6BA55F3317BA38F6FD742F64": {
+    "kind": "texture",
+    "dest": "textures/Ui/Mainmenu_Profiles.png"
+  },
+  "_2D69F980961953B27ED06B96CB823FC3": {
+    "kind": "texture",
+    "dest": "textures/Ui/Mainmenu_Quit.png"
+  },
+  "_7FC4C0CC3E425F29AA29778BEE461B8B": {
+    "kind": "texture",
+    "dest": "textures/Ui/Mainmenu_Settings.png"
+  },
+  "_BD2BD64CFBE3FE4547AD71740C5C56AC": {
+    "kind": "texture",
+    "dest": "textures/Ui/Option_Device.png"
+  },
+  "_48AC30DE9439EA1BFBFE46F74EC1DFF2": {
+    "kind": "texture",
+    "dest": "textures/Ui/Option_TTag.png"
+  },
+  "_FD44E7A92FF77D3AB52C23B9BA89EED8": {
+    "kind": "texture",
+    "dest": "textures/Ui/Pictograms/128x/BlueArea.png"
+  },
+  "_ED668BD0D4A782DC8337D539D60318D6": {
+    "kind": "texture",
+    "dest": "textures/Ui/Pictograms/128x/BlueArea_focused.png"
+  },
+  "_B7FE7E90B86DD96BE6CFFFC0B192AAEC": {
+    "kind": "texture",
+    "dest": "textures/Ui/Pictograms/128x/GreenArea.png"
+  },
+  "_6C7F82FEFCBEB0658AD66058EE4B4768": {
+    "kind": "texture",
+    "dest": "textures/Ui/Pictograms/128x/GreenArea_focused.png"
+  },
+  "_D9BAE18A19BD6F3A6221BD3D9B31159C": {
+    "kind": "texture",
+    "dest": "textures/Ui/Pictograms/128x/Hud_1.png"
+  },
+  "_D8331929481FE3861A6A397F20AB208C": {
+    "kind": "texture",
+    "dest": "textures/Ui/Pictograms/128x/Hud_10.png"
+  },
+  "_8BA64E1889C19628D0C1245E0E1B6A0D": {
+    "kind": "texture",
+    "dest": "textures/Ui/Pictograms/128x/Hud_11.png"
+  },
+  "_1B514D40B026BED0A3CE2FCB3FC66266": {
+    "kind": "texture",
+    "dest": "textures/Ui/Pictograms/128x/Hud_12.png"
+  },
+  "_B636546889FFB6162B425D0693B57F40": {
+    "kind": "texture",
+    "dest": "textures/Ui/Pictograms/128x/Hud_13.png"
+  },
+  "_4E5346F3BF97BB6285F0BCB2E2536F80": {
+    "kind": "texture",
+    "dest": "textures/Ui/Pictograms/128x/Hud_14.png"
+  },
+  "_7040BA68B67B64593959150E9ED3A486": {
+    "kind": "texture",
+    "dest": "textures/Ui/Pictograms/128x/Hud_15.png"
+  },
+  "_275B26FA36A575EA4161778CF93EA7BE": {
+    "kind": "texture",
+    "dest": "textures/Ui/Pictograms/128x/Hud_16.png"
+  },
+  "_52D40D8E93A6E465994AD0E36C2C45B5": {
+    "kind": "texture",
+    "dest": "textures/Ui/Pictograms/128x/Hud_17.png"
+  },
+  "_39E3D82856EFBA10EDC23DD6F8477E89": {
+    "kind": "texture",
+    "dest": "textures/Ui/Pictograms/128x/Hud_18.png"
+  },
+  "_86899728421370F67315148FD47F46C3": {
+    "kind": "texture",
+    "dest": "textures/Ui/Pictograms/128x/Hud_19.png"
+  },
+  "_31C2E2B829124BC2A3EE0CB53BE8EE67": {
+    "kind": "texture",
+    "dest": "textures/Ui/Pictograms/128x/Hud_2.png"
+  },
+  "_B3DF829D8A37D634ABC3439E801F638B": {
+    "kind": "texture",
+    "dest": "textures/Ui/Pictograms/128x/Hud_3.png"
+  },
+  "_507275E68210C85551F890290AC65CAA": {
+    "kind": "texture",
+    "dest": "textures/Ui/Pictograms/128x/Hud_4.png"
+  },
+  "_94FB189CAFC4C91FA907557D280833DA": {
+    "kind": "texture",
+    "dest": "textures/Ui/Pictograms/128x/Hud_5.png"
+  },
+  "_0900F0ED19898A2B90754D1CE4A261F8": {
+    "kind": "texture",
+    "dest": "textures/Ui/Pictograms/128x/Hud_6.png"
+  },
+  "_673C7AF5AB98168CE0FF02454FF7BCF4": {
+    "kind": "texture",
+    "dest": "textures/Ui/Pictograms/128x/Hud_7.png"
+  },
+  "_27CCF22FF45A99B1A55FF7C9B678A011": {
+    "kind": "texture",
+    "dest": "textures/Ui/Pictograms/128x/Hud_8.png"
+  },
+  "_25416C059FCDC8573ADEFC30B76D94CC": {
+    "kind": "texture",
+    "dest": "textures/Ui/Pictograms/128x/Hud_9.png"
+  },
+  "_48BCB82756293572ADDDB1439BA1EA5A": {
+    "kind": "texture",
+    "dest": "textures/Ui/Pictograms/128x/Player1.png"
+  },
+  "_C9F1195E40B4D158DB9331C8E6573133": {
+    "kind": "texture",
+    "dest": "textures/Ui/Pictograms/128x/Player1_focused.png"
+  },
+  "_6520041774D64F4ED466C36CD66A119C": {
+    "kind": "texture",
+    "dest": "textures/Ui/Pictograms/128x/Player2.png"
+  },
+  "_8070BD4FF04483AFD25B5286FBEE22B7": {
+    "kind": "texture",
+    "dest": "textures/Ui/Pictograms/128x/Player2_focused.png"
+  },
+  "_EF0312696FCE74A69604FAF7B7C5D27C": {
+    "kind": "texture",
+    "dest": "textures/Ui/Pictograms/128x/RF03.png"
+  },
+  "_5530FC007CFFBB0BF855771F1FFCAB41": {
+    "kind": "texture",
+    "dest": "textures/Ui/Pictograms/128x/RF03_white.png"
+  },
+  "_72AE05EC3C67E6AE389161250B7D4728": {
+    "kind": "texture",
+    "dest": "textures/Ui/Pictograms/128x/RF04.png"
+  },
+  "_5A182407DD81E38D232D582439B32DF9": {
+    "kind": "texture",
+    "dest": "textures/Ui/Pictograms/128x/RF04_white.png"
+  },
+  "_A87C68DF2AEFAB3D3F87E8E4C2B46A2E": {
+    "kind": "texture",
+    "dest": "textures/Ui/Pictograms/128x/RF05.png"
+  },
+  "_D4B2CC20CA1D5843013EB7D4187F1FC1": {
+    "kind": "texture",
+    "dest": "textures/Ui/Pictograms/128x/RF05_white.png"
+  },
+  "_0E89EA1B26971136508F744877C1A6BC": {
+    "kind": "texture",
+    "dest": "textures/Ui/Pictograms/128x/RF06.png"
+  },
+  "_5AF9BB6AB9189DE82CB1E29322D840D7": {
+    "kind": "texture",
+    "dest": "textures/Ui/Pictograms/128x/RF06_white.png"
+  },
+  "_6A681566384DDD5CA9C91A50BE18D769": {
+    "kind": "texture",
+    "dest": "textures/Ui/Pictograms/128x/RF09.png"
+  },
+  "_D4288C67569ABDFE4B1C7F35EEDAF42B": {
+    "kind": "texture",
+    "dest": "textures/Ui/Pictograms/128x/RF09_white.png"
+  },
+  "_53BB7CD2E99D07E995D6B55518D3FC72": {
+    "kind": "texture",
+    "dest": "textures/Ui/Pictograms/128x/RedArea.png"
+  },
+  "_D07AEEB1CAB03E70D7483673F361D856": {
+    "kind": "texture",
+    "dest": "textures/Ui/Pictograms/128x/RedArea_focused.png"
+  },
+  "_FEDE089501BFF58ADFAA042C61768736": {
+    "kind": "texture",
+    "dest": "textures/Ui/Pictograms/128x/Start.png"
+  },
+  "_F7A70CE2DB2C98AE2B9F397F32AC00E8": {
+    "kind": "texture",
+    "dest": "textures/Ui/Pictograms/128x/YellowArea.png"
+  },
+  "_8314EB8B2F7A03C01BE48720A39966D5": {
+    "kind": "texture",
+    "dest": "textures/Ui/Pictograms/128x/YellowArea_focused.png"
+  },
+  "_D2849F173B1F18BD449AC8DC6ADEDC66": {
+    "kind": "texture",
+    "dest": "textures/Ui/Pictograms/256x/Arrows.png"
+  },
+  "_3BB3F2C18D7C06A703E729028F8F9158": {
+    "kind": "texture",
+    "dest": "textures/Ui/Pictograms/256x/Arrows_focused.png"
+  },
+  "_84F77C34C97A8265F1C3DC95B458CFFB": {
+    "kind": "texture",
+    "dest": "textures/Ui/Pictograms/32x/FreeForAll.png"
+  },
+  "_8C71ECA9DB68453579A615F50A191B29": {
+    "kind": "texture",
+    "dest": "textures/Ui/Pictograms/32x/FreeFrag.png"
+  },
+  "_40FEF74AC62C531692BD713EE3A47B3D": {
+    "kind": "texture",
+    "dest": "textures/Ui/Pictograms/32x/LastManStanding.png"
+  },
+  "_52C0874D0B3E4CC5B02C37388FD65D69": {
+    "kind": "texture",
+    "dest": "textures/Ui/Pictograms/32x/OldFashionDuel.png"
+  },
+  "_0DDBC3A446A0FF15CE1D05BEA877232B": {
+    "kind": "texture",
+    "dest": "textures/Ui/Pictograms/32x/StarterFrag.png"
+  },
+  "_5A650318CBD51C3E990BF4E57DF3EA39": {
+    "kind": "texture",
+    "dest": "textures/Ui/Pictograms/32x/TagNShoot.png"
+  },
+  "_A5123C770FD1C5BFDC4E0B9C263015A2": {
+    "kind": "texture",
+    "dest": "textures/Ui/Pictograms/32x/TeamFrag.png"
+  },
+  "_977401CCA978B6758A9F3591E54752E7": {
+    "kind": "texture",
+    "dest": "textures/Ui/Pictograms/64x/Hud_1.png"
+  },
+  "_E638CE874A2FBF2F7977084C3ACBD7E2": {
+    "kind": "texture",
+    "dest": "textures/Ui/Pictograms/64x/Hud_10.png"
+  },
+  "_F8888432FABDDF83096A8185CCD2E6D5": {
+    "kind": "texture",
+    "dest": "textures/Ui/Pictograms/64x/Hud_11.png"
+  },
+  "_76F7F1328CBAE5A30AAC995E81787C46": {
+    "kind": "texture",
+    "dest": "textures/Ui/Pictograms/64x/Hud_12.png"
+  },
+  "_C1466A0981419AB21F2C6EDA3C7DCE1E": {
+    "kind": "texture",
+    "dest": "textures/Ui/Pictograms/64x/Hud_13.png"
+  },
+  "_C79E6FD0945B6587EA4AEF1BC9FE9B94": {
+    "kind": "texture",
+    "dest": "textures/Ui/Pictograms/64x/Hud_14.png"
+  },
+  "_03380666E8FA450EBD8E3EE8222D0BC5": {
+    "kind": "texture",
+    "dest": "textures/Ui/Pictograms/64x/Hud_15.png"
+  },
+  "_17201E2C268299C96645C08CCB51D292": {
+    "kind": "texture",
+    "dest": "textures/Ui/Pictograms/64x/Hud_16.png"
+  },
+  "_51148B16E7E1F790907FDC0C5BADC228": {
+    "kind": "texture",
+    "dest": "textures/Ui/Pictograms/64x/Hud_17.png"
+  },
+  "_5A4BB668520BFD929193F59AD76427C4": {
+    "kind": "texture",
+    "dest": "textures/Ui/Pictograms/64x/Hud_18.png"
+  },
+  "_426E46B3AA20C108CAC9902D23BF3CD9": {
+    "kind": "texture",
+    "dest": "textures/Ui/Pictograms/64x/Hud_19.png"
+  },
+  "_6AB6A43599FF28988DBC44BF9BAC929A": {
+    "kind": "texture",
+    "dest": "textures/Ui/Pictograms/64x/Hud_2.png"
+  },
+  "_C522005F264541DC6F99BF855886426D": {
+    "kind": "texture",
+    "dest": "textures/Ui/Pictograms/64x/Hud_3.png"
+  },
+  "_5540500DE1298D9F35C3A58B5A34ADA6": {
+    "kind": "texture",
+    "dest": "textures/Ui/Pictograms/64x/Hud_4.png"
+  },
+  "_A355291BF6083BF0E95462D0B489E057": {
+    "kind": "texture",
+    "dest": "textures/Ui/Pictograms/64x/Hud_5.png"
+  },
+  "_9C349C6792824873907136BA0C15A6A1": {
+    "kind": "texture",
+    "dest": "textures/Ui/Pictograms/64x/Hud_6.png"
+  },
+  "_7FA561555112807389F80A4F8E50D733": {
+    "kind": "texture",
+    "dest": "textures/Ui/Pictograms/64x/Hud_7.png"
+  },
+  "_0C00EC33A013C773E3DAF17536C1E9E0": {
+    "kind": "texture",
+    "dest": "textures/Ui/Pictograms/64x/Hud_8.png"
+  },
+  "_0B9120A7735C646B936B570AC09398E7": {
+    "kind": "texture",
+    "dest": "textures/Ui/Pictograms/64x/Hud_9.png"
+  },
+  "_F0990D6E9F8A76E7CDD5EAF4D7BF303B": {
+    "kind": "texture",
+    "dest": "textures/Ui/Pictograms/64x/Hud_guest.png"
+  },
+  "_FF65DF857BEDF1F06D6481DA673C34DE": {
+    "kind": "texture",
+    "dest": "textures/Ui/Pictograms/64x/RF01.png"
+  },
+  "_019B294D168983176EC9417A1047A906": {
+    "kind": "texture",
+    "dest": "textures/Ui/Pictograms/64x/RF01_focused.png"
+  },
+  "_322EEBED22E76BFDEEC6EE80FF3B37EC": {
+    "kind": "texture",
+    "dest": "textures/Ui/Pictograms/64x/RF02.png"
+  },
+  "_8435F68802504316DEAD05834F740877": {
+    "kind": "texture",
+    "dest": "textures/Ui/Pictograms/64x/RF02_focused.png"
+  },
+  "_791A6BC19484C8161908FCEF53D79A1D": {
+    "kind": "texture",
+    "dest": "textures/Ui/Pictograms/64x/RF03.png"
+  },
+  "_80536EBF55F29CE077C9AB65AD9854C5": {
+    "kind": "texture",
+    "dest": "textures/Ui/Pictograms/64x/RF03_focused.png"
+  },
+  "_A878EB31797A0205DC0190B943107068": {
+    "kind": "texture",
+    "dest": "textures/Ui/Pictograms/64x/RF04.png"
+  },
+  "_862698E19F17A7104BC3983F21238322": {
+    "kind": "texture",
+    "dest": "textures/Ui/Pictograms/64x/RF04_focused.png"
+  },
+  "_BF7323943F8239E398B8613BF53CA5FE": {
+    "kind": "texture",
+    "dest": "textures/Ui/Pictograms/64x/RF05.png"
+  },
+  "_947D89D741FA7CD025913BD36BC1A44B": {
+    "kind": "texture",
+    "dest": "textures/Ui/Pictograms/64x/RF05_focused.png"
+  },
+  "_44E76D72D5FAF2C3618B8ADF770140B0": {
+    "kind": "texture",
+    "dest": "textures/Ui/Pictograms/64x/RF06.png"
+  },
+  "_CAB62A6174A493C8191ADF7F216C8F1E": {
+    "kind": "texture",
+    "dest": "textures/Ui/Pictograms/64x/RF06_focused.png"
+  },
+  "_B711529A909AFD5D5627A2B3D143B9AC": {
+    "kind": "texture",
+    "dest": "textures/Ui/Pictograms/64x/RF07.png"
+  },
+  "_88884E53653EDBAA90D25B2B5F1F30EA": {
+    "kind": "texture",
+    "dest": "textures/Ui/Pictograms/64x/RF07_focused.png"
+  },
+  "_C006B24CCD612478D3B77404C3731A82": {
+    "kind": "texture",
+    "dest": "textures/Ui/Pictograms/64x/RF08.png"
+  },
+  "_917DFD3A25C9569C8C2702E09320A061": {
+    "kind": "texture",
+    "dest": "textures/Ui/Pictograms/64x/RF08_focused.png"
+  },
+  "_FAA0029134E53CB9E15D47622FD1E17E": {
+    "kind": "texture",
+    "dest": "textures/Ui/Pictograms/64x/RF09.png"
+  },
+  "_C88D054B4A9314CC03C245ADF2D901E1": {
+    "kind": "texture",
+    "dest": "textures/Ui/Pictograms/64x/RF09_focused.png"
+  },
+  "_E0F0C1851C69C0FDFAAE8AA6D3D467A6": {
+    "kind": "texture",
+    "dest": "textures/Ui/Pictograms/96x/FreeForAll.png"
+  },
+  "_DCA285D73918A32DB6A1961A9F74581E": {
+    "kind": "texture",
+    "dest": "textures/Ui/Pictograms/96x/FreeFrag.png"
+  },
+  "_F6F54183008C50CDBB5F99760081798A": {
+    "kind": "texture",
+    "dest": "textures/Ui/Pictograms/96x/LastManStanding.png"
+  },
+  "_BCAB9A76C6C298098796685FD238B0D1": {
+    "kind": "texture",
+    "dest": "textures/Ui/Pictograms/96x/OldFashionDuel.png"
+  },
+  "_550CBAF2A2FCE1123FF8E93BDCDD69E6": {
+    "kind": "texture",
+    "dest": "textures/Ui/Pictograms/96x/StarterFrag.png"
+  },
+  "_A18112F934D9CC966D204975F943C8DB": {
+    "kind": "texture",
+    "dest": "textures/Ui/Pictograms/96x/TagNShoot.png"
+  },
+  "_FC8389F7DD17B72EE3C7018B46D0D52B": {
+    "kind": "texture",
+    "dest": "textures/Ui/Pictograms/96x/TeamFrag.png"
+  },
+  "_2BF27C3E448851ECD9172D1DC5B79843": {
+    "kind": "texture",
+    "dest": "textures/Ui/Playground_Arrows.png"
+  },
+  "_1767C0DBCB78AF5804B12D0015FDA20E": {
+    "kind": "texture",
+    "dest": "textures/Ui/Playground_Background.png"
+  },
+  "_9F67D249D0578DDFAB6BD2042BF3A382": {
+    "kind": "texture",
+    "dest": "textures/Ui/Playground_Line1.png"
+  },
+  "_B16F19DAAFB03C092F2343FA750F5EAF": {
+    "kind": "texture",
+    "dest": "textures/Ui/Playground_Line2.png"
+  },
+  "_341A35F49F35556F488F0C49AC2FF928": {
+    "kind": "texture",
+    "dest": "textures/Ui/PopUp_TurnOnGun.png"
+  },
+  "_65AB6ACC6957B8C16F77425576EBCD01": {
+    "kind": "texture",
+    "dest": "textures/Ui/PopUp_TurnOnGunAndVest.png"
+  },
+  "_45BD44BA7F99D6C2187E3C3E426C592C": {
+    "kind": "texture",
+    "dest": "textures/Ui/Ranking_Banner_Arrow.png"
+  },
+  "_C65EB71D8D9568F0D2E109B6EB90170A": {
+    "kind": "texture",
+    "dest": "textures/Ui/Ranking_Banner_EndBG.png"
+  },
+  "_0AF9EF66441D879F1CD842D3522E9BAB": {
+    "kind": "texture",
+    "dest": "textures/Ui/Ranking_Banner_MiddleBG.png"
+  },
+  "_DAC0E52433AA0C8E02BA1F7FEFD1152C": {
+    "kind": "texture",
+    "dest": "textures/Ui/Ranking_Banner_NameBG.png"
+  },
+  "_3AECE0ABBD52643F75702E12F0D06A73": {
+    "kind": "texture",
+    "dest": "textures/Ui/Ranking_Banner_Position.png"
+  },
+  "_A64379909AC3FD61F64D8F4CD6EBDC25": {
+    "kind": "texture",
+    "dest": "textures/Ui/Ranking_Banner_StartBG.png"
+  },
+  "_94525E19349D22AD64B0456EB58B56CB": {
+    "kind": "texture",
+    "dest": "textures/Ui/Ranking_Bg.png"
+  },
+  "_D052AE2358BBFAD64053335EA6FBD185": {
+    "kind": "texture",
+    "dest": "textures/Ui/Ranking_Bg_Bottom.png"
+  },
+  "_5F46F7FA003E283390E9A28469A559CC": {
+    "kind": "texture",
+    "dest": "textures/Ui/Ranking_Bg_FreeForAll.png"
+  },
+  "_628B8C58653537D0E0904C3EAB3653DE": {
+    "kind": "texture",
+    "dest": "textures/Ui/Ranking_Bg_FreeFrag.png"
+  },
+  "_5AF16F240D8B61DD9C9042D09604EB79": {
+    "kind": "texture",
+    "dest": "textures/Ui/Ranking_Bg_Introduction.png"
+  },
+  "_AA0ADDD8B35E4967F0BF017A0B9C38B9": {
+    "kind": "texture",
+    "dest": "textures/Ui/Ranking_Bg_LastManStanding.png"
+  },
+  "_E6BF91E269694F66C8EADB034FD49E5A": {
+    "kind": "texture",
+    "dest": "textures/Ui/Ranking_Bg_OldFashionDuel.png"
+  },
+  "_5166B3BCADAECBF6FDC286D50F45BA71": {
+    "kind": "texture",
+    "dest": "textures/Ui/Ranking_Bg_Star.png"
+  },
+  "_7068E2FFC031BF91928AC597311796A4": {
+    "kind": "texture",
+    "dest": "textures/Ui/Ranking_Bg_StarterFrag.png"
+  },
+  "_9C630CBF86DD7F67803FA8BDDCB5E792": {
+    "kind": "texture",
+    "dest": "textures/Ui/Ranking_Bg_TagNShoot.png"
+  },
+  "_1D7E84B7E03619B28C2A802B94BC6D55": {
+    "kind": "texture",
+    "dest": "textures/Ui/Ranking_Bg_TeamFrag.png"
+  },
+  "_332660EC6F61195EC5C1302BC246B1D0": {
+    "kind": "texture",
+    "dest": "textures/Ui/Ranking_Bg_Top.png"
+  },
+  "_9CA1967F2FA13E1F4669F679BF3F9BA1": {
+    "kind": "texture",
+    "dest": "textures/Ui/Ranking_Medal_Bronze.png"
+  },
+  "_7718334732CC4218F46B096AA0EA2C18": {
+    "kind": "texture",
+    "dest": "textures/Ui/Ranking_Medal_Gold.png"
+  },
+  "_1DF7899A8FB6D3E034574431E4EE7FA0": {
+    "kind": "texture",
+    "dest": "textures/Ui/Ranking_Medal_Silver.png"
+  },
+  "_6C17A6C812BA3FF9A04C190E65C7D73A": {
+    "kind": "texture",
+    "dest": "textures/Ui/Rankings_Arrow1.png"
+  },
+  "_5FAB7F6CC8FF12A44BD9BE606FE1099B": {
+    "kind": "texture",
+    "dest": "textures/Ui/Rankings_Arrow2.png"
+  },
+  "_D38995544F72353CD12FA41EDD13167C": {
+    "kind": "texture",
+    "dest": "textures/Ui/Rankings_Arrow3.png"
+  },
+  "_886A03D2C0F7B9D6B4F0E537E920AE7A": {
+    "kind": "texture",
+    "dest": "textures/Ui/Rankings_SmallArrow1.png"
+  },
+  "_DEF086DD90BD1F3F8280C9079791BC55": {
+    "kind": "texture",
+    "dest": "textures/Ui/Rankings_SmallArrow2.png"
+  },
+  "_C3C509516030460320A99C19824D8390": {
+    "kind": "texture",
+    "dest": "textures/Ui/Rankings_SmallArrow3.png"
+  },
+  "_4755E27C98DA3163E6A0A750871085AF": {
+    "kind": "texture",
+    "dest": "textures/Ui/Rankings_Star.png"
+  },
+  "_AF9B8AA58D55FA122FC4CC1DD96E0591": {
+    "kind": "texture",
+    "dest": "textures/Ui/TBlaster_Connect.png"
+  },
+  "_9ADD5531E090377F8D9DFCA89B991C16": {
+    "kind": "texture",
+    "dest": "textures/Ui/TBlaster_Connect2.png"
+  },
+  "_0972B4C7A2EEF9FC744CEE20E9604E31": {
+    "kind": "texture",
+    "dest": "textures/Ui/TBlaster_TurnOn.png"
+  },
+  "_2C9BECAEF05A1AAA73D210F3C660175F": {
+    "kind": "texture",
+    "dest": "textures/Ui/Text_GameOver.png"
+  },
+  "_8AB57237EA8A4EA6975C3C365154D7CE": {
+    "kind": "texture",
+    "dest": "textures/Ui/TopBorderLeft.png"
+  },
+  "_D395A95E3E43CBED59C1A8CA94DEAC90": {
+    "kind": "texture",
+    "dest": "textures/Ui/TopBorderLine.png"
+  },
+  "_9B3C8199DA112E47EB43D41E759C85C4": {
+    "kind": "texture",
+    "dest": "textures/Ui/TopBorderRight.png"
+  },
+  "_E1C673FDC09B58EA08E26D9B65BE61B9": {
+    "kind": "texture",
+    "dest": "textures/Ui/Warning.png"
+  },
+  "_25CA0E1B2423CF650E8A3CE9DE8AF651": {
+    "kind": "texture",
+    "dest": "textures/Ui/basics06_1.png"
+  },
+  "_A88D45F8D21E1D889C5E4BBA5652366D": {
+    "kind": "texture",
+    "dest": "textures/Ui/basics06_2.png"
+  },
+  "_E363FF6665BC0AEF2B9E5E0F7E893A45": {
+    "kind": "texture",
+    "dest": "textures/Ui/basics06_3.png"
+  },
+  "_BD303905A64B046C6FF1D54F511F883F": {
+    "kind": "texture",
+    "dest": "textures/Ui/basics06_4.png"
+  }
+}

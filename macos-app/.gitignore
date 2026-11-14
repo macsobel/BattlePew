@@ -1,0 +1,7 @@
+# Build outputs for the macOS .app (never commit a built app or downloads).
+/build/
+/.cache/
+*.zip
+*.icns
+# Local overrides / scratch used by the build script.
+/.local-build-env

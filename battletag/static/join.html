@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<title>Join the Battle — BattlePew</title>
+<style>
+  @font-face {
+    font-family: 'UbiTTB';
+    src: url('/static/assets/fonts/UbiTTB.ttf') format('truetype');
+    font-display: swap;
+  }
+  :root {
+    --hud-bg: #0E1117;
+    --hud-card: #171C26;
+    --hud-border: #2C3446;
+    --bt-orange: #F26314;
+    --bt-orange-bright: #FB8119;
+    --font-display: 'UbiTTB', -apple-system, BlinkMacSystemFont, 'SF Pro Display', sans-serif;
+    --font-sans: -apple-system, BlinkMacSystemFont, 'SF Pro Text', sans-serif;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--hud-bg);
+    color: #F2F4F8;
+    font-family: var(--font-sans);
+    -webkit-tap-highlight-color: transparent;
+    min-height: 100vh;
+    min-height: 100dvh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 32px 20px 24px;
+  }
+  .brand {
+    font-family: var(--font-display);
+    font-size: 1.5rem;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+  .brand span { color: var(--bt-orange-bright); }
+  .prompt {
+    margin: 10px 0 22px;
+    font-size: 1.05rem;
+    color: #AAB3C5;
+    text-align: center;
+  }
+  .player-grid {
+    width: 100%;
+    max-width: 430px;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+  }
+  .player-btn {
+    appearance: none;
+    border: 1.5px solid var(--hud-border);
+    border-radius: 14px;
+    background: var(--hud-card);
+    color: #F2F4F8;
+    padding: 18px 12px 16px;
+    cursor: pointer;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+    font-family: var(--font-sans);
+    min-height: 132px;
+    justify-content: center;
+  }
+  .player-btn:active { border-color: var(--bt-orange); background: #1E2534; }
+  .player-btn img:not(.player-num-badge) { width: 56px; height: 56px; }
+  .avatar-with-badge {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .player-num-badge {
+    position: absolute;
+    right: -5px;
+    bottom: -5px;
+    width: 28px;
+    height: 28px;
+    object-fit: contain;
+    pointer-events: none;
+    filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.5));
+    z-index: 2;
+  }
+  .player-btn .pnum {
+    font-family: var(--font-display);
+    font-size: 1.3rem;
+    letter-spacing: 0.04em;
+  }
+  .player-btn .pname {
+    font-size: 0.85rem;
+    color: #AAB3C5;
+    max-width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    text-transform: uppercase;
+  }
+  .waiting {
+    width: 100%;
+    max-width: 430px;
+    text-align: center;
+    border: 1.5px dashed var(--hud-border);
+    border-radius: 14px;
+    padding: 28px 18px;
+    color: #AAB3C5;
+    line-height: 1.5;
+  }
+  .waiting .pulse { font-size: 1.8rem; }
+  .footnote {
+    margin-top: auto;
+    padding-top: 28px;
+    font-size: 0.8rem;
+    color: #6B7488;
+    text-align: center;
+  }
+</style>
+</head>
+<body>
+  <div class="brand">Battle<span>Pew</span></div>
+  <p class="prompt">Select the player number on your T-Blaster.</p>
+  <div class="player-grid" id="playerGrid"></div>
+  <div class="waiting" id="waitingBox" style="display: none;">
+    <div class="pulse">🎯</div>
+    <p>No T-Blasters paired yet.<br />Pair a gun on the Arena Master — this page updates on its own.</p>
+  </div>
+  <p class="footnote">To switch players, scan the QR code again.</p>
+<script>
+  const grid = document.getElementById('playerGrid');
+  const waiting = document.getElementById('waitingBox');
+  let lastKey = '';
+  async function refresh() {
+    try {
+      const res = await fetch('/api/state');
+      if (!res.ok) return;
+      const state = await res.json();
+      const players = [...(state.players || [])].sort((a, b) => a.gun_num - b.gun_num);
+      const key = players.map((p) => `${p.gun_num}:${p.name}:${p.avatar}`).join('|');
+      if (key === lastKey) return;
+      lastKey = key;
+      if (players.length === 0) {
+        grid.innerHTML = '';
+        grid.style.display = 'none';
+        waiting.style.display = 'block';
+        return;
+      }
+      waiting.style.display = 'none';
+      grid.style.display = 'grid';
+      grid.innerHTML = players.map((p) => `
+        <button type="button" class="player-btn" onclick="location.href='/player/${p.gun_num}'">
+          <span class="avatar-with-badge">
+            <img src="/static/assets/textures/Avatars/64x/${p.avatar}.png" alt="${p.avatar}" />
+            <img class="player-num-badge" src="/static/assets/textures/Ui/Pictograms/64x/Hud_${p.gun_num}.png" alt="P${p.gun_num}" />
+          </span>
+          <span class="pname">${(p.name || '').toUpperCase()}</span>
+        </button>`).join('');
+    } catch (err) {
+      /* Offline or server restarting: keep polling. */
+    }
+  }
+  refresh();
+  setInterval(refresh, 2000);
+</script>
+</body>
+</html>
