@@ -258,6 +258,148 @@
       justify-content: space-between;
     }
 
+    /* Duel block (Wild West Duel only): round, signal state, tally. */
+    .duel-card {
+      background: var(--hud-card);
+      border: 1.5px solid var(--hud-border);
+      border-radius: 12px;
+      padding: 14px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      text-align: center;
+    }
+
+    .duel-block-head {
+      font-family: var(--font-display);
+      font-size: 1.05rem;
+      letter-spacing: 0.08em;
+      color: #9BA3B5;
+      text-transform: uppercase;
+    }
+
+    .duel-subphase {
+      font-family: var(--font-display);
+      font-size: 1.9rem;
+      line-height: 1.1;
+      letter-spacing: 0.03em;
+    }
+
+    .duel-subphase.wait { color: #F59E0B; }
+    .duel-subphase.draw { color: var(--team-green); font-size: 2.6rem; }
+    .duel-subphase.end { color: #9BA3B5; font-size: 1.5rem; }
+    .duel-subphase.complete { color: var(--team-yellow); }
+
+    .duel-tally {
+      font-family: var(--font-display);
+      font-size: 1.3rem;
+      letter-spacing: 0.04em;
+    }
+
+    .duel-chips {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      gap: 6px;
+    }
+
+    .duel-chip {
+      font-size: 0.75rem;
+      font-weight: 700;
+      letter-spacing: 0.04em;
+      padding: 3px 8px;
+      border-radius: 999px;
+      background: #11151E;
+      border: 1px solid var(--hud-border);
+      color: #C7CEDD;
+    }
+
+    .duel-chip.mine { border-color: var(--team-green); color: #7BD88A; }
+    .duel-chip.rival { border-color: var(--team-red); color: #FF8575; }
+
+    /* Race block (Tag'n Shoot only): tags, tower, course progress. */
+    .race-card {
+      background: var(--hud-card);
+      border: 1.5px solid var(--hud-border);
+      border-radius: 12px;
+      padding: 14px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .race-stats {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+    }
+
+    .race-stat {
+      background: #11151E;
+      border: 1px solid var(--hud-border);
+      border-radius: 9px;
+      padding: 10px 12px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 2px;
+    }
+
+    .race-num {
+      font-family: var(--font-display);
+      font-size: 2.2rem;
+      line-height: 1;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .race-label {
+      font-size: 0.7rem;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      color: #9BA3B5;
+    }
+
+    .race-course-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+    }
+
+    .race-course-label {
+      font-family: var(--font-display);
+      font-size: 0.95rem;
+      letter-spacing: 0.04em;
+      color: var(--bt-orange-bright);
+      text-transform: uppercase;
+      white-space: nowrap;
+    }
+
+    .race-pips {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+    }
+
+    .race-pip {
+      width: 22px;
+      height: 12px;
+      border-radius: 3px;
+      background: #252C3B;
+      border: 1px solid #384157;
+    }
+
+    .race-pip.done {
+      background: var(--team-green);
+      border-color: #4ADE80;
+    }
+
+    .race-pip.next {
+      background: var(--bt-orange);
+      border-color: var(--bt-orange-bright);
+      box-shadow: 0 0 8px rgba(242, 99, 20, 0.6);
+    }
+
     /* Secondary Stats: Streak, Accuracy, Hits, Frags */
     .stats-4grid {
       display: grid;
@@ -1082,6 +1224,26 @@
     </div>
   </section>
 
+  <!-- Duel round display (Wild West Duel only) -->
+  <section class="duel-card" id="hudDuelBlock" style="display: none;">
+    <div class="duel-block-head" id="hudDuelRound">ROUND 1 OF 5</div>
+    <div class="duel-subphase end" id="hudDuelSubphase">GET READY</div>
+    <div class="duel-tally" id="hudDuelTally"></div>
+    <div class="duel-chips" id="hudDuelChips"></div>
+  </section>
+
+  <!-- Race progress (Tag'n Shoot only) -->
+  <section class="race-card" id="hudRaceBlock" style="display: none;">
+    <div class="race-stats">
+      <div class="race-stat"><span class="race-num" id="hudRaceTags">0</span><span class="race-label">T-BASE TAGS</span></div>
+      <div class="race-stat"><span class="race-num" id="hudRaceTower">0</span><span class="race-label">TOWER HITS</span></div>
+    </div>
+    <div class="race-course-row">
+      <span class="race-course-label" id="hudRaceCourse">NEXT: T-BASE 1</span>
+      <div class="race-pips" id="hudRacePips"></div>
+    </div>
+  </section>
+
   <!-- Health & Ammo Vitals -->
   <section class="vitals-card" id="hudVitals">
     <div>
@@ -1426,6 +1588,11 @@
       }
       overlay.style.display = 'none';
 
+      // Mode-specific display: duel rounds, race course, LMS elims.
+      const isDuel = state.mode.id === 'OldFashionDuel';
+      const isLMS = state.mode.id === 'LastManStanding';
+      const isRace = state.mode.id === 'TagThenShoot';
+
       // Header. Team identity only shows in team modes; solo modes get
       // Solo modes (no teams) and the lobby pairing page (wizard_step === 1)
       // use the plain orange treatment and no team label. Team info appears
@@ -1479,7 +1646,9 @@
       const showGameStats = isRoundActive || (hasPrevStats && !isGameSelection);
       const resultsRevealed = !!state.results_revealed
         && (state.phase === 'GAME_OVER' || (state.phase === 'LOBBY' && hasPrevStats && !isGameSelection));
-      const hideRankAndScore = (state.phase === 'PLAYING' && state.remaining_seconds != null && state.remaining_seconds <= 20)
+      // TagThenShoot never fades rank/score: a 60-second race stays
+      // visible to the end. The game-over reveal gate still applies.
+      const hideRankAndScore = (state.mode.id !== 'TagThenShoot' && state.phase === 'PLAYING' && state.remaining_seconds != null && state.remaining_seconds <= 20)
         || (state.phase === 'GAME_OVER' && !resultsRevealed);
 
       document.getElementById('hudWaitingCard').style.display = showGameStats ? 'none' : 'flex';
@@ -1499,8 +1668,9 @@
         }
       }
       document.getElementById('hudTelemetry').style.display = showGameStats ? 'grid' : 'none';
-      // Hide Life/Ammo/Clips once results are shown
-      document.getElementById('hudVitals').style.display = (showGameStats && !resultsRevealed) ? 'flex' : 'none';
+      // Hide Life/Ammo/Clips once results are shown; race mode swaps
+      // the all-infinity vitals for the race block instead.
+      document.getElementById('hudVitals').style.display = (showGameStats && !resultsRevealed && !isRace) ? 'flex' : 'none';
       // Hits, frags, streak, and accuracy belong on the end-of-game stats page, not active HUD
       document.getElementById('hudStatsGrid').style.display = 'none';
       document.getElementById('hudRankBox').classList.toggle('hud-fade-hidden', hideRankAndScore);
@@ -1526,7 +1696,11 @@
         ? `00:${String(state.countdown_remaining).padStart(2, '0')}`
         : state.clock;
       document.getElementById('hudRank').textContent = `#${rank}`;
-      document.getElementById('hudScore').textContent = rankMe.score;
+      // The score box shows the mode's real number: rounds won in Duel
+      // (score already counts those), eliminations in LMS (score there
+      // is a sort-order artifact, not points).
+      document.getElementById('hudScore').textContent = isLMS ? rankMe.frags : rankMe.score;
+      document.querySelector('#hudScoreBox .t-label').textContent = isDuel ? 'ROUNDS' : (isLMS ? 'ELIMS' : 'SCORE');
 
       // Big countdown treatment while the guns count down (or waiting on P1 trigger).
       const hero = document.getElementById('countdownHero');
@@ -1542,6 +1716,51 @@
           : 'Waiting for Player 1 to pull their trigger…';
       } else {
         hero.style.display = 'none';
+      }
+
+      // Duel block: round, signal state, tally. The phone is what the
+      // duelist holds during the standoff, so the WAIT/DRAW state and
+      // the rounds tally live here, mirroring the main-screen strip.
+      const duelBlock = document.getElementById('hudDuelBlock');
+      const ds = state.duel_state || null;
+      const showDuelBlock = isDuel && isRoundActive && !!ds && typeof ds.round === 'number' && !resultsRevealed;
+      duelBlock.style.display = showDuelBlock ? 'flex' : 'none';
+      if (showDuelBlock) {
+        const subLabels = { INTRO: 'GET READY', WAIT: 'WAIT FOR THE SIGNAL…', DRAW: 'DRAW!', ROUND_END: 'ROUND OVER', COMPLETE: 'DUEL COMPLETE' };
+        document.getElementById('hudDuelRound').textContent = `ROUND ${Math.max(1, ds.round)} OF ${ds.max_rounds}`;
+        const subEl = document.getElementById('hudDuelSubphase');
+        subEl.textContent = subLabels[ds.subphase] || ds.subphase || '';
+        subEl.className = 'duel-subphase ' + (ds.subphase === 'WAIT' ? 'wait' : ds.subphase === 'DRAW' ? 'draw' : ds.subphase === 'COMPLETE' ? 'complete' : 'end');
+        const rival = allPlayers.find((p) => p.gun_id !== me.gun_id) || null;
+        const scores = ds.round_scores || {};
+        const myWins = scores[me.gun_id] || 0;
+        const rivalWins = rival ? (scores[rival.gun_id] || 0) : 0;
+        document.getElementById('hudDuelTally').textContent = rival
+          ? `YOU ${myWins} — ${rivalWins} ${(rival.name || '').toUpperCase()}`
+          : `YOU ${myWins}`;
+        document.getElementById('hudDuelChips').innerHTML = (ds.round_results || []).map((r) => {
+          if (!r.winner_gun_num) return `<span class="duel-chip">R${r.round}: DRAW</span>`;
+          const mine = allPlayers.find((p) => p.gun_num === r.winner_gun_num)?.gun_id === me.gun_id;
+          return `<span class="duel-chip ${mine ? 'mine' : 'rival'}">R${r.round}: ${mine ? 'YOU ★' : 'RIVAL'}</span>`;
+        }).join('');
+      }
+
+      // Race block: tags, tower hits, and course progress, replacing
+      // the all-infinity vitals in TagThenShoot.
+      const raceBlock = document.getElementById('hudRaceBlock');
+      const showRaceBlock = isRace && showGameStats && !resultsRevealed;
+      raceBlock.style.display = showRaceBlock ? 'flex' : 'none';
+      if (showRaceBlock) {
+        document.getElementById('hudRaceTags').textContent = me.tags;
+        document.getElementById('hudRaceTower').textContent = me.tower_hits;
+        const bases = Math.max(1, parseInt(state.settings?.numberOfBase ?? 4, 10) || 4);
+        const taggedThisLap = ((me.tags % bases) + bases) % bases;
+        const lap = Math.floor(me.tags / bases) + 1;
+        document.getElementById('hudRaceCourse').textContent = `NEXT: T-BASE ${taggedThisLap + 1}${lap > 1 ? ` · LAP ${lap}` : ''}`;
+        document.getElementById('hudRacePips').innerHTML = Array.from({ length: bases }, (_, i) => {
+          const cls = i < taggedThisLap ? 'done' : (i === taggedThisLap ? 'next' : '');
+          return `<span class="race-pip ${cls}"></span>`;
+        }).join('');
       }
 
       // New-tag detection: flash + haptics the moment a fresh tag lands.
@@ -1662,7 +1881,9 @@
         overCard.style.display = 'flex';
         const won = rankMe.status_badge === 'WINNER';
         document.getElementById('gameOverHead').textContent = won ? '🏆 VICTORY!' : 'MATCH OVER';
-        document.getElementById('gameOverRank').textContent = `Final rank #${rank} · ${rankMe.score} point${rankMe.score === 1 ? '' : 's'}`;
+        const finalNum = isLMS ? rankMe.frags : rankMe.score;
+        const finalWord = isDuel ? (finalNum === 1 ? 'round won' : 'rounds won') : isLMS ? (finalNum === 1 ? 'elim' : 'elims') : (finalNum === 1 ? 'point' : 'points');
+        document.getElementById('gameOverRank').textContent = `Final rank #${rank} · ${finalNum} ${finalWord}`;
         document.getElementById('gameOverStats').innerHTML = `
           <span class="hud-stat-chip" title="Hits Landed">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3"/></svg>
@@ -1697,6 +1918,12 @@
           hint = 'Ammo boxes reload · No respawns — stay alive';
         } else if (state.mode.id === 'StarterFrag') {
           hint = 'Ammo boxes reload your clip';
+        } else if (state.mode.id === 'OldFashionDuel') {
+          hint = 'Wait for DRAW — an early hit forfeits the round';
+        } else if (state.mode.id === 'TagThenShoot') {
+          hint = 'Scan T-Bases in order, then shoot the tower';
+        } else if (state.mode.id === 'FreeFrag' && state.settings && state.settings.scoreLimit > 0) {
+          hint = `First to ${state.settings.scoreLimit} hits wins`;
         }
       }
       hintEl.textContent = hint;
