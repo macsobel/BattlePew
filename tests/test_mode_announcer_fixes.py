@@ -43,6 +43,17 @@ def _poll_all(eng: ArenaEngine) -> None:
             eng.ingest_status_report(st)
 
 
+def _start_run(eng: ArenaEngine) -> None:
+    """Drive the active player's timed turn from WAIT_TRIGGER to RUNNING."""
+    assert eng.race_state["turn_phase"] == "WAIT_TRIGGER"
+    eng._turn_triggered = True
+    eng.tick_race_turns()
+    assert eng.race_state["turn_phase"] == "COUNTDOWN"
+    eng.race_state["countdown_ends_at"] = time.time() - 1.0
+    eng.tick_race_turns()
+    assert eng.race_state["turn_phase"] == "RUNNING"
+
+
 def test_frag_credit_goes_to_killing_shooter() -> None:
     """F6: in a multi-shooter report the frag (+3) goes to shooters[0],
     the most-recent shooter (the killing blow per the shift-register
@@ -175,6 +186,7 @@ def test_tagtenshoot_separate_stats_and_counter_reset() -> None:
     across matches (no phantom tower hits)."""
     eng = ArenaEngine()
     _start(eng, "TagThenShoot")
+    _start_run(eng)
     assert MODE_CATALOG["TagThenShoot"]["max_players"] == 8
     p = eng.players[2]
 
@@ -205,6 +217,7 @@ def test_tagtenshoot_separate_stats_and_counter_reset() -> None:
     eng.match_start_ts = time.time()
     assert (p.tags, p.tower_hits, p.frags, p.score) == (0, 0, 0, 0)
     _poll_all(eng)
+    _start_run(eng)
     eng.sim.sim_scan_rfid(2, "RF03")
     _poll_all(eng)
     eng.sim.sim_fire_shot(2, 2)

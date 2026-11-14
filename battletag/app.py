@@ -651,10 +651,20 @@ async def api_stop_match() -> JSONResponse:
 
 @app.post("/api/manual-launch/trigger")
 async def api_manual_launch_trigger() -> JSONResponse:
-    if engine.phase != "WAIT_TRIGGER":
-        return JSONResponse({"ok": False, "reason": "Not waiting for trigger"}, status_code=400)
-    engine._manual_launch_triggered = True
-    return JSONResponse({"ok": True})
+    if engine.phase == "WAIT_TRIGGER":
+        engine._manual_launch_triggered = True
+        return JSONResponse({"ok": True})
+    # Timed TagThenShoot turns wait inside PLAYING: release only the
+    # current turn's wait, so a stray tap can never auto-release a
+    # later turn.
+    if (
+        engine.mode_name == "TagThenShoot"
+        and engine.phase == "PLAYING"
+        and engine.race_state.get("turn_phase") == "WAIT_TRIGGER"
+    ):
+        engine._turn_triggered = True
+        return JSONResponse({"ok": True})
+    return JSONResponse({"ok": False, "reason": "Not waiting for trigger"}, status_code=400)
 
 
 async def _announce_winner_followups(items: list[tuple[str, str]]) -> None:
@@ -704,11 +714,26 @@ def _trigger_winner_announcement() -> None:
         asyncio.create_task(_announce_winner_followups(items))
         return
 
-    ranked_players = sorted(engine.players.values(), key=lambda p: p.score, reverse=True)
-    if not ranked_players:
-        return
-    top_score = ranked_players[0].score
-    winners = [p for p in ranked_players if p.score == top_score]
+    if engine.mode_name == "TagThenShoot":
+        # Timed turns: the fastest finished run wins (shared winners
+        # on an exact time tie, as the original has no tie-breaks).
+        # When nobody finished, the most points wins.
+        completed = [
+            p for p in engine.players.values() if p.run_completed and p.run_time is not None
+        ]
+        if completed:
+            best = min(p.run_time for p in completed)
+            winners = [p for p in completed if p.run_time == best]
+        else:
+            ranked_players = sorted(engine.players.values(), key=lambda p: p.score, reverse=True)
+            top_score = ranked_players[0].score
+            winners = [p for p in ranked_players if p.score == top_score]
+    else:
+        ranked_players = sorted(engine.players.values(), key=lambda p: p.score, reverse=True)
+        if not ranked_players:
+            return
+        top_score = ranked_players[0].score
+        winners = [p for p in ranked_players if p.score == top_score]
     if len(winners) > 1:
         # Shared winners: "And the winners are..." plus a Set B callout
         # for every tied winner. The original has no tie-breaks.
@@ -1308,9 +1333,11 @@ async def _run_match_lifecycle() -> None:
 
         engine.reset_stats_for_new_match()
 
-        # Optional Manual Launch: Player 1 pulls their trigger to begin a 5s countdown
+        # Optional Manual Launch: Player 1 pulls their trigger to begin a 5s countdown.
+        # TagThenShoot skips the match-level wait: its timed turns each
+        # wait for their own player's trigger inside PLAYING.
         cd_secs = int(engine.settings.get("countdownSeconds", 10))
-        if int(engine.settings.get("gameLaunch", 0)) == 1 and engine.players:
+        if int(engine.settings.get("gameLaunch", 0)) == 1 and engine.players and engine.mode_name != "TagThenShoot":
             p1 = min(engine.players.values(), key=lambda p: p.gun_num)
             engine.phase = "WAIT_TRIGGER"
             engine._manual_launch_triggered = False
@@ -1331,43 +1358,82 @@ async def _run_match_lifecycle() -> None:
                 return
             cd_secs = max(1, cd_secs // 2)
 
-        # Phase 2: Countdown
-        engine.phase = "COUNTDOWN"
-        engine.countdown_remaining = cd_secs
-        engine.audio.trigger_pool("countdown_intro", force=True)
-        if not engine.use_simulator and engine.hw:
-            ok = await asyncio.to_thread(engine.hw.start_countdown, sorted(engine.players.keys()), cd_secs)
-            if not ok:
-                await _broadcast_toast("Countdown echo failed on hardware.", kind="countdown_echo_failed")
-                engine.phase = "LOBBY"
+        # Phase 2: Countdown. TagThenShoot skips the match-level
+        # countdown: each timed turn runs its own countdown after its
+        # player's trigger pull, driven by tick_race_turns.
+        if engine.mode_name != "TagThenShoot":
+            engine.phase = "COUNTDOWN"
+            engine.countdown_remaining = cd_secs
+            engine.audio.trigger_pool("countdown_intro", force=True)
+            if not engine.use_simulator and engine.hw:
+                ok = await asyncio.to_thread(engine.hw.start_countdown, sorted(engine.players.keys()), cd_secs)
+                if not ok:
+                    await _broadcast_toast("Countdown echo failed on hardware.", kind="countdown_echo_failed")
+                    engine.phase = "LOBBY"
+                    await broadcast_state()
+                    return
+
+            for rem in range(cd_secs, 0, -1):
+                engine.countdown_remaining = rem
+                engine.audio.play_countdown_number(rem)
                 await broadcast_state()
-                return
+                if not engine.use_simulator and engine.hw and rem == 5:
+                    await asyncio.to_thread(engine.hw.send_ping)
+                await asyncio.sleep(1.0)
 
-        for rem in range(cd_secs, 0, -1):
-            engine.countdown_remaining = rem
-            engine.audio.play_countdown_number(rem)
-            await broadcast_state()
-            if not engine.use_simulator and engine.hw and rem == 5:
-                await asyncio.to_thread(engine.hw.send_ping)
-            await asyncio.sleep(1.0)
-
-        if not engine.use_simulator and engine.hw:
-            await asyncio.to_thread(engine.hw.drain_stale_echoes, 0.4)
+            if not engine.use_simulator and engine.hw:
+                await asyncio.to_thread(engine.hw.drain_stale_echoes, 0.4)
 
         # Phase 3: Active Match
         engine.phase = "PLAYING"
         engine.countdown_remaining = 0
         engine.match_start_ts = time.time()
         engine.audio.play_music("musicingame.wav")
-        engine.audio.trigger_pool("game_start", force=True)
+        # The race plays game_start at each run's start instead: the
+        # match opens on turn 1's trigger wait, not on a run.
+        if engine.mode_name != "TagThenShoot":
+            engine.audio.trigger_pool("game_start", force=True)
         engine.add_event("system", f"{MODE_CATALOG[engine.mode_name]['title']} match started!")
         await broadcast_state()
 
         last_bot_step = time.time()
         last_vest_sweep = time.time()
+        race_prompt_tick = 0
         while engine.phase == "PLAYING":
             engine.tick_mode_timers()
+            engine.tick_race_turns()
             engine.tick_pending_audio()
+            # TagThenShoot timed turns on hardware: poll the active
+            # gun's trigger while its turn waits, and send the
+            # per-turn countdown to that gun alone when its countdown
+            # starts. The trigger poll runs ~4x/s (a pull is a human
+            # action; the 0xC2 query is one extra packet per cycle),
+            # the prompt every ~5 s, matching the match-level wait.
+            if engine.mode_name == "TagThenShoot" and not engine.use_simulator and engine.hw:
+                rs = engine.race_state
+                race_prompt_tick += 1
+                if rs.get("turn_phase") == "WAIT_TRIGGER" and rs.get("active_gun_id") is not None:
+                    gid = rs["active_gun_id"]
+                    if race_prompt_tick % 100 == 0:
+                        await asyncio.to_thread(engine.hw.send_manual_launch_prompt, gid)
+                    if race_prompt_tick % 5 == 0:
+                        pulled = await asyncio.to_thread(engine.hw.poll_manual_trigger, gid)
+                        if not pulled:
+                            rs["trigger_armed"] = True
+                        elif rs.get("trigger_armed", True):
+                            engine._turn_triggered = True
+                elif rs.get("turn_phase") == "COUNTDOWN" and not rs.get("countdown_sent", True):
+                    rs["countdown_sent"] = True
+                    gid = rs.get("active_gun_id")
+                    ok = await asyncio.to_thread(
+                        engine.hw.start_countdown, [gid], int(rs.get("countdown_seconds", 1))
+                    )
+                    if not ok:
+                        await _broadcast_toast("Countdown echo failed on hardware.", kind="countdown_echo_failed")
+                        engine.phase = "LOBBY"
+                        await broadcast_state()
+                        return
+                    await asyncio.to_thread(engine.hw.drain_stale_echoes, 0.4)
             for gid in sorted(engine.players.keys()):
                 player = engine.players[gid]
                 downlink = None
@@ -1492,7 +1558,12 @@ async def _finish_match(reason: str = "Match Over") -> None:
         # Note: Do NOT close engine.hw! The guns stay paired across matches until explicitly reset.
 
     engine.audio.play_ui("Ranking.wav")
-    engine.audio.trigger_pool("game_end", force=True)
+    # The race ends on its own line ("Race over!" / "Wow! What a
+    # race!") instead of the generic game-end pool.
+    if engine.mode_name == "TagThenShoot":
+        engine.audio.trigger_pool("race_over", force=True)
+    else:
+        engine.audio.trigger_pool("game_end", force=True)
     engine.audio.play_music("musicmenu.wav")
 
     # Determine headline winner

@@ -186,6 +186,21 @@ class SimulatorTransport:
             g.tag_stage = 0
             g.awaiting_shot = False
 
+    def reset_race_course(self, gun_id: int) -> None:
+        """Reset one sim gun's TagThenShoot course position for a new timed turn.
+
+        The tag counter itself stays cumulative (the engine diffs it
+        against its per-player baseline); only the course position —
+        which base is next and whether a tower shot is awaited — resets,
+        mirroring the per-turn countdown restart on real hardware.
+        """
+        g = self.guns.get(gun_id)
+        if g is None:
+            return
+        g.tag_stage = 0
+        g.awaiting_shot = False
+        g.phase_flag = 1
+
     def read_gun_profile(self, gun_id: int) -> dict[str, Any] | None:
         """Return the sim gun's stored (flash) profile, as a 0x84 read would."""
         g = self.guns.get(gun_id)

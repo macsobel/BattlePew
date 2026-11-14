@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import time
+
 import pytest
 
 from battletag.hardware import RealHIDTransport, load_mode_sequences
@@ -211,9 +213,16 @@ def test_eight_player_support_and_duel_tagnshoot() -> None:
     assert eng.players[2].name == "CAPTAIN"
     assert eng.players[9].gun_num == 8
 
-    # Verify TagThenShoot 0xC3 UbiConnect hit ingestion
+    # Verify TagThenShoot 0xC3 UbiConnect hit ingestion during the
+    # active player's timed run (scoring is gated to live runs).
     eng.select_mode("TagThenShoot")
     eng.reset_stats_for_new_match()
+    eng.phase = "PLAYING"
+    eng._turn_triggered = True
+    eng.tick_race_turns()
+    eng.race_state["countdown_ends_at"] = time.time() - 1.0
+    eng.tick_race_turns()
+    assert eng.race_state["turn_phase"] == "RUNNING"
     eng.ingest_ubiconnect_hits({2: 3})
     assert eng.players[2].score == 3
     assert eng.players[2].frags == 3

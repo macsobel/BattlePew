@@ -328,6 +328,16 @@
       gap: 12px;
     }
 
+    .race-status {
+      font-family: var(--font-display);
+      font-size: 1rem;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+      text-align: center;
+      color: #FFFFFF;
+      font-variant-numeric: tabular-nums;
+    }
+
     .race-stats {
       display: grid;
       grid-template-columns: 1fr 1fr;
@@ -1234,6 +1244,7 @@
 
   <!-- Race progress (Tag'n Shoot only) -->
   <section class="race-card" id="hudRaceBlock" style="display: none;">
+    <div class="race-status" id="hudRaceStatus"></div>
     <div class="race-stats">
       <div class="race-stat"><span class="race-num" id="hudRaceTags">0</span><span class="race-label">T-BASE TAGS</span></div>
       <div class="race-stat"><span class="race-num" id="hudRaceTower">0</span><span class="race-label">TOWER HITS</span></div>
@@ -1690,7 +1701,16 @@
       const rankMe = finalStandings
         ? (finalStandings.find((p) => p.gun_id === me.gun_id || p.gun_num === me.gun_num) || me)
         : me;
-      const rank = 1 + rankPool.filter((p) => p.score > rankMe.score).length;
+      const rank = isRace
+        ? 1 + rankPool.filter((p) => {
+            const pFin = p.run_completed && p.run_time != null;
+            const meFin = rankMe.run_completed && rankMe.run_time != null;
+            if (pFin && meFin) return p.run_time < rankMe.run_time;
+            if (pFin && !meFin) return true;
+            if (!pFin && !meFin) return p.score > rankMe.score;
+            return false;
+          }).length
+        : 1 + rankPool.filter((p) => p.score > rankMe.score).length;
       document.getElementById('hudModeLabel').textContent = state.mode.title;
       document.getElementById('hudClock').textContent = state.phase === 'COUNTDOWN'
         ? `00:${String(state.countdown_remaining).padStart(2, '0')}`
@@ -1745,20 +1765,68 @@
         }).join('');
       }
 
-      // Race block: tags, tower hits, and course progress, replacing
-      // the all-infinity vitals in TagThenShoot.
+      // Race block: my run totals, the turn status, and my course
+      // progress, replacing the all-infinity vitals in TagThenShoot.
       const raceBlock = document.getElementById('hudRaceBlock');
       const showRaceBlock = isRace && showGameStats && !resultsRevealed;
       raceBlock.style.display = showRaceBlock ? 'flex' : 'none';
       if (showRaceBlock) {
         document.getElementById('hudRaceTags').textContent = me.tags;
         document.getElementById('hudRaceTower').textContent = me.tower_hits;
+        const rs = state.race_state;
         const bases = Math.max(1, parseInt(state.settings?.numberOfBase ?? 4, 10) || 4);
-        const taggedThisLap = ((me.tags % bases) + bases) % bases;
-        const lap = Math.floor(me.tags / bases) + 1;
-        document.getElementById('hudRaceCourse').textContent = `NEXT: T-BASE ${taggedThisLap + 1}${lap > 1 ? ` · LAP ${lap}` : ''}`;
+        const meUp = !!(rs && rs.active_gun_id === me.gun_id);
+        const meFinished = me.run_completed && me.run_time != null;
+        const runner = rs ? (allPlayers || []).find((p) => p.gun_id === rs.active_gun_id) : null;
+        const runnerName = runner ? (runner.name || '').toUpperCase() : '';
+        const turnPhase = rs ? rs.turn_phase : null;
+        // Status line: the live turn, from this player's point of view.
+        let status = '';
+        if (turnPhase === 'WAIT_TRIGGER') {
+          status = meUp ? 'PULL THE TRIGGER TO START' : `${runnerName} IS UP — WAITING FOR TRIGGER`;
+        } else if (turnPhase === 'COUNTDOWN') {
+          status = meUp ? `GET READY — ${rs.countdown_remaining}` : `${runnerName} STARTS IN ${rs.countdown_remaining}…`;
+        } else if (turnPhase === 'RUNNING') {
+          status = meUp ? `YOUR RUN — ${(rs.elapsed || 0).toFixed(1)}s` : `${runnerName} — ${(rs.elapsed || 0).toFixed(1)}s`;
+        } else if (turnPhase === 'TURN_END') {
+          if (meUp) {
+            status = meFinished ? `FINISHED ${me.run_time.toFixed(1)}s` : `TIME UP — ${me.score} PTS`;
+          } else if (runner) {
+            status = runner.run_completed && runner.run_time != null
+              ? `${runnerName} FINISHED ${runner.run_time.toFixed(1)}s`
+              : `${runnerName} — TIME UP · ${runner.score} PTS`;
+          }
+        } else {
+          status = 'RACE COMPLETE';
+        }
+        // A finished run keeps its time on screen while others run.
+        if (meFinished && !meUp) {
+          status += ` · YOU ${me.run_time.toFixed(1)}s`;
+          const finTimes = (allPlayers || []).filter((p) => p.run_completed && p.run_time != null).map((p) => p.run_time);
+          if (finTimes.length && me.run_time === Math.min(...finTimes)) status += ' ★ FASTEST';
+        }
+        document.getElementById('hudRaceStatus').textContent = status;
+        // Course row: my next action while I'm up, my result once my
+        // run is over. The gun alternates scan/shoot states, so a
+        // tower deficit means the tower shot comes next.
+        const alreadyRan = !!(rs && Array.isArray(rs.turn_order) && rs.turn_order.indexOf(me.gun_id) >= 0 && rs.turn_order.indexOf(me.gun_id) < rs.turn_index);
+        const awaitingShot = me.tower_hits < me.tags;
+        let courseLabel;
+        if (meFinished) {
+          courseLabel = `FINISHED ${me.run_time.toFixed(1)}s`;
+        } else if (alreadyRan || turnPhase === 'DONE') {
+          courseLabel = `TIME UP — ${me.score} PTS`;
+        } else if (awaitingShot) {
+          courseLabel = 'SHOOT THE TOWER';
+        } else if (me.tags < bases) {
+          courseLabel = `NEXT: T-BASE ${me.tags + 1}`;
+        } else {
+          courseLabel = 'FINISH!';
+        }
+        document.getElementById('hudRaceCourse').textContent = courseLabel;
+        const tagged = Math.min(me.tags, bases);
         document.getElementById('hudRacePips').innerHTML = Array.from({ length: bases }, (_, i) => {
-          const cls = i < taggedThisLap ? 'done' : (i === taggedThisLap ? 'next' : '');
+          const cls = i < tagged ? 'done' : (i === tagged && meUp && !awaitingShot && !meFinished ? 'next' : '');
           return `<span class="race-pip ${cls}"></span>`;
         }).join('');
       }
@@ -1883,7 +1951,9 @@
         document.getElementById('gameOverHead').textContent = won ? '🏆 VICTORY!' : 'MATCH OVER';
         const finalNum = isLMS ? rankMe.frags : rankMe.score;
         const finalWord = isDuel ? (finalNum === 1 ? 'round won' : 'rounds won') : isLMS ? (finalNum === 1 ? 'elim' : 'elims') : (finalNum === 1 ? 'point' : 'points');
-        document.getElementById('gameOverRank').textContent = `Final rank #${rank} · ${finalNum} ${finalWord}`;
+        document.getElementById('gameOverRank').textContent = isRace && rankMe.run_completed && rankMe.run_time != null
+          ? `Final rank #${rank} · ${rankMe.run_time.toFixed(1)}s`
+          : `Final rank #${rank} · ${finalNum} ${finalWord}`;
         document.getElementById('gameOverStats').innerHTML = `
           <span class="hud-stat-chip" title="Hits Landed">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3"/></svg>
@@ -1921,7 +1991,7 @@
         } else if (state.mode.id === 'OldFashionDuel') {
           hint = 'Wait for DRAW — an early hit forfeits the round';
         } else if (state.mode.id === 'TagThenShoot') {
-          hint = 'Scan T-Bases in order, then shoot the tower';
+          hint = 'Pull the trigger to start — scan bases in order, then shoot the tower';
         } else if (state.mode.id === 'FreeFrag' && state.settings && state.settings.scoreLimit > 0) {
           hint = `First to ${state.settings.scoreLimit} hits wins`;
         }
