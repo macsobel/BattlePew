@@ -1245,6 +1245,62 @@
       margin-top: 4px;
     }
 
+    /* TagThenShoot course progress: next-base label + base pips. */
+    .tv-course-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-top: 2px;
+    }
+
+    .tv-course-label {
+      font-size: 0.78rem;
+      font-weight: 800;
+      letter-spacing: 0.03em;
+      color: var(--bt-orange);
+      text-transform: uppercase;
+      white-space: nowrap;
+    }
+
+    .tv-base-pips {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+
+    .tv-base-pip {
+      width: 18px;
+      height: 10px;
+      border-radius: 3px;
+      background: #E8EAF0;
+      border: 1px solid var(--border-steel);
+    }
+
+    .tv-base-pip.done {
+      background: var(--team-green);
+      border-color: var(--team-green);
+    }
+
+    .tv-base-pip.next {
+      background: var(--bt-orange);
+      border-color: var(--bt-orange);
+      box-shadow: 0 0 6px rgba(242, 99, 20, 0.6);
+    }
+
+    /* LastManStanding elimination badge. */
+    .tv-elim-badge {
+      display: inline-block;
+      margin-top: 4px;
+      padding: 2px 8px;
+      border-radius: 4px;
+      background: #FDECEA;
+      color: var(--team-red);
+      border: 1px solid rgba(212, 25, 0, 0.35);
+      font-size: 0.7rem;
+      font-weight: 800;
+      letter-spacing: 0.05em;
+    }
+
     /* TV Scoreboard Grid */
     .match-tv-main {
       position: relative;
@@ -3932,6 +3988,7 @@
     let prevScores = {};
     let prevHitsTaken = {};
     let prevLifePoints = {};
+    let prevFrags = {};
     let lastGridSignature = null;
     let lastBlastEventId = 0;
     let lastFeedSignature = null;
@@ -5053,6 +5110,12 @@
     function renderMatchView(state) {
       document.getElementById('tvModeTitle').textContent = state.mode.title;
       document.getElementById('tvModeSubtitle').textContent = state.mode.subtitle;
+      // LastManStanding: the subtitle carries the alive count — the
+      // number the whole room is watching.
+      if (state.mode.id === 'LastManStanding' && ['COUNTDOWN', 'PLAYING'].includes(state.phase)) {
+        const aliveCount = state.players.filter((p) => p.life_points > 0).length;
+        document.getElementById('tvModeSubtitle').textContent = `${aliveCount} ${aliveCount === 1 ? 'PLAYER' : 'PLAYERS'} LEFT`;
+      }
       document.getElementById('tvModeIcon').src = state.mode.icon;
 
       // The launch hero owns the pre-launch states on this screen.
@@ -5104,7 +5167,9 @@
       const seeResultsGate = document.getElementById('seeResultsGate');
       const tvGridEl = document.getElementById('tvScoreboardGrid');
       const isGameOverGate = state.phase === 'GAME_OVER' && awaitingSeeResults;
-      const hidePlayerCards = (state.phase === 'PLAYING' && state.remaining_seconds != null && state.remaining_seconds <= 20) || isGameOverGate;
+      // TagThenShoot never fades the cards: a 60-second race stays
+      // visible to the end. The game-over reveal gate still applies.
+      const hidePlayerCards = (state.mode && state.mode.id !== 'TagThenShoot' && state.phase === 'PLAYING' && state.remaining_seconds != null && state.remaining_seconds <= 20) || isGameOverGate;
 
       if (endBtn) endBtn.style.display = state.phase === 'GAME_OVER' ? 'none' : '';
       if (seeResultsGate) seeResultsGate.classList.toggle('visible', isGameOverGate);
@@ -5128,7 +5193,9 @@
         // Timerless modes (duel, LMS) count up: remaining_seconds is
         // null and the clock shows elapsed time, never urgent.
         const untimed = state.mode && state.mode.timed === false;
-        clockSub.textContent = untimed ? 'Elapsed Time' : 'Time Remaining';
+        const scoreTarget = state.mode && state.mode.id === 'FreeFrag' && state.settings && state.settings.scoreLimit > 0
+          ? ` · First to ${state.settings.scoreLimit}` : '';
+        clockSub.textContent = (untimed ? 'Elapsed Time' : 'Time Remaining') + scoreTarget;
         clockDigits.classList.toggle('urgent', !untimed && state.remaining_seconds != null && state.remaining_seconds <= 15);
       }
 
@@ -5143,7 +5210,7 @@
             const label = r.winner_gun_num ? `P${r.winner_gun_num} ★` : 'DRAW';
             return `<span class="tv-duel-chip">${esc('R' + r.round + ': ' + label)}</span>`;
           }).join('');
-          duelStrip.innerHTML = `<div class="tv-duel-head">ROUND ${ds.round} OF ${ds.max_rounds} · ${esc(subLabels[ds.subphase] || ds.subphase || '')}</div>`
+          duelStrip.innerHTML = `<div class="tv-duel-head">ROUND ${Math.max(1, ds.round)} OF ${ds.max_rounds} · ${esc(subLabels[ds.subphase] || ds.subphase || '')}</div>`
             + (chips ? `<div class="tv-duel-chips">${chips}</div>` : '');
           duelStrip.style.display = '';
         } else {
@@ -5186,11 +5253,21 @@
       };
 
       const tvCardHtml = (p, soloIdx = null) => {
+        const isDuel = state.mode.id === 'OldFashionDuel';
+        const isLMS = state.mode.id === 'LastManStanding';
+        const isRace = state.mode.id === 'TagThenShoot';
+        // The big number is mode-specific: rounds won in Duel (score
+        // already counts those), eliminations in LMS (score there is a
+        // sort-order artifact, not points), points everywhere else.
+        const displayScore = isLMS ? p.frags : p.score;
+        const scoreLabel = isDuel ? 'Rounds' : (isLMS ? 'Elims' : 'Points');
         const isLeader = p.gun_id === leaderGunId;
         const scoreColor = state.mode.teams ? p.team_color : (isLeader ? 'var(--bt-gold)' : 'var(--bt-orange)');
         // Diff-driven feedback: a score pop when the score rose, a red
         // flash when the player just took a hit, dimming when out of action.
-        const scorePopped = prevScores[p.gun_id] !== undefined && p.score > prevScores[p.gun_id];
+        const scorePopped = isLMS
+          ? (prevFrags[p.gun_id] !== undefined && p.frags > prevFrags[p.gun_id])
+          : (prevScores[p.gun_id] !== undefined && p.score > prevScores[p.gun_id]);
         const hitFlashed = prevHitsTaken[p.gun_id] !== undefined && p.hits_received > prevHitsTaken[p.gun_id];
         const knockedOut = showLife && prevLifePoints[p.gun_id] !== undefined && prevLifePoints[p.gun_id] > 0 && p.life_points === 0;
         const respawned = showLife && prevLifePoints[p.gun_id] !== undefined && prevLifePoints[p.gun_id] === 0 && p.life_points > 0;
@@ -5218,7 +5295,24 @@
         const iconHeart = `<svg class="ui-icon" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 21s-6.8-4.35-9.4-8.36C.7 9.7 1.85 5.4 5.5 4.25c2.1-.66 4.4.12 5.75 1.8L12 7l.75-.95c1.35-1.68 3.65-2.46 5.75-1.8 3.65 1.15 4.8 5.45 2.9 8.39C18.8 16.65 12 21 12 21z"/></svg>`;
         const iconBlaster = `<svg class="ui-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 10h14l2-2h3v4h-3l-1 2H11l-2 6H6l1.5-6H4l-2-2v-2z" fill="currentColor" fill-opacity="0.18"/><path d="M2 10h14l2-2h3v4h-3l-1 2H11l-2 6H6l1.5-6H4l-2-2v-2z"/><path d="M13 14v2.5"/></svg>`;
 
-        const vitalsHtml = (!showLife && !showAmmo)
+        // TagThenShoot course progress: which base is next, which lap,
+        // and pips for the bases tagged so far this lap. The gun
+        // enforces scan order, so tags modulo the base count is the
+        // stage within the current lap.
+        const raceBases = Math.max(1, parseInt(state.settings?.numberOfBase ?? 4, 10) || 4);
+        const raceTaggedThisLap = ((p.tags % raceBases) + raceBases) % raceBases;
+        const raceNextBase = raceTaggedThisLap + 1;
+        const raceLap = Math.floor(p.tags / raceBases) + 1;
+        const racePips = Array.from({ length: raceBases }, (_, i) => {
+          const cls = i < raceTaggedThisLap ? 'done' : (i === raceTaggedThisLap ? 'next' : '');
+          return `<span class="tv-base-pip ${cls}"></span>`;
+        }).join('');
+        const raceVitalsHtml = `<div class="tv-course-row" title="Next: T-Base ${raceNextBase} · Lap ${raceLap}">
+               <span class="tv-course-label">Next: T-Base ${raceNextBase}${raceLap > 1 ? ` · Lap ${raceLap}` : ''}</span>
+               <div class="tv-base-pips">${racePips}</div>
+             </div>`;
+
+        const vitalsHtml = isRace ? raceVitalsHtml : ((!showLife && !showAmmo)
           ? `<div class="tv-inf-row">
                <span style="color: var(--team-green); display:inline-flex; align-items:center; gap:4px;">${iconHeart} ∞</span>
                <span style="color: var(--team-blue); display:inline-flex; align-items:center; gap:4px;">${iconBlaster} ∞</span>
@@ -5229,7 +5323,7 @@
                    <span style="color: var(--team-green); min-width: 38px; display:inline-flex; align-items:center; gap:4px;">${iconHeart} ${p.life_points}/${p.max_life}</span>
                    <div class="tv-pills">${renderPills(p.life_points, p.max_life, hpClass)}</div>
                  </div>
-               ` : `<div class="tv-bar-row"><span style="color: var(--team-green); display:inline-flex; align-items:center; gap:4px;">${iconHeart} ∞</span></div>`}
+               ` : (isDuel ? '' : `<div class="tv-bar-row"><span style="color: var(--team-green); display:inline-flex; align-items:center; gap:4px;">${iconHeart} ∞</span></div>`)}
 
                ${showAmmo ? `
                  <div class="tv-bar-row" title="Ammo: ${p.ammo}/${p.max_ammo}${showClips ? ` · ${p.clips} clips` : ''}">
@@ -5238,7 +5332,7 @@
                    ${showClips ? renderClipPips(p.clips) : ''}
                  </div>
                ` : `<div class="tv-bar-row"><span style="color: var(--team-blue); display:inline-flex; align-items:center; gap:4px;">${iconBlaster} ∞</span></div>`}
-             </div>`;
+             </div>`);
 
         return `
           <div class="${cardClasses}" data-gun-num="${p.gun_num}"${stairStyle}>
@@ -5253,13 +5347,14 @@
               </div>
               ${p.gun_online === false ? `<div><span class="tv-vest-warn">T-BLASTER OFFLINE — RECONNECTING</span></div>` : !p.vest_ok ? `<div><span class="tv-vest-warn">NO VEST — HITS WON'T REGISTER</span></div>` : ''}
               ${state.phase === 'PLAYING' && p.signal_lost ? `<div><span class="tv-signal-warn">NO SIGNAL — CHECK THE BLASTER</span></div>` : ''}
+              ${isLMS && p.life_points === 0 ? `<div><span class="tv-elim-badge">ELIMINATED</span></div>` : ''}
               ${vitalsHtml}
               ${state.mode.id === 'TagThenShoot' ? `<div class="tv-tag-line">Tags ${p.tags} · Tower ${p.tower_hits}</div>` : ''}
             </div>
 
             <div class="tv-score-box">
-              <div class="tv-score-num ${scorePopped ? 'score-pop' : ''}" style="color: ${scoreColor};">${p.score}</div>
-              <div class="tv-score-label">Points</div>
+              <div class="tv-score-num ${scorePopped ? 'score-pop' : ''}" style="color: ${scoreColor};">${displayScore}</div>
+              <div class="tv-score-label">${scoreLabel}</div>
             </div>
           </div>
         `;
@@ -5273,7 +5368,7 @@
       const gridSignature = JSON.stringify([
         state.mode.id,
         state.phase,
-        state.players.map((p) => [p.gun_id, p.name, p.avatar, p.score, p.life_points, p.max_life, p.ammo, p.max_ammo, p.clips, p.vest_ok, p.signal_lost, p.team_id, p.team_color, p.tags, p.tower_hits]),
+        state.players.map((p) => [p.gun_id, p.name, p.avatar, p.score, p.frags, p.life_points, p.max_life, p.ammo, p.max_ammo, p.clips, p.vest_ok, p.signal_lost, p.team_id, p.team_color, p.tags, p.tower_hits]),
       ]);
       if (gridSignature !== lastGridSignature) {
         lastGridSignature = gridSignature;
@@ -5347,10 +5442,12 @@
         prevScores = {};
         prevHitsTaken = {};
         prevLifePoints = {};
+        prevFrags = {};
         state.players.forEach((p) => {
           prevScores[p.gun_id] = p.score;
           prevHitsTaken[p.gun_id] = p.hits_received;
           prevLifePoints[p.gun_id] = p.life_points;
+          prevFrags[p.gun_id] = p.frags;
         });
       }
 
