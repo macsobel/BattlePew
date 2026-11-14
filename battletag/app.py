@@ -117,13 +117,22 @@ def _enqueue_notification(msg: dict[str, Any]) -> None:
 async def _broadcast_toast(
     message: str,
     *,
+    kind: str | None = None,
     name: str | None = None,
     avatar: str | None = None,
     gun_num: int | None = None,
     icon_url: str | None = None,
 ) -> None:
-    """Push a temporary top-middle pill toast to all connected UI clients."""
+    """Push a temporary top-middle pill toast to all connected UI clients.
+
+    `kind` is the frontend's bundling key: same-kind toasts arriving
+    within a few seconds coalesce into one pill (e.g. six vest
+    disconnects become "6 vests disconnected"). Kinds without a
+    frontend template show individually, verbatim.
+    """
     payload: dict[str, Any] = {"message": message}
+    if kind is not None:
+        payload["kind"] = kind
     if name is not None:
         payload["name"] = name
     if avatar is not None:
@@ -534,6 +543,7 @@ async def api_remove_player(gun_num: int) -> JSONResponse:
     engine.audio.play_ui("ChangeValue.wav")
     await _broadcast_toast(
         "was removed by the host.",
+        kind="player_removed_host",
         name=removed.display_name,
         avatar=removed.avatar,
         gun_num=removed.gun_num,
@@ -753,7 +763,7 @@ async def api_return_to_lobby() -> JSONResponse:
         try:
             await asyncio.to_thread(engine.hw.send_gameover_clear, sorted(engine.players.keys()))
         except Exception as exc:
-            engine.add_event("system", f"Could not reset T-Blasters: {exc}")
+            await _broadcast_toast(f"Could not reset T-Blasters: {exc}", kind="reset_failed")
         engine.bytecode_ready = False
         engine.bytecode_uploaded = False
         engine.config_failed_guns = []
@@ -971,6 +981,7 @@ async def _lobby_auto_pairing_loop() -> None:
                         )
                         await _broadcast_toast(
                             "UbiConnect lost — guns will need to re-pair when it returns.",
+                            kind="ubiconnect_lost",
                             icon_url="/static/assets/textures/Ui/ubiconnect-disconnected.png",
                         )
                     elif (
@@ -987,6 +998,7 @@ async def _lobby_auto_pairing_loop() -> None:
                         engine.add_lobby_notice("UbiConnect found — re-pairing guns…")
                         await _broadcast_toast(
                             "UbiConnect found — re-pairing guns…",
+                            kind="ubiconnect_found",
                             icon_url="/static/assets/textures/Ui/ubiconnect-connected.png",
                         )
                         try:
@@ -1008,6 +1020,7 @@ async def _lobby_auto_pairing_loop() -> None:
                                 engine.add_lobby_notice(msg)
                                 await _broadcast_toast(
                                     msg,
+                                    kind="repaired",
                                     icon_url="/static/assets/textures/Ui/ubiconnect-connected.png",
                                 )
                             else:
@@ -1015,6 +1028,7 @@ async def _lobby_auto_pairing_loop() -> None:
                                 engine.add_lobby_notice(msg)
                                 await _broadcast_toast(
                                     msg,
+                                    kind="no_repair",
                                     icon_url="/static/assets/textures/Ui/ubiconnect-connected.png",
                                 )
                         except Exception:
@@ -1099,10 +1113,11 @@ async def _refresh_vest_states(announce_changes: bool = False) -> None:
     Hardware only: in simulator mode vest state comes from the simulated
     guns. A failed sweep never raises — vest display must not break the
     match loop or the lobby loop that call this. When announce_changes is
-    set (live match), guns whose vest state changed get a feed event so
-    the host notices mid-game; in the lobby the roster shows the state
-    live and no feed event is posted (setup events would otherwise leak
-    into the next match's feed).
+    set (live match), guns whose vest state changed get a toast
+    notification so the host notices mid-game (bundled when several
+    change at once); in the lobby the roster shows the state live and
+    no toast is posted (setup events would otherwise leak into the
+    next match's feed).
     """
     if engine.use_simulator or engine.hw is None or not engine.players:
         return
@@ -1112,15 +1127,22 @@ async def _refresh_vest_states(announce_changes: bool = False) -> None:
         return
     for player, connected in engine.apply_vest_states(dict(engine.hw.vest_states)):
         if announce_changes:
-            engine.add_event(
-                "system",
-                (
-                    f"T-Blaster not responding: {player.display_name} (Player {player.gun_num})"
-                    if not connected and not player.gun_online
-                    else f"Vest {'connected' if connected else 'disconnected'}: {player.display_name} (Player {player.gun_num})"
-                ),
-                actor=player,
-            )
+            if not connected and not player.gun_online:
+                await _broadcast_toast(
+                    f"T-Blaster not responding: {player.display_name} (Player {player.gun_num})",
+                    kind="gun_offline",
+                    name=player.display_name,
+                    avatar=player.avatar,
+                    gun_num=player.gun_num,
+                )
+            else:
+                await _broadcast_toast(
+                    f"Vest {'connected' if connected else 'disconnected'}: {player.display_name} (Player {player.gun_num})",
+                    kind="vest_connect" if connected else "vest_disconnect",
+                    name=player.display_name,
+                    avatar=player.avatar,
+                    gun_num=player.gun_num,
+                )
     if engine.phase == "LOBBY" and not announce_changes:
         # Quiet guns leave the roster: the time-based timeout first
         # (silence >4 s), the sweep-count removal as the backstop. Each
@@ -1143,6 +1165,7 @@ async def _refresh_vest_states(announce_changes: bool = False) -> None:
                     engine.hw.unpair_gun(p.ref_hex)
                 await _broadcast_toast(
                     "went quiet and was removed from the roster.",
+                    kind="player_quiet",
                     name=p.display_name,
                     avatar=p.avatar,
                     gun_num=p.gun_num,
@@ -1334,9 +1357,9 @@ async def _run_match_lifecycle() -> None:
                     engine.sync_paired_hardware_guns(paired)
 
             if len(engine.players) < min_required:
-                engine.add_event(
-                    "system",
+                await _broadcast_toast(
                     f"Pairing incomplete: need at least {min_required} {'player' if min_required == 1 else 'players'}.",
+                    kind="pairing_incomplete",
                 )
                 engine._set_banner(
                     f"PAIRING INCOMPLETE ({len(engine.players)}/{min_required} PLAYERS)",
@@ -1388,7 +1411,7 @@ async def _run_match_lifecycle() -> None:
         if not engine.use_simulator and engine.hw:
             ok = await asyncio.to_thread(engine.hw.start_countdown, sorted(engine.players.keys()), cd_secs)
             if not ok:
-                engine.add_event("system", "Countdown echo failed on hardware.")
+                await _broadcast_toast("Countdown echo failed on hardware.", kind="countdown_echo_failed")
                 engine.phase = "LOBBY"
                 await broadcast_state()
                 return
@@ -1487,7 +1510,7 @@ async def _run_match_lifecycle() -> None:
     except asyncio.CancelledError:
         pass
     except Exception as exc:
-        engine.add_event("system", f"Engine notice: {exc}")
+        await _broadcast_toast(f"Engine notice: {exc}", kind="engine_notice")
         engine.phase = "LOBBY"
         await broadcast_state()
 

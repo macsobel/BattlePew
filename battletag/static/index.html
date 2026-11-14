@@ -7182,21 +7182,97 @@
 
     // WebSocket Connection
     let impatientToastTimer = null;
+
+    // Burst-bundling for the single toast pill: same-kind toasts arriving
+    // within TOAST_BUNDLE_WINDOW_MS of the previous one coalesce into one
+    // pill, updated in place — the first arrival shows verbatim, 2-3 named
+    // arrivals list their names, 4+ show a count. Each arrival refreshes
+    // the 2800ms display timer. A different kind replaces the pill
+    // outright (one pill can only show one thing), and an arrival after
+    // the window closes starts a fresh toast. Only kinds with a template
+    // bundle; anything else shows individually, verbatim. A flapping
+    // player (same gun/name twice in the window) never double-counts.
+    const TOAST_BUNDLE_WINDOW_MS = 3000;
+    const TOAST_BUNDLE_TEMPLATES = {
+      vest_disconnect: {
+        few: (names) => `Vests disconnected: ${names.join(', ')}`,
+        many: (n) => `${n} vests disconnected`,
+      },
+      vest_connect: {
+        few: (names) => `Vests connected: ${names.join(', ')}`,
+        many: (n) => `${n} vests connected`,
+      },
+      gun_offline: {
+        few: (names) => `T-Blasters not responding: ${names.join(', ')}`,
+        many: (n) => `${n} T-Blasters not responding`,
+      },
+      player_quiet: {
+        few: (names) => `${names.join(', ')} went quiet and were removed from the roster`,
+        many: (n) => `${n} players went quiet and were removed from the roster`,
+      },
+      player_removed_host: {
+        few: (names) => `Removed by the host: ${names.join(', ')}`,
+        many: (n) => `${n} players removed by the host`,
+      },
+    };
+    // Open bundle, if any: {kind, items: [{key, name}], first, lastArrival}
+    let toastBundle = null;
+
+    function toastBundleItemKey(data) {
+      return data.gun_num != null ? `gun:${data.gun_num}` : `name:${data.name || ''}`;
+    }
+
     function showToast(data) {
       const toast = document.getElementById('impatientToast');
       const avatarEl = document.getElementById('impatientToastAvatar');
       const nameEl = document.getElementById('impatientToastName');
       const msgEl = document.getElementById('impatientToastMessage');
       if (!toast || !avatarEl || !nameEl || !msgEl || !data) return;
-      if (data.icon_url) {
-        avatarEl.src = data.icon_url;
+      // Resolve what the pill shows: verbatim for a lone toast, the
+      // bundle template once same-kind arrivals pile up.
+      const now = Date.now();
+      const template = data.kind ? TOAST_BUNDLE_TEMPLATES[data.kind] : undefined;
+      let display = data;
+      if (template && toastBundle && toastBundle.kind === data.kind
+          && now - toastBundle.lastArrival <= TOAST_BUNDLE_WINDOW_MS) {
+        const key = toastBundleItemKey(data);
+        if (!toastBundle.items.some((item) => item.key === key)) {
+          toastBundle.items.push({key, name: data.name || ''});
+        }
+        toastBundle.lastArrival = now;
+        const names = toastBundle.items.map((item) => item.name).filter(Boolean);
+        if (toastBundle.items.length > 1 && names.length === toastBundle.items.length) {
+          // Bundled: no single player is the subject, so the pill drops
+          // the name label and avatar in favour of the generic logo and
+          // the template text.
+          display = {
+            message: toastBundle.items.length <= 3
+              ? template.few(names) : template.many(toastBundle.items.length),
+          };
+        } else if (toastBundle.items.length > 1) {
+          // An unnamed item joined: fall back to the first arrival's
+          // wording rather than a template with a hole in it.
+          display = toastBundle.first;
+        }
+      } else if (template) {
+        toastBundle = {
+          kind: data.kind,
+          items: [{key: toastBundleItemKey(data), name: data.name || ''}],
+          first: data,
+          lastArrival: now,
+        };
+      } else {
+        toastBundle = null;
+      }
+      if (display.icon_url) {
+        avatarEl.src = display.icon_url;
         avatarEl.alt = '';
         avatarEl.style.display = '';
-      } else if (data.avatar) {
-        avatarEl.src = `/static/assets/textures/Avatars/80x/${data.avatar}.png`;
-        avatarEl.alt = data.avatar;
+      } else if (display.avatar) {
+        avatarEl.src = `/static/assets/textures/Avatars/80x/${display.avatar}.png`;
+        avatarEl.alt = display.avatar;
         avatarEl.style.display = '';
-      } else if (data.gun_num) {
+      } else if (display.gun_num) {
         avatarEl.src = `/static/assets/textures/Avatars/80x/Bear.png`;
         avatarEl.alt = 'Bear';
         avatarEl.style.display = '';
@@ -7205,16 +7281,17 @@
         avatarEl.alt = '';
         avatarEl.style.display = '';
       }
-      const label = data.name ? data.name.toUpperCase() : (data.gun_num ? `P${data.gun_num}` : '');
+      const label = display.name ? display.name.toUpperCase() : (display.gun_num ? `P${display.gun_num}` : '');
       nameEl.textContent = label;
       nameEl.style.display = label ? '' : 'none';
-      msgEl.textContent = data.message || 'is getting impatient!';
+      msgEl.textContent = display.message || 'is getting impatient!';
       toast.classList.add('show');
       toast.setAttribute('aria-hidden', 'false');
       if (impatientToastTimer) clearTimeout(impatientToastTimer);
       impatientToastTimer = setTimeout(() => {
         toast.classList.remove('show');
         toast.setAttribute('aria-hidden', 'true');
+        toastBundle = null;
       }, 2800);
     }
 
