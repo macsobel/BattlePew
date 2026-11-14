@@ -106,6 +106,18 @@ class SimGunState:
     hit_ids: list[int] = field(default_factory=lambda: [0, 0, 0, 0, 0])
     last_rfid: str = ""
     led_color: str = "orange"
+    # FreeForAll timer respawn: wall time the gun died (None while alive).
+    dead_at: float | None = None
+    # TeamFrag scan-then-timer respawn: wall time the wait ends (None
+    # unless an own-base scan started a respawn wait).
+    respawn_at: float | None = None
+    # Set when the last bullet of a clip is fired with clips remaining:
+    # the gun's next TIMER tick consumes a clip and refills the ammo.
+    auto_reload_pending: bool = False
+    # TagThenShoot course state: 0-based index of the next base to scan,
+    # and whether the gun is in its shoot state awaiting a tower hit.
+    tag_stage: int = 0
+    awaiting_shot: bool = False
 
 
 class SimulatorTransport:
@@ -118,6 +130,10 @@ class SimulatorTransport:
         self.mode_name: str = "FreeFrag"
         self.settings: dict[str, Any] = {}
         self.upload_progress: float = 0.0
+        # Cumulative per-gun UbiConnect tower hits (the sim's 0xC3
+        # channel), mirroring RealHIDTransport.ubiconnect_hits. Cleared
+        # by reset_for_mode every match.
+        self.ubiconnect_hits: dict[int, int] = {}
         self.setup_number_of_guns(num_guns)
 
     def setup_number_of_guns(self, num_guns: int) -> None:
@@ -148,12 +164,13 @@ class SimulatorTransport:
     def reset_for_mode(self, mode_name: str, settings: dict[str, Any], team_map: dict[int, int] | None = None) -> None:
         self.mode_name = mode_name
         self.settings = dict(settings)
+        self.ubiconnect_hits = {}
         for gid, g in self.guns.items():
             if team_map and gid in team_map:
                 g.team_id = team_map[gid]
             g.life_points = int(settings.get("lifePoints", 5))
             g.max_life = g.life_points
-            g.ammo = 1 if mode_name == "OldFashionDuel" else int(settings.get("ammunitions", 9))
+            g.ammo = 6 if mode_name == "OldFashionDuel" else int(settings.get("ammunitions", 9))
             g.max_ammo = g.ammo
             g.clips = 0 if mode_name == "OldFashionDuel" else int(settings.get("clips", 5))
             g.max_clips = g.clips
@@ -163,6 +180,11 @@ class SimulatorTransport:
             g.hit_ids = [0, 0, 0, 0, 0]
             g.last_rfid = ""
             g.led_color = "orange"
+            g.dead_at = None
+            g.respawn_at = None
+            g.auto_reload_pending = False
+            g.tag_stage = 0
+            g.awaiting_shot = False
 
     def read_gun_profile(self, gun_id: int) -> dict[str, Any] | None:
         """Return the sim gun's stored (flash) profile, as a 0x84 read would."""
@@ -194,27 +216,45 @@ class SimulatorTransport:
             return {"ok": False, "error": "Shooter is out of life points (needs respawn/medkit)"}
         if self.mode_name in ("TeamFrag", "FreeForAll", "LastManStanding", "StarterFrag", "OldFashionDuel"):
             if shooter.ammo <= 0:
-                if shooter.clips > 0 and self.mode_name != "StarterFrag":
-                    shooter.clips -= 1
-                    shooter.ammo = shooter.max_ammo
-                else:
-                    return {"ok": False, "error": "Out of ammo — scan an Ammo card (RF01/RF02)!"}
+                if shooter.auto_reload_pending:
+                    return {"ok": False, "error": "Reloading — the next tick refills the ammo."}
+                if shooter.clips > 0:
+                    # The gun auto-reloads on its next TIMER tick: arm
+                    # the reload here; poll_gun performs the refill.
+                    shooter.auto_reload_pending = True
+                    return {"ok": False, "error": "Out of ammo — reloading on the next tick."}
+                return {"ok": False, "error": "Out of ammo — scan an Ammo card (RF01/RF02)!"}
             shooter.ammo = max(0, shooter.ammo - 1)
+            if shooter.ammo == 0 and shooter.clips > 0:
+                # Firing the last bullet arms the gun's auto_reload.
+                shooter.auto_reload_pending = True
 
         shooter.shots_fired += 1
 
         if target_gid is not None and target_gid in self.guns:
             target = self.guns[target_gid]
             if self.mode_name == "TagThenShoot":
-                shooter.hits_received += 1
-                shooter.phase_flag = 1
-                return {"ok": True, "shot": True, "hit": True, "shooter": shooter_gid, "target": target_gid}
+                if shooter.awaiting_shot:
+                    # Tower hit: the UbiConnect reports it and the gun
+                    # returns to its tag state for the next base. The
+                    # stage wraps after the last base: the course loops.
+                    self.ubiconnect_hits[shooter_gid] = self.ubiconnect_hits.get(shooter_gid, 0) + 1
+                    bases = max(1, int(self.settings.get("numberOfBase", 4)))
+                    shooter.tag_stage = (shooter.tag_stage + 1) % bases
+                    shooter.awaiting_shot = False
+                    shooter.phase_flag = 1
+                    return {"ok": True, "shot": True, "hit": True, "shooter": shooter_gid, "target": target_gid}
+                # In the tag state a shot scores nothing.
+                return {"ok": True, "shot": True, "hit": False, "shooter": shooter_gid, "target": target_gid}
 
             target.hits_received += 1
             target.hit_ids = [shooter_gid] + target.hit_ids[:4]
             if self.mode_name in ("TeamFrag", "FreeForAll", "LastManStanding"):
                 if target.life_points > 0:
                     target.life_points = max(0, target.life_points - 1)
+                    if target.life_points == 0 and self.mode_name == "FreeForAll":
+                        # The timer-only respawn clock starts at death.
+                        target.dead_at = time.time()
             return {"ok": True, "shot": True, "hit": True, "shooter": shooter_gid, "target": target_gid}
 
         return {"ok": True, "shot": True, "hit": False, "shooter": shooter_gid}
@@ -228,23 +268,78 @@ class SimulatorTransport:
         if rfid_code in ("RF01", "RF02"):
             gun.clips = gun.max_clips
             gun.ammo = gun.max_ammo
+            gun.auto_reload_pending = False
         elif rfid_code == "RF07":
             if int(self.settings.get("medkit", 1)) > 0 or self.mode_name in ("TeamFrag", "FreeForAll", "LastManStanding"):
                 gun.life_points = gun.max_life
+                gun.dead_at = None
+                gun.respawn_at = None
         elif rfid_code in ("RF03", "RF04", "RF05", "RF06"):
             base_num = int(rfid_code[-1]) - 2
             if self.mode_name == "TeamFrag" and base_num == gun.team_id:
-                gun.life_points = gun.max_life
-                gun.ammo = gun.max_ammo
-                gun.clips = gun.max_clips
+                if gun.life_points <= 0:
+                    # Scan-then-timer respawn: the own-base scan starts
+                    # the wait; the gun returns once respawn_time
+                    # elapses (at once when respawn_time is 0).
+                    wait = float(self.settings.get("respawnTime", 0))
+                    if wait <= 0:
+                        gun.life_points = gun.max_life
+                        gun.ammo = gun.max_ammo
+                        gun.clips = gun.max_clips
+                    else:
+                        gun.respawn_at = time.time() + wait
+                else:
+                    gun.life_points = gun.max_life
+                    gun.ammo = gun.max_ammo
+                    gun.clips = gun.max_clips
             elif self.mode_name == "TagThenShoot":
-                gun.phase_flag = 0
+                self._tag_scan(gun, base_num)
         return {"ok": True, "gun_id": gun_id, "rfid_code": rfid_code}
+
+    def _tag_scan(self, gun: SimGunState, base_num: int) -> None:
+        """TagThenShoot scan: the gun enforces course order.
+
+        Only the next base in sequence counts, and only while the gun
+        is in its tag state. A correct scan raises the tag count and
+        moves the gun to its shoot state (phase_flag 0); a wrong base,
+        or a scan while awaiting a tower shot, scores nothing.
+        """
+        if gun.awaiting_shot:
+            return
+        if base_num != gun.tag_stage + 1:
+            return
+        gun.hits_received += 1
+        gun.awaiting_shot = True
+        gun.phase_flag = 0
 
     def poll_gun(self, gun_id: int, mode_name: str, downlink_word: int | None = None) -> DecodedStatus | None:
         g = self.guns.get(gun_id)
         if not g:
             return None
+        now = time.time()
+        # Timer-based auto-reload: the gun's TIMER tick consumes a clip
+        # and refills the ammo after the last bullet was fired.
+        if g.auto_reload_pending:
+            if g.clips > 0:
+                g.clips -= 1
+                g.ammo = g.max_ammo
+            g.auto_reload_pending = False
+        # FreeForAll timer-only respawn: the dead gun returns with full
+        # life/ammo once respawn_time has elapsed. No scan can shorten
+        # it, and the original has no T-Base respawn in this mode.
+        if mode_name == "FreeForAll" and g.life_points <= 0 and g.dead_at is not None:
+            if now - g.dead_at >= float(self.settings.get("respawnTime", 0)):
+                g.life_points = g.max_life
+                g.ammo = g.max_ammo
+                g.clips = g.max_clips
+                g.dead_at = None
+        # TeamFrag scan-then-timer respawn: the wait the own-base scan
+        # started has run out, so the gun returns.
+        if mode_name == "TeamFrag" and g.respawn_at is not None and now >= g.respawn_at:
+            g.life_points = g.max_life
+            g.ammo = g.max_ammo
+            g.clips = g.max_clips
+            g.respawn_at = None
         if mode_name == "FreeFrag":
             words = [g.hits_received, g.shots_fired]
         elif mode_name == "TeamFrag":

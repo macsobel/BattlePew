@@ -620,12 +620,21 @@ async def api_manual_launch_trigger() -> JSONResponse:
     return JSONResponse({"ok": True})
 
 
-async def _announce_winner_followup(wav_name: str, subtitle: str) -> None:
+async def _announce_winner_followups(items: list[tuple[str, str]]) -> None:
+    """Play winner callouts in sequence after the "winner is/are" intro.
+
+    The intro line runs ~1.9 s and each callout ~1.2-1.9 s; items play
+    in order with a 2 s spacing, stopping if results are no longer
+    shown. A tie announces every shared winner, as the original does.
+    """
     try:
-        await asyncio.sleep(1.95)
-        if engine.phase == "GAME_OVER" and engine.results_revealed:
-            engine.audio.play_announcer_file(wav_name, subtitle, priority=-2, duration=2.0)
-            await broadcast_state()
+        for i, (wav_name, subtitle) in enumerate(items):
+            await asyncio.sleep(1.95 if i == 0 else 2.0)
+            if engine.phase == "GAME_OVER" and engine.results_revealed:
+                engine.audio.play_announcer_file(wav_name, subtitle, priority=-2, duration=2.0)
+                await broadcast_state()
+            else:
+                return
     except asyncio.CancelledError:
         pass
 
@@ -639,35 +648,57 @@ def _trigger_winner_announcement() -> None:
         for p in engine.players.values():
             totals[p.team_id] = totals.get(p.team_id, 0) + p.score
         ranked_teams = sorted(totals.items(), key=lambda item: item[1], reverse=True)
-        if not ranked_teams or (len(ranked_teams) > 1 and ranked_teams[0][1] == ranked_teams[1][1]):
+        if not ranked_teams:
             return
+        top_score = ranked_teams[0][1]
+        tied = [tid for tid, sc in ranked_teams if sc == top_score]
         team_wavs = {
             1: ("DLG_GM_FRAG_TEAM_05.wav", "The Red Team!"),
             2: ("DLG_GM_FRAG_TEAM_06.wav", "The Blue Team!"),
             3: ("DLG_GM_FRAG_TEAM_07.wav", "The Yellow Team!"),
             4: ("DLG_GM_FRAG_TEAM_08.wav", "The Green Team!"),
         }
-        entry = team_wavs.get(ranked_teams[0][0])
-        if not entry:
+        items = [team_wavs[tid] for tid in tied if tid in team_wavs]
+        if not items:
             return
         engine.audio.play_announcer_file(
             "DLG_GM_GLOBAL_54.wav", "And the winners are...", priority=-1, duration=1.9
         )
-        asyncio.create_task(_announce_winner_followup(entry[0], entry[1]))
+        asyncio.create_task(_announce_winner_followups(items))
         return
 
     ranked_players = sorted(engine.players.values(), key=lambda p: p.score, reverse=True)
-    if not ranked_players or (len(ranked_players) > 1 and ranked_players[0].score == ranked_players[1].score):
+    if not ranked_players:
         return
-    winner = ranked_players[0]
+    top_score = ranked_players[0].score
+    winners = [p for p in ranked_players if p.score == top_score]
+    if len(winners) > 1:
+        # Shared winners: "And the winners are..." plus a Set B callout
+        # for every tied winner. The original has no tie-breaks.
+        items = [
+            (f"DLG_GM_GLOBAL_{96 + w.gun_num:02d}.wav", f"Player {w.gun_num} — {w.name}!")
+            for w in winners
+            if 1 <= w.gun_num <= 8
+        ]
+        if not items:
+            return
+        engine.audio.play_announcer_file(
+            "DLG_GM_GLOBAL_54.wav", "And the winners are...", priority=-1, duration=1.9
+        )
+        asyncio.create_task(_announce_winner_followups(items))
+        return
+    winner = winners[0]
     if not (1 <= winner.gun_num <= 8):
         return
-    wav = f"DLG_GM_GLOBAL_{54 + winner.gun_num:02d}.wav"
+    # FinalRankings announces winners with Set B (GLOBAL_97-104); Set A
+    # (55-62) is the duel-round set. GLOBAL_96 says "Race over" and is
+    # never a callout, which is why the set starts at 97 for Player 1.
+    wav = f"DLG_GM_GLOBAL_{96 + winner.gun_num:02d}.wav"
     sub = f"Player {winner.gun_num} — {winner.name}!"
     engine.audio.play_announcer_file(
         "DLG_GM_GLOBAL_53.wav", "And the winner is...", priority=-1, duration=1.9
     )
-    asyncio.create_task(_announce_winner_followup(wav, sub))
+    asyncio.create_task(_announce_winner_followups([(wav, sub)]))
 
 
 @app.post("/api/results/reveal")
@@ -1346,6 +1377,7 @@ async def _run_match_lifecycle() -> None:
         last_vest_sweep = time.time()
         while engine.phase == "PLAYING":
             engine.tick_mode_timers()
+            engine.tick_pending_audio()
             for gid in sorted(engine.players.keys()):
                 player = engine.players[gid]
                 downlink = None
@@ -1367,6 +1399,10 @@ async def _run_match_lifecycle() -> None:
             if not engine.use_simulator and engine.hw:
                 engine.ingest_ubiconnect_hits(engine.hw.ubiconnect_hits)
                 await asyncio.to_thread(engine.hw.send_ping)
+            elif engine.use_simulator:
+                # The simulator reports tower hits through the same
+                # channel as the hardware 0xC3 path.
+                engine.ingest_ubiconnect_hits(engine.sim.ubiconnect_hits)
 
             # Periodic vest sweep: a vest unplugged mid-match must show up
             # on the scoreboard and in the feed, not just at the next
@@ -1387,8 +1423,10 @@ async def _run_match_lifecycle() -> None:
                 last_bot_step = time.time()
                 _run_simulator_bot_step()
 
-            # Check time warnings
-            engine.audio.check_time_remaining(engine.get_remaining_seconds())
+            # Check time warnings (timed modes only: duel and LMS have
+            # no match clock, and TagThenShoot skips the 60 s mark).
+            if engine._is_timed_mode():
+                engine.audio.check_time_remaining(engine.get_remaining_seconds(), engine.mode_name)
             engine.check_idle_announcer()
 
             # Check auto-end
@@ -1424,8 +1462,10 @@ def _run_simulator_bot_step() -> None:
         engine.sim.sim_scan_rfid(shooter, "RF01")
         return
     if engine.mode_name == "TagThenShoot":
-        if engine.sim.guns[shooter].phase_flag == 1:
-            engine.sim.sim_scan_rfid(shooter, "RF03")
+        sg = engine.sim.guns[shooter]
+        if sg.phase_flag == 1:
+            # Scan the next base in course order (base 1 -> RF03, ...).
+            engine.sim.sim_scan_rfid(shooter, f"RF0{sg.tag_stage + 3}")
         else:
             engine.sim.sim_fire_shot(shooter, shooter)
         return
@@ -1451,6 +1491,7 @@ async def _finish_match(reason: str = "Match Over") -> None:
         return
     engine.record_score_snapshot(force=True)
     engine.phase = "GAME_OVER"
+    engine.match_end_ts = time.time()
     outcomes = engine.compute_gameover_outcomes()
     for gid, won in outcomes.items():
         if gid in engine.players:

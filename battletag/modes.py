@@ -50,6 +50,7 @@ MODE_CATALOG: dict[str, dict[str, Any]] = {
         "subtitle": "Instant Action · Infinite Ammo · No Reloads",
         "tier": 1,
         "badge": "Arcade Action",
+        "timed": True,
         "min_players": 2,
         "max_players": 8,
         "teams": False,
@@ -82,6 +83,7 @@ MODE_CATALOG: dict[str, dict[str, Any]] = {
         "subtitle": "2–4 Teams · Life Points · T-Base Respawn",
         "tier": 1,
         "badge": "Team Battle",
+        "timed": True,
         "min_players": 2,
         "max_players": 8,
         "teams": True,
@@ -127,6 +129,7 @@ MODE_CATALOG: dict[str, dict[str, Any]] = {
         "subtitle": "Every Player for Themselves · Life + Clips + Respawn",
         "tier": 1,
         "badge": "Free For All",
+        "timed": True,
         "min_players": 2,
         "max_players": 8,
         "teams": False,
@@ -170,6 +173,9 @@ MODE_CATALOG: dict[str, dict[str, Any]] = {
         "subtitle": "Survival Elimination · No Respawns · Final Survivor Wins",
         "tier": 1,
         "badge": "Elimination",
+        # The original has no timer: the match ends when one player is
+        # left alive. No duration setting exists for this mode.
+        "timed": False,
         "min_players": 2,
         "max_players": 8,
         "teams": False,
@@ -185,7 +191,6 @@ MODE_CATALOG: dict[str, dict[str, Any]] = {
             "Last player standing wins",
         ],
         "defaults": {
-            "durationSeconds": 180,
             "countdownSeconds": 10,
             "gameLaunch": 0,
             "lifePoints": 5,
@@ -196,7 +201,6 @@ MODE_CATALOG: dict[str, dict[str, Any]] = {
             "medkit": 0,
         },
         "options": [
-            {"key": "durationSeconds", "label": "Time Limit", "choices": [120, 180, 300, 600, 900]},
             {"key": "gameLaunch", "label": "Game Launch", "choices": [0, 1]},
             {"key": "lifePoints", "label": "Starting Lives", "choices": [3, 5, 7, 9]},
             {"key": "ammunitions", "label": "Shots per Clip", "choices": [6, 9, 12, 20]},
@@ -207,9 +211,11 @@ MODE_CATALOG: dict[str, dict[str, Any]] = {
     "OldFashionDuel": {
         "id": "OldFashionDuel",
         "title": "Wild West Duel",
-        "subtitle": "2-Player Showdown · 5 Rounds · 1 Bullet per Round",
+        "subtitle": "2-Player Showdown · 5 Rounds · 6 Bullets per Round",
         "tier": 1,
         "badge": "Quickdraw",
+        # The original runs purely on rounds with no timer at all.
+        "timed": False,
         "min_players": 2,
         "max_players": 2,
         "teams": False,
@@ -218,14 +224,13 @@ MODE_CATALOG: dict[str, dict[str, Any]] = {
         "icon": "/static/assets/textures/Ui/Pictograms/96x/OldFashionDuel.png",
         "banner": "/static/assets/textures/Packages/OldFashionDuel/Ui/Loading_OldFashionDuel.png",
         "ranking_bg": "/static/assets/textures/Ui/Ranking_Bg_OldFashionDuel.png",
-        "description": "Classic 2-player showdown across 5 tense rounds! Point your T-Blaster down during the 5–8s standoff; when the announcer yells DRAW, fire your single bullet first. Firing before the signal forfeits the round!",
+        "description": "Classic 2-player showdown across 5 tense rounds! Point your T-Blaster down during the 5–8s standoff; when the announcer yells DRAW, fire first — you have 6 bullets per round. Hitting your opponent before the signal forfeits the round!",
         "bullets": [
             "1v1 quickdraw standoff",
-            "1 bullet per round · Fire on DRAW",
-            "Firing early forfeits the round",
+            "6 bullets per round · Fire on DRAW",
+            "Hitting early forfeits the round",
         ],
         "defaults": {
-            "durationSeconds": 300,
             "countdownSeconds": 5,
             "rounds": 5,
         },
@@ -239,6 +244,7 @@ MODE_CATALOG: dict[str, dict[str, Any]] = {
         "subtitle": "Infinite Life · Reloads with Ammo Cards",
         "tier": 1,
         "badge": "Card Reload",
+        "timed": True,
         "min_players": 2,
         "max_players": 8,
         "teams": False,
@@ -253,8 +259,10 @@ MODE_CATALOG: dict[str, dict[str, Any]] = {
             "Limited ammo · Scan Ammo Box to reload",
             "+1 pt per hit · Highest score wins",
         ],
+        # The original fixes all three settings (playtime 5 min, ammo
+        # 12, clips 3) with no UI options; only the launch mode varies.
         "defaults": {
-            "durationSeconds": 180,
+            "durationSeconds": 300,
             "countdownSeconds": 10,
             "gameLaunch": 0,
             "ammunitions": 12,
@@ -262,10 +270,7 @@ MODE_CATALOG: dict[str, dict[str, Any]] = {
             "assist": 1,
         },
         "options": [
-            {"key": "durationSeconds", "label": "Match Duration", "choices": [120, 180, 300, 600, 900]},
             {"key": "gameLaunch", "label": "Game Launch", "choices": [0, 1]},
-            {"key": "ammunitions", "label": "Shots per Clip", "choices": [6, 9, 12, 20]},
-            {"key": "clips", "label": "Clips (magazines)", "choices": [1, 2, 3, 4, 5, 6]},
         ],
     },
     "TagThenShoot": {
@@ -274,19 +279,20 @@ MODE_CATALOG: dict[str, dict[str, Any]] = {
         "subtitle": "Solo: Scan the bases, then shoot the UbiConnect",
         "tier": 1,
         "badge": "Solo Course",
+        "timed": True,
         "min_players": 1,
-        "max_players": 4,
+        "max_players": 8,
         "teams": False,
         "needs_accessories": True,
         "accessories": ["tbase"],
         "icon": "/static/assets/textures/Ui/Pictograms/96x/TagNShoot.png",
         "banner": "/static/assets/textures/Packages/TagThenShoot/Ui/Loading_TagNShoot.png",
         "ranking_bg": "/static/assets/textures/Ui/Ranking_Bg_TagNShoot.png",
-        "description": "Solo obstacle course! Sprint to scan the T-Bases in sequence, then race back and shoot the UbiConnect tower itself to score a lap. Most laps before time expires wins!",
+        "description": "Solo obstacle course! Scan the T-Bases in sequence, then shoot the UbiConnect tower itself. Every T-Base tag and every tower hit scores 1 point — most points in 60 seconds wins!",
         "bullets": [
             "Sprint & scan T-Bases in order",
-            "Shoot UbiConnect tower to score a lap",
-            "Most laps before time expires wins",
+            "Tags and tower hits each score +1 pt",
+            "Most points in 60 seconds wins",
         ],
         "defaults": {
             "durationSeconds": 60,
@@ -296,9 +302,10 @@ MODE_CATALOG: dict[str, dict[str, Any]] = {
             "assist": 1,
         },
         "options": [
-            {"key": "durationSeconds", "label": "Sprint Timer", "choices": [60, 90, 120, 180, 300]},
+            # Fixed 60 s in the original: no duration option. Bases are
+            # 2, or 4 with the medkit pack.
             {"key": "gameLaunch", "label": "Game Launch", "choices": [0, 1]},
-            {"key": "numberOfBase", "label": "T-Bases Required", "choices": [1, 2, 3, 4]},
+            {"key": "numberOfBase", "label": "T-Bases Required", "choices": [2, 4]},
         ],
     },
 }
@@ -335,6 +342,12 @@ class PlayerState:
     hits_received: int = 0
     frags: int = 0
     deaths: int = 0
+    # TagThenShoot splits its score into two disjoint channels: T-Base
+    # tags (status word 0) and UbiConnect tower hits (0xC3 reports).
+    # `frags` still mirrors the tower-hit total in that mode because the
+    # poll downlink sends the running tower-hit count from it.
+    tags: int = 0
+    tower_hits: int = 0
     shots_fired: int = 0
     streak: int = 0
     best_streak: int = 0
@@ -371,6 +384,9 @@ class PlayerState:
     hits_taken_from: dict[int, int] = field(default_factory=dict)
     _empty_ammo_warned: bool = False
     _last_empty_warn_ts: float = 0.0
+    # True once the low-ammo ("Reload!") line has fired for the current
+    # clip; cleared when ammo rises above 3 so it fires once per descent.
+    _low_ammo_warned: bool = False
 
     @property
     def display_name(self) -> str:
@@ -407,6 +423,8 @@ class PlayerState:
             "hits_received": self.hits_received,
             "frags": self.frags,
             "deaths": self.deaths,
+            "tags": self.tags,
+            "tower_hits": self.tower_hits,
             "shots_fired": self.shots_fired,
             "accuracy": self.accuracy,
             "streak": self.streak,
@@ -606,6 +624,9 @@ class ArenaEngine:
         # disconnected; reset whenever the gun answers a sweep.
         self._vest_miss_counts: dict[int, int] = {}
         self.match_start_ts: float = 0.0
+        # Set when a match ends so the elapsed clock on timerless modes
+        # freezes at the final time instead of keep counting in GAME_OVER.
+        self.match_end_ts: float = 0.0
         self.match_duration_s: int = int(self.settings.get("durationSeconds", 300))
         self.countdown_remaining: int = 0
         self.current_leader_key: str = ""
@@ -613,12 +634,24 @@ class ArenaEngine:
         self.duel_state: dict[str, Any] = {
             "round": 0,
             "max_rounds": 5,
-            "phase_code": 2,  # 2 = between rounds (reload 1 bullet), 0/1 = active standoff/draw
+            "phase_code": 2,  # 2 = between rounds (reload 6 bullets), 0/1 = active standoff/draw
             "subphase": "INTRO",  # INTRO | WAIT | DRAW | ROUND_END
             "can_shoot": False,
             "next_transition_at": 0.0,
             "round_scores": {},
+            # Per-round results, oldest first: {"round": n,
+            # "winner_gun_num": g | None} — None means the round was a draw.
+            "round_results": [],
         }
+        # Deferred actions the match loop fires when their time comes:
+        # sequenced announcer followups (a second line that must start
+        # after the first finishes) and the duel can_shoot flip, which
+        # the original sets on completion of the DRAW line. Each entry
+        # is {"fire_at": float, "kind": str, ...}; see
+        # _schedule_audio_followup / tick_pending_audio. The browser
+        # reports no playback-completion events, so every delay here is
+        # the host's modeled line length, not a true completion callback.
+        self._pending_audio: list[dict[str, Any]] = []
         self.expected_hardware_guns: int = 2
         self.match_history: list[dict[str, Any]] = []
         self.score_history: list[dict[str, Any]] = []
@@ -1082,19 +1115,105 @@ class ArenaEngine:
             "expires_at": time.time() + duration_s,
         }
 
+    def _is_timed_mode(self) -> bool:
+        """Whether the current mode runs against a match clock.
+
+        OldFashionDuel and LastManStanding are timerless in the
+        original (rounds / last-alive endings); every other mode is
+        timed. Timerless modes show elapsed time, get no time
+        warnings, and never end on the clock.
+        """
+        return bool(MODE_CATALOG.get(self.mode_name, {}).get("timed", True))
+
+    def get_elapsed_seconds(self) -> float:
+        if self.match_start_ts <= 0:
+            return 0.0
+        end = self.match_end_ts if (self.phase == "GAME_OVER" and self.match_end_ts > 0) else time.time()
+        return max(0.0, end - self.match_start_ts)
+
     def format_clock(self) -> str:
+        if not self._is_timed_mode():
+            elapsed = self.get_elapsed_seconds()
+            mins = int(elapsed) // 60
+            secs = int(elapsed) % 60
+            return f"{mins:02d}:{secs:02d}"
         rem = self.get_remaining_seconds()
+        if rem is None:
+            return "00:00"
         mins = int(rem) // 60
         secs = int(rem) % 60
         return f"{mins:02d}:{secs:02d}"
 
-    def get_remaining_seconds(self) -> float:
+    def get_remaining_seconds(self) -> float | None:
+        """Seconds left on the match clock, or None for timerless modes."""
+        if not self._is_timed_mode():
+            return None
         if self.phase == "PLAYING":
             elapsed = time.time() - self.match_start_ts
             return max(0.0, self.match_duration_s - elapsed)
         if self.phase == "GAME_OVER":
             return 0.0
         return float(self.match_duration_s)
+
+    def _schedule_audio_followup(self, delay_s: float, kind: str, **payload: Any) -> None:
+        """Queue a deferred action for tick_pending_audio to fire.
+
+        Kinds: "pool" (payload: pool_key, subtitle, force),
+        "file" (payload: filename, subtitle, priority, duration),
+        "duel_can_shoot" (no payload). Delays are modeled line
+        lengths — see _pending_audio.
+        """
+        entry: dict[str, Any] = {"fire_at": time.time() + max(0.0, delay_s), "kind": kind}
+        entry.update(payload)
+        self._pending_audio.append(entry)
+
+    def tick_pending_audio(self, now: float | None = None) -> None:
+        """Fire due deferred actions. Called once per match-loop cycle."""
+        if not self._pending_audio:
+            return
+        now = time.time() if now is None else now
+        due, rest = [], []
+        for entry in self._pending_audio:
+            (due if entry["fire_at"] <= now else rest).append(entry)
+        self._pending_audio = rest
+        if self.phase != "PLAYING":
+            return
+        for entry in due:
+            kind = entry["kind"]
+            if kind == "pool":
+                self.audio.trigger_pool(
+                    entry["pool_key"],
+                    custom_subtitle=entry.get("subtitle"),
+                    force=bool(entry.get("force", False)),
+                )
+            elif kind == "file":
+                self.audio.play_announcer_file(
+                    entry["filename"],
+                    entry.get("subtitle", ""),
+                    priority=int(entry.get("priority", 0)),
+                    duration=float(entry.get("duration", 2.0)),
+                )
+            elif kind == "duel_can_shoot":
+                # Only arm shooting while the round is still in DRAW;
+                # a hit that already resolved the round must not
+                # re-arm it.
+                if self.duel_state.get("subphase") == "DRAW":
+                    self.duel_state["can_shoot"] = True
+
+    def _record_duel_round_result(self, winner: PlayerState | None) -> None:
+        """Record one finished duel round for the round display.
+
+        `winner` is the round-winning player, or None for a draw.
+        Totals in round_scores and the per-round history in
+        round_results stay in step.
+        """
+        rnd = int(self.duel_state.get("round", 0))
+        if winner is not None:
+            scores = self.duel_state.setdefault("round_scores", {})
+            scores[winner.gun_id] = scores.get(winner.gun_id, 0) + 1
+        self.duel_state.setdefault("round_results", []).append(
+            {"round": rnd, "winner_gun_num": winner.gun_num if winner else None}
+        )
 
     def add_event(
         self,
@@ -1145,15 +1264,23 @@ class ArenaEngine:
         self._last_reload_reminder_ts = 0.0
         self._manual_launch_triggered = False
         self.results_revealed = False
+        self.match_end_ts = 0.0
+        self._pending_audio = []
         self.score_history = [
             {"t": 0.0, "scores": {str(p.gun_num): 0 for p in self.players.values()}}
         ]
         self.audio.reset_match_timers()
         team_map = {gid: p.team_id for gid, p in self.players.items()}
         self.sim.reset_for_mode(self.mode_name, self.settings, team_map=team_map)
+        # The 0xC3 tower-hit counter on the hardware transport is
+        # cumulative across the transport's lifetime; clear it every
+        # match or the first poll of the next TagThenShoot match
+        # credits phantom hits equal to the previous match's total.
+        if self.hw is not None:
+            self.hw.ubiconnect_hits.clear()
 
         max_life = int(self.settings.get("lifePoints", 5))
-        max_ammo = 1 if self.mode_name == "OldFashionDuel" else int(self.settings.get("ammunitions", 9))
+        max_ammo = 6 if self.mode_name == "OldFashionDuel" else int(self.settings.get("ammunitions", 9))
         max_clips = 0 if self.mode_name == "OldFashionDuel" else int(self.settings.get("clips", 3))
 
         for p in self.players.values():
@@ -1162,6 +1289,8 @@ class ArenaEngine:
             p.hits_received = 0
             p.frags = 0
             p.deaths = 0
+            p.tags = 0
+            p.tower_hits = 0
             p.shots_fired = 0
             p.streak = 0
             p.best_streak = 0
@@ -1177,6 +1306,7 @@ class ArenaEngine:
             p.miss_streak = 0
             p._empty_ammo_warned = False
             p._last_empty_warn_ts = 0.0
+            p._low_ammo_warned = False
             p.last_tagged_by = ""
             p.last_tagged_by_time = 0.0
             p.last_tagged_target = ""
@@ -1194,6 +1324,7 @@ class ArenaEngine:
                 "can_shoot": False,
                 "next_transition_at": time.time() + 3.0,
                 "round_scores": {gid: 0 for gid in self.players},
+                "round_results": [],
             }
 
     def tick_mode_timers(self) -> None:
@@ -1215,24 +1346,41 @@ class ArenaEngine:
                 self.duel_state["can_shoot"] = False
                 self.duel_state["next_transition_at"] = now + random.uniform(5.0, 8.0)
                 for p in self.players.values():
-                    p.ammo = 1
-                    p.prev_ammo = 1
+                    p.ammo = 6
+                    p.prev_ammo = 6
                 if self.use_simulator:
                     for sg in self.sim.guns.values():
-                        sg.ammo = 1
-                self.audio.trigger_pool("duel_prepare", force=True)
+                        sg.ammo = 6
+                # Round 1 opens with the setup intros (OW_DUEL_01/02),
+                # which the original plays once at PlayersSetup; later
+                # rounds use the per-round position calls (03/04/05).
+                self.audio.trigger_pool(
+                    "duel_setup" if next_rnd == 1 else "duel_prepare", force=True
+                )
                 self._set_banner(
                     f"DUEL ROUND {next_rnd} OF {max_rnd} — WAIT FOR SIGNAL!",
-                    "Keep your T-Blaster aimed down! Firing early forfeits the round.",
+                    "Keep your T-Blaster aimed down! Hitting early forfeits the round.",
                     theme="orange",
                     duration_s=4.5,
                 )
             elif sub == "WAIT":
                 self.duel_state["subphase"] = "DRAW"
                 self.duel_state["phase_code"] = 1
-                self.duel_state["can_shoot"] = True
+                # Shooting opens when the DRAW line finishes, not when
+                # it starts: the original sets canShoot on completion
+                # of the Go line. No completion callback exists, so
+                # arm shooting at the end of the host's modeled line
+                # window (the pool's active_until, ~2.4 s, covers both
+                # DRAW recordings); fall back to 1 s when no cue
+                # emitted (assets absent).
+                self.duel_state["can_shoot"] = False
                 self.duel_state["next_transition_at"] = now + 8.0
-                self.audio.trigger_pool("duel_draw", force=True)
+                cue = self.audio.trigger_pool("duel_draw", force=True)
+                if cue is not None:
+                    delay = max(0.1, self.audio.active_until - now)
+                else:
+                    delay = 1.0
+                self._schedule_audio_followup(delay, "duel_can_shoot")
                 self._set_banner(
                     "🔥 DRAW! FIRE NOW! 🔥",
                     f"Round {self.duel_state['round']} — First hit wins the round!",
@@ -1245,10 +1393,18 @@ class ArenaEngine:
                 self.duel_state["phase_code"] = 2
                 self.duel_state["can_shoot"] = False
                 self.duel_state["next_transition_at"] = now + 3.5
+                self._record_duel_round_result(None)
                 self.add_event("duel", f"Round {self.duel_state['round']} ended in a draw!")
+                self.audio.trigger_pool("duel_drawn", force=True)
 
     def ingest_ubiconnect_hits(self, hits_by_gid: dict[int, int]) -> None:
-        """Process 0xC3 IR shots received directly by the UbiConnect tower in TagThenShoot."""
+        """Process 0xC3 IR shots received directly by the UbiConnect tower in TagThenShoot.
+
+        Tower hits are one of the mode's two scoring channels (+1 each);
+        the other is T-Base tags from status word 0. `player.frags` is
+        kept in step with the tower-hit total because the poll downlink
+        sends the running tower-hit count from it.
+        """
         if self.mode_name != "TagThenShoot":
             return
         for gid, total_hits in hits_by_gid.items():
@@ -1258,6 +1414,7 @@ class ArenaEngine:
             if total_hits > player.frags:
                 delta = total_hits - player.frags
                 player.frags = total_hits
+                player.tower_hits = total_hits
                 player.score += delta
                 player.hits_landed += delta
                 player.streak += delta
@@ -1268,7 +1425,7 @@ class ArenaEngine:
                     actor=player,
                     icon_url="/static/assets/textures/Ui/Pictograms/64x/RF08.png",
                 )
-                self.audio.trigger_pool("lap_complete", custom_subtitle=f"{player.display_name} tagged the UbiConnect!")
+                self.audio.trigger_pool("tower_hit", custom_subtitle=f"{player.display_name} hit the UbiConnect tower!")
                 self._check_lead_change()
 
     def ingest_status_report(self, status: DecodedStatus) -> None:
@@ -1309,7 +1466,9 @@ class ArenaEngine:
             now = time.time()
             self.last_action_ts = now
             player.miss_streak += shots_delta
-            if player.miss_streak >= 3 and now - self._last_miss_taunt_ts >= 9.0:
+            # The original's blind/aim taunt fires after repeated
+            # misses; the threshold is 5, matching its blind rule.
+            if player.miss_streak >= 5 and now - self._last_miss_taunt_ts >= 9.0:
                 player.miss_streak = 0
                 self._last_miss_taunt_ts = now
                 self.audio.trigger_pool(
@@ -1334,6 +1493,14 @@ class ArenaEngine:
             player.ammo = status.ammo
             player.prev_ammo = status.ammo
             finite_ammo_mode = self.mode_name in ("TeamFrag", "FreeForAll", "StarterFrag", "LastManStanding")
+            # The original's low-ammo event fires when ammo reaches
+            # exactly 3, once per descent (a separate trigger from the
+            # empty-ammo reminder below).
+            if finite_ammo_mode and status.ammo == 3 and not player._low_ammo_warned:
+                player._low_ammo_warned = True
+                self.audio.trigger_pool("reload_reminder")
+            elif status.ammo > 3:
+                player._low_ammo_warned = False
             if finite_ammo_mode and player.ammo == 0 and player.clips == 0:
                 now = time.time()
                 if (
@@ -1370,16 +1537,23 @@ class ArenaEngine:
                 player.life_points = curr_life
                 player.streak = 0
                 shooters = count_new_shooters(player.prev_slots, status.hit_ids, delta)
-                for i, sgid in enumerate(shooters):
-                    shooter = self.players.get(sgid)
-                    if shooter:
-                        is_frag = (curr_life == 0) and (i == len(shooters) - 1)
-                        self._record_hit(shooter, player, is_frag=is_frag)
+                # "Medic!" when life drops to exactly 1.
+                if curr_life == 1 and player.prev_life > 1:
+                    self.audio.trigger_pool("low_life")
+                if self.mode_name == "LastManStanding":
+                    self._record_lms_hits(shooters, player, curr_life)
+                else:
+                    for i, sgid in enumerate(shooters):
+                        shooter = self.players.get(sgid)
+                        if shooter:
+                            # The shift register is most-recent-first,
+                            # so shooters[0] landed the killing blow.
+                            is_frag = (curr_life == 0) and (i == 0)
+                            self._record_hit(shooter, player, is_frag=is_frag)
                 if curr_life == 0:
                     player.deaths += 1
                     if self.mode_name == "LastManStanding":
                         player.status_badge = "ELIMINATED"
-                        self.audio.trigger_pool("lms_eliminated", custom_subtitle=f"{player.display_name} is eliminated!", force=True)
                     else:
                         player.status_badge = "SCAN T-BASE"
             elif curr_life > player.prev_life:
@@ -1387,14 +1561,27 @@ class ArenaEngine:
                 player.life_points = curr_life
                 player.status_badge = "ACTIVE"
                 if was_zero:
-                    team_rfid = TEAM_INFO.get(player.team_id, TEAM_INFO[1])["rfid_code"]
-                    player.last_rfid = team_rfid
-                    self.add_event(
-                        "respawn",
-                        f"{player.display_name} scanned {TEAM_INFO.get(player.team_id, TEAM_INFO[1])['name']} T-Base & respawned!",
-                        actor=player,
-                        icon_url=TEAM_INFO.get(player.team_id, TEAM_INFO[1])["rfid_tex"],
-                    )
+                    if self.mode_name == "TeamFrag":
+                        team_rfid = TEAM_INFO.get(player.team_id, TEAM_INFO[1])["rfid_code"]
+                        player.last_rfid = team_rfid
+                        self.add_event(
+                            "respawn",
+                            f"{player.display_name} scanned {TEAM_INFO.get(player.team_id, TEAM_INFO[1])['name']} T-Base & respawned!",
+                            actor=player,
+                            icon_url=TEAM_INFO.get(player.team_id, TEAM_INFO[1])["rfid_tex"],
+                        )
+                    else:
+                        # FreeForAll respawns are timer-only (no scan is
+                        # involved); LastManStanding has no respawn at
+                        # all, so a restore there is only ever a medkit
+                        # edge case — neutral wording for both.
+                        self.add_event(
+                            "respawn",
+                            f"{player.display_name} is back in the game!",
+                            actor=player,
+                        )
+                    if self.mode_name in ("TeamFrag", "FreeForAll"):
+                        self.audio.trigger_pool("respawn")
                 else:
                     player.last_rfid = "RF07"
                     self.add_event(
@@ -1424,10 +1611,14 @@ class ArenaEngine:
                             actor=shooter,
                             target=player,
                         )
-                        self.audio.trigger_pool("duel_round_win", custom_subtitle=f"{shooter.display_name} wins Round {self.duel_state.get('round', 1)}!", force=True)
+                        self._record_duel_round_result(shooter)
+                        self._announce_duel_round_win(shooter)
                     else:
-                        # Early shot before DRAW signal -> victim wins the round!
+                        # Early hit before DRAW signal -> victim wins the round!
+                        # (The forfeit triggers on a hit landing, not on a
+                        # shot fired: an early miss only spends ammo.)
                         player.score += 1
+                        self._record_duel_round_result(player)
                         self.add_event(
                             "duel",
                             f"Round {self.duel_state.get('round', 1)}: {shooter.display_name} fired before DRAW! Point awarded to {player.display_name}!",
@@ -1435,6 +1626,11 @@ class ArenaEngine:
                             target=shooter,
                         )
                         self.audio.trigger_pool("duel_cheat", force=True)
+                else:
+                    # A hit with no identifiable shooter is a draw in the
+                    # original: GLOBAL_118, round over.
+                    self._record_duel_round_result(None)
+                    self.audio.trigger_pool("duel_drawn", force=True)
                 self.duel_state["subphase"] = "ROUND_END"
                 self.duel_state["phase_code"] = 2
                 self.duel_state["can_shoot"] = False
@@ -1449,38 +1645,143 @@ class ArenaEngine:
                 self.duel_state["phase_code"] = 2
                 self.duel_state["can_shoot"] = False
                 self.duel_state["next_transition_at"] = time.time() + 4.0
+                self._record_duel_round_result(None)
                 self.add_event("duel", f"Round {self.duel_state.get('round', 1)}: Both duelists missed — Draw!")
+                self.audio.trigger_pool("duel_drawn", force=True)
             player.prev_hits_rec = curr_hits
 
         elif self.mode_name == "TagThenShoot":
+            # Status word 0 is the T-Base tag count (the gun's only SEND
+            # var); tower hits arrive separately via 0xC3. Both score
+            # +1, tracked and displayed as separate stats. The second
+            # status word is not read: the original's RoundLoop never
+            # looks at it and its meaning on real hardware is unknown.
             curr_tags = status.hits_received or 0
-            curr_phase = status.phase_flag if status.phase_flag is not None else 1
-            if curr_phase == 0 and player.prev_phase_flag == 1:
-                self.add_event(
-                    "respawn",
-                    f"{player.display_name} scanned all T-Bases — shoot the UbiConnect now!",
-                    actor=player,
-                    icon_url=RFID_CARDS["RF03"]["icon"],
-                )
-                self.audio.trigger_pool("tagnshoot_base")
             if curr_tags > player.prev_hits_rec:
                 delta = curr_tags - player.prev_hits_rec
+                player.tags += delta
                 player.score += delta
-                player.hits_landed += delta
-                player.streak += delta
-                player.best_streak = max(player.best_streak, player.streak)
+                bases = max(1, int(self.settings.get("numberOfBase", 4)))
+                base_num = ((player.tags - 1) % bases) + 1
+                if delta == 1:
+                    text = f"{player.display_name} tagged T-Base {base_num}! (+1 pt)"
+                else:
+                    text = f"{player.display_name} tagged {delta} T-Bases! (+{delta} pt)"
                 self.add_event(
-                    "frag",
-                    f"{player.display_name} tagged the UbiConnect! (+{delta} Lap)",
+                    "hit",
+                    text,
                     actor=player,
                     icon_url="/static/assets/textures/Ui/Pictograms/64x/RF08.png",
                 )
-                self.audio.trigger_pool("lap_complete", custom_subtitle=f"{player.display_name} completes a lap!")
+                # Base-name callout (T-Base 1-4), then a confirmation
+                # line once the callout finishes. The gun enforces scan
+                # order, so the tag count modulo the base count is the
+                # stage of the base just tagged.
+                cue = self.audio.play_announcer_file(
+                    f"DLG_GM_GLOBAL_{72 + base_num - 1:02d}.wav",
+                    f"T-Base {base_num}!",
+                    priority=2,
+                    duration=1.5,
+                )
+                if cue is not None:
+                    delay = max(0.1, self.audio.active_until - time.time()) + 0.25
+                else:
+                    delay = 0.1
+                self._schedule_audio_followup(
+                    delay,
+                    "pool",
+                    pool_key="tagnshoot_base",
+                    subtitle=f"{player.display_name} tagged T-Base {base_num}!",
+                    force=False,
+                )
                 self._check_lead_change()
             player.prev_hits_rec = curr_tags
-            player.prev_phase_flag = curr_phase
+            player.prev_phase_flag = status.phase_flag if status.phase_flag is not None else 1
 
         player.prev_slots = list(status.hit_ids)
+
+    def _announce_duel_round_win(self, shooter: PlayerState) -> None:
+        """Announce a duel round win as the original does: the winner's
+        player-number callout (Set A, GLOBAL_54+classId), then GLOBAL_119
+        "Wins the round!" once the callout finishes. The followup is
+        scheduled at the end of the host's modeled callout window (the
+        recordings run ~1.2 s); see _pending_audio."""
+        subtitle = f"{shooter.display_name} wins Round {self.duel_state.get('round', 1)}!"
+        if 1 <= shooter.gun_num <= 16:
+            cue = self.audio.play_announcer_file(
+                f"DLG_GM_GLOBAL_{54 + shooter.gun_num:02d}.wav",
+                f"Player {shooter.gun_num}!",
+                priority=3,
+                duration=1.4,
+            )
+            if cue is not None:
+                delay = max(0.1, self.audio.active_until - time.time()) + 0.25
+            else:
+                delay = 0.1
+            self._schedule_audio_followup(
+                delay, "pool", pool_key="duel_round_win", subtitle=subtitle, force=True
+            )
+        else:
+            self.audio.trigger_pool("duel_round_win", custom_subtitle=subtitle, force=True)
+
+    def _record_lms_hits(self, shooters: list[int], victim: PlayerState, curr_life: int) -> None:
+        """Score LastManStanding hits by the original's survival formula.
+
+        Hits and kills award no points — only counters. While alive a
+        player's score is life + #players, recomputed when their life
+        drops; on elimination it becomes #players - #alive, set once at
+        the moment of elimination. Healing never raises the score: the
+        recompute lives in the life-decrease branch only, as in the
+        original's RoundLoop (a quirk, preserved).
+        """
+        num_players = len(self.players)
+        for sgid in shooters:
+            shooter = self.players.get(sgid)
+            if not shooter:
+                continue
+            self.last_action_ts = time.time()
+            shooter.miss_streak = 0
+            shooter.hits_landed += 1
+            shooter.last_tagged_target = victim.display_name
+            victim.last_tagged_by = shooter.display_name
+            victim.last_tagged_by_time = time.time()
+            shooter.hits_dealt_to[victim.gun_num] = shooter.hits_dealt_to.get(victim.gun_num, 0) + 1
+            victim.hits_taken_from[shooter.gun_num] = victim.hits_taken_from.get(shooter.gun_num, 0) + 1
+            verb = random.choice(KILL_VERBS)
+            self.add_event(
+                "hit",
+                f"{shooter.display_name} {verb} {victim.display_name}",
+                actor=shooter,
+                target=victim,
+            )
+            if curr_life > 0:
+                self.audio.trigger_pool("hit_scored")
+        if curr_life > 0:
+            victim.score = victim.life_points + num_players
+        else:
+            alive = [p for p in self.players.values() if p.life_points > 0]
+            victim.score = num_players - len(alive)
+            killer = self.players.get(shooters[0]) if shooters else None
+            if killer is not None:
+                killer.frags += 1
+                fverb = random.choice(FRAG_VERBS)
+                self.add_event(
+                    "frag",
+                    f"ELIMINATED! {killer.display_name} {fverb} {victim.display_name}",
+                    actor=killer,
+                    target=victim,
+                )
+            else:
+                self.add_event(
+                    "frag",
+                    f"ELIMINATED! {victim.display_name} is out!",
+                    actor=victim,
+                )
+            self.audio.play_lms_elimination(
+                len(alive),
+                subtitle=f"{victim.display_name} is eliminated! {len(alive)} left!",
+            )
+        self._check_lead_change()
 
     def _record_hit(self, shooter: PlayerState, victim: PlayerState, is_frag: bool = False) -> None:
         self.last_action_ts = time.time()
@@ -1540,6 +1841,11 @@ class ArenaEngine:
         self._check_lead_change()
 
     def _check_lead_change(self) -> None:
+        # Duel has no lead concept: rounds are announced by the
+        # round-win callout + GLOBAL_119, and a generic lead-change
+        # line would interrupt that sequence.
+        if self.mode_name == "OldFashionDuel":
+            return
         if self.mode_name == "TeamFrag":
             standings = self.get_team_standings()
             if len(standings) >= 2 and standings[0]["score"] > standings[1]["score"]:
@@ -1621,6 +1927,14 @@ class ArenaEngine:
         """
         if not self.players:
             return {}
+        if self.mode_name == "LastManStanding":
+            # Survival decides: every player still alive gets winner
+            # LEDs regardless of score, so the sole survivor is never
+            # shown red behind an eliminated player's higher score. If
+            # somehow nobody is alive, fall back to the score rule.
+            alive = {gid for gid, p in self.players.items() if p.life_points > 0}
+            if alive:
+                return {gid: gid in alive for gid in self.players}
         if self.mode_name == "TeamFrag":
             teams = self.get_team_standings()
             if not teams:
@@ -1647,7 +1961,8 @@ class ArenaEngine:
         if self.phase != "PLAYING" or self.mode_name == "OldFashionDuel":
             return
         now = time.time()
-        if self.get_remaining_seconds() <= 12:
+        remaining = self.get_remaining_seconds()
+        if remaining is not None and remaining <= 12:
             return
         if now - self.last_action_ts >= 8.0 and now - self._last_idle_banter_ts >= 10.0:
             self._last_idle_banter_ts = now
@@ -1708,7 +2023,9 @@ class ArenaEngine:
         """Return True if the match should transition to GAME_OVER."""
         if self.phase != "PLAYING":
             return False
-        if self.get_remaining_seconds() <= 0:
+        # Timerless modes (duel, LMS) never end on the clock; the
+        # original has no stalemate rule for them either.
+        if self._is_timed_mode() and (self.get_remaining_seconds() or 0.0) <= 0:
             return True
         score_limit = int(self.settings.get("scoreLimit", 0))
         if score_limit > 0 and any(p.score >= score_limit for p in self.players.values()):
@@ -1747,6 +2064,7 @@ class ArenaEngine:
 
         ranked = [p.to_dict() for p in self.get_sorted_players()]
         teams = self.get_team_standings() if MODE_CATALOG[self.mode_name]["teams"] else []
+        remaining = self.get_remaining_seconds()
 
         return {
             "phase": self.phase,
@@ -1763,7 +2081,8 @@ class ArenaEngine:
             "global_settings": dict(self.global_settings),
             "upload_failed_guns": list(self.last_upload_failed_guns),
             "clock": self.format_clock(),
-            "remaining_seconds": round(self.get_remaining_seconds(), 1),
+            # None for timerless modes (duel, LMS): the clock counts up.
+            "remaining_seconds": None if remaining is None else round(remaining, 1),
             "countdown_remaining": self.countdown_remaining,
             "upload_progress": self.upload_progress,
             "players": ranked,
