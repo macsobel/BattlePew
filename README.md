@@ -41,8 +41,8 @@ Directly communicates with the physical **UbiConnect** USB antenna/tower (`0x044
 <div align="center">
   <br />
   <strong>Gameplay Demo</strong><br /><br />
-  <video src="docs/screenshots/gameplay.mp4" controls width="720"></video><br />
-  <a href="docs/screenshots/gameplay.mp4">Watch Gameplay Demo (MP4)</a>
+  <img src="docs/screenshots/gameplay.webp" alt="BattlePew Gameplay Demo" width="720" /><br />
+  <sub><a href="docs/screenshots/gameplay.mp4">Full-resolution MP4</a></sub>
 </div>
 
 ---
