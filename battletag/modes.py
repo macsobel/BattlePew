@@ -1406,18 +1406,57 @@ class ArenaEngine:
                 self.duel_state["phase_code"] = 1
                 self.duel_state["subphase"] = "WAIT"
                 self.duel_state["can_shoot"] = False
-                self.duel_state["next_transition_at"] = now + random.uniform(5.0, 8.0)
+                # Round 1 carries the setup intro after the round
+                # announcement, so its standoff floor covers both
+                # lines (6 s) and the DRAW cue never talks over the
+                # intro; later rounds keep the usual 5 s floor.
+                wait_floor = 6.0 if next_rnd == 1 else 5.0
+                self.duel_state["next_transition_at"] = now + random.uniform(
+                    wait_floor, 8.0
+                )
                 for p in self.players.values():
                     p.ammo = 6
                     p.prev_ammo = 6
                 if self.use_simulator:
                     for sg in self.sim.guns.values():
                         sg.ammo = 6
-                # Round 1 opens with the setup intros (OW_DUEL_01/02),
-                # which the original plays once at PlayersSetup; later
-                # rounds use the per-round position calls (03/04/05).
-                self.audio.trigger_pool(
-                    "duel_setup" if next_rnd == 1 else "duel_prepare", force=True
+                # Round announcement (F21): "First round!" opens the
+                # match, "Final round" heads the last round, "Next
+                # round!" the rest. The announcement plays first and
+                # the setup intro (round 1, OW_DUEL_01/02, which the
+                # original plays once at PlayersSetup) or the per-round
+                # position calls (03/04/05) follow once its modeled
+                # window ends, via the pending-audio queue.
+                if next_rnd == 1:
+                    round_file, round_sub, round_dur = (
+                        "DLG_GM_GLOBAL_115.wav",
+                        "First round!",
+                        1.2,
+                    )
+                elif next_rnd >= max_rnd:
+                    round_file, round_sub, round_dur = (
+                        "DLG_GM_GLOBAL_116.wav",
+                        "Final round",
+                        1.4,
+                    )
+                else:
+                    round_file, round_sub, round_dur = (
+                        "DLG_GM_GLOBAL_114.wav",
+                        "Next round!",
+                        1.1,
+                    )
+                cue = self.audio.play_announcer_file(
+                    round_file, round_sub, priority=-1, duration=round_dur
+                )
+                if cue is not None:
+                    delay = max(0.1, self.audio.active_until - now) + 0.25
+                else:
+                    delay = 0.1
+                self._schedule_audio_followup(
+                    delay,
+                    "pool",
+                    pool_key="duel_setup" if next_rnd == 1 else "duel_prepare",
+                    force=True,
                 )
             elif sub == "WAIT":
                 self.duel_state["subphase"] = "DRAW"
