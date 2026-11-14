@@ -5179,7 +5179,7 @@
       };
 
       const renderClipPips = (clips) => {
-        if (clips <= 0) return `<span class="tv-clips-strip" title="0 clips left"><span class="tv-clip-pip"></span><span class="tv-clip-count">0</span></span>`;
+        if (clips <= 0) return '';
         if (clips > 6) return `<span class="tv-clips-strip" title="${clips} clips left"><span class="tv-clip-pip on"></span><span class="tv-clip-count">×${clips}</span></span>`;
         const pips = Array.from({ length: clips }, () => `<span class="tv-clip-pip on"></span>`).join('');
         return `<span class="tv-clips-strip" title="${clips} clip${clips === 1 ? '' : 's'} left">${pips}</span>`;
