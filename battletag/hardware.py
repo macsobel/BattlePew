@@ -788,20 +788,51 @@ class RealHIDTransport:
                     new_step["expect_prefix"] = f"35{gun_id_hex}"
             pair_seq["steps"].append(new_step)
 
-        # Run the pair sequence, retrying once: a single dropped RF reply (the
-        # revision or profile response is sent once) must not cost the gun.
-        # The gun keeps announcing every ~150 ms until acked, so the retry
-        # catches a fresh announcement; pair-start/stop and the acks are
-        # idempotent.
+        # Split the pairing sequence into the core handshake (steps 1-7 ending
+        # with the 04 <id> revision reply) and the optional profile read
+        # (step 8, 05 <id> 84 -> 35 <id>). Once the core handshake succeeds,
+        # the gun is already paired on the RF link and stops sending 10 00 12
+        # announcements; if the profile reply is dropped, retrying from step 1
+        # would always time out and strand a paired gun off-screen.
+        rev_idx = next(
+            (
+                idx
+                for idx, st in enumerate(pair_seq["steps"])
+                if str(st.get("expect_prefix", "")).upper().startswith("04")
+            ),
+            len(pair_seq["steps"]) - 1,
+        )
+        core_seq = dict(pair_seq, steps=pair_seq["steps"][: rev_idx + 1])
+        profile_steps = pair_seq["steps"][rev_idx + 1 :]
+
+        # Run the core handshake, retrying once: a single dropped RF reply
+        # before the gun receives its ack must not cost the gun.
         paired = False
         for pair_attempt in (1, 2):
-            if self.run_sequence(pair_seq):
+            if self.run_sequence(core_seq):
                 paired = True
                 break
             self.log(f"  pair attempt {pair_attempt} failed, retrying sequence")
         if not paired:
             self.log(f"FAIL: pair gun {gun_id:02x}")
             return None
+
+        if profile_steps:
+            profile_seq = {
+                "name": f"profile gun {gun_id:02x}",
+                "capture": pair_seq.get("capture"),
+                "ref": ref_hex,
+                "lock_ref": True,
+                "steps": profile_steps,
+            }
+            prof_ok = False
+            for prof_attempt in (1, 2):
+                if self.run_sequence(profile_seq):
+                    prof_ok = True
+                    break
+                self.log(f"  profile attempt {prof_attempt} failed for gun {gun_id:02x}, retrying profile read")
+            if not prof_ok:
+                self.log(f"  WARNING: profile read failed for gun {gun_id:02x}; using default name/avatar")
 
         profile_name = name
         profile_avatar = AVATAR_NAMES[(class_id - 1) % len(AVATAR_NAMES)]
