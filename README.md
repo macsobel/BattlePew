@@ -1,53 +1,72 @@
+<div align="center">
+
+<img src="macos-app/Resources/AppIcon-1024.png" alt="BattlePew" width="140" />
+
 # BattlePew
 
-A modern cross-platform Arena Master and replacement server for the **Ubisoft Battle Tag (2010)** laser tag system, supporting **macOS**, **Windows**, and **Linux**.
+**A modern, cross-platform Arena Master for the Ubisoft Battle Tag (2010) laser tag system.**
 
-Directly communicates with the physical **UbiConnect** USB antenna/tower (`0x044F:0xB365`), pairs up to 8 **T-Blasters** and **T-Vests**, flashes original Ubisoft bytecode sequences over the air, tracks telemetry in real-time, and hosts a TV-first responsive Arena Master HUD with smartphone integration.
+[![macOS build](https://github.com/macsobel/BattlePew/actions/workflows/build-macos-app.yml/badge.svg)](https://github.com/macsobel/BattlePew/actions/workflows/build-macos-app.yml)
+[![Windows & Linux build](https://github.com/macsobel/BattlePew/actions/workflows/build-windows-linux.yml/badge.svg)](https://github.com/macsobel/BattlePew/actions/workflows/build-windows-linux.yml)
+![Platforms](https://img.shields.io/badge/platforms-macOS%20%7C%20Windows%20%7C%20Linux-F26314)
+![Python](https://img.shields.io/badge/python-3.10%E2%80%933.13-3776AB?logo=python&logoColor=white)
+![License](https://img.shields.io/badge/license-MIT-green)
 
-> **Disclaimer:** This program was developed with the use of **Google Antigravity AI**.
+[Screenshots](#-screenshots) &nbsp;•&nbsp; [Download](#-download) &nbsp;•&nbsp; [Features](#-features) &nbsp;•&nbsp; [Game Modes](#-game-modes) &nbsp;•&nbsp; [Run from Source](#-run-from-source) &nbsp;•&nbsp; [Tests](#-running-tests)
+
+</div>
+
+BattlePew talks directly to the physical **UbiConnect** USB antenna (`0x044F:0xB365`), pairs up to 8 **T-Blasters** and **T-Vests**, flashes the original bytecode sequences over the air, tracks telemetry in real time, and serves a TV-first Arena Master display with a zero-install smartphone HUD.
+
+> [!NOTE]
+> This program was developed with the use of **Google Antigravity AI**.
+
+> [!IMPORTANT]
+> **No Ubisoft assets are included.** Announcer voices, music, sound effects, fonts and UI textures are extracted locally from your own copy of the official installer. See [Original Assets](#-original-assets-not-included).
 
 ---
 
-## Screenshots
+## 📸 Screenshots
 
 <table>
   <tr>
     <td align="center" width="50%">
-      <strong>Lobby &amp; T-Blaster Roster</strong><br />
-      <img src="docs/screenshots/lobby.png" alt="BattlePew Lobby" />
+      <img src="docs/screenshots/lobby.png" alt="BattlePew Lobby" /><br />
+      <sub><b>Lobby &amp; T-Blaster Roster</b></sub>
     </td>
     <td align="center" width="50%">
-      <strong>Game Mode &amp; Team Selector</strong><br />
-      <img src="docs/screenshots/game-selector.png" alt="BattlePew Game Mode Selector" />
+      <img src="docs/screenshots/game-selector.png" alt="BattlePew Game Mode Selector" /><br />
+      <sub><b>Game Mode &amp; Team Selector</b></sub>
     </td>
   </tr>
   <tr>
     <td align="center" width="50%">
-      <strong>Live Match — Team Frag</strong><br />
-      <img src="docs/screenshots/live-match.png" alt="BattlePew Live Team Frag Match" />
+      <img src="docs/screenshots/live-match.png" alt="BattlePew Live Team Frag Match" /><br />
+      <sub><b>Live Match — Team Frag</b></sub>
     </td>
     <td align="center" width="50%">
-      <strong>Match Results &amp; Score Progression</strong><br />
-      <img src="docs/screenshots/results.png" alt="BattlePew Results Screen" />
+      <img src="docs/screenshots/results.png" alt="BattlePew Results Screen" /><br />
+      <sub><b>Match Results &amp; Score Progression</b></sub>
     </td>
   </tr>
 </table>
 
-<div align="center">
-  <strong>Smartphone Player HUD</strong> (join via on-screen QR code)<br /><br />
-  <img src="docs/screenshots/phone-hud.png" alt="BattlePew Smartphone Player HUD" width="300" />
-</div>
-
-<div align="center">
-  <br />
-  <strong>Gameplay Demo</strong><br /><br />
-  <img src="docs/screenshots/gameplay.webp" alt="BattlePew Gameplay Demo" width="720" /><br />
-  <sub><a href="docs/screenshots/gameplay.mp4">Full-resolution MP4</a></sub>
-</div>
+<table>
+  <tr>
+    <td align="center" width="62%">
+      <img src="docs/screenshots/gameplay.webp" alt="BattlePew Gameplay Demo" /><br />
+      <sub><b>Gameplay demo</b> · <a href="docs/screenshots/gameplay.mp4">full-resolution MP4</a></sub>
+    </td>
+    <td align="center" width="38%">
+      <img src="docs/screenshots/phone-hud.png" alt="BattlePew Smartphone Player HUD" width="240" /><br />
+      <sub><b>Smartphone HUD</b> — join via the on-screen QR code</sub>
+    </td>
+  </tr>
+</table>
 
 ---
 
-## Important: Original Assets Not Included
+## 🔒 Original Assets Not Included
 
 **This repository and its prebuilt releases do NOT include any of Ubisoft's copyrighted assets** (announcer voice lines, music, sound effects, fonts, or UI icons/textures).
 
@@ -60,11 +79,21 @@ On first launch, BattlePew checks for extracted assets in your local user data f
 
 ---
 
-## Running Prebuilt Releases (Unsigned Binaries)
+## 📦 Download
+
+Grab the latest build for your platform from the [**Releases**](https://github.com/macsobel/BattlePew/releases) page, or from the artifacts of any [GitHub Actions run](https://github.com/macsobel/BattlePew/actions).
+
+| Platform | Archive | First-launch notes |
+| :-- | :-- | :-- |
+| 🍎 **macOS** (Apple Silicon, 13+) | `BattlePew-macOS-*.zip` | [Gatekeeper](#macos-gatekeeper) |
+| 🪟 **Windows** (x64) | `BattlePew-Windows-*.zip` | [SmartScreen](#windows-microsoft-defender-smartscreen) |
+| 🐧 **Linux** (x64) | `BattlePew-Linux-*.tar.gz` | [Permissions &amp; USB access](#linux-executable-permissions--usb-hid-access) |
+
+### Running Prebuilt Releases (Unsigned Binaries)
 
 Prebuilt desktop releases from GitHub Actions are not code-signed with an Apple Developer ID or Microsoft Authenticode certificate, so your operating system may warn you on first launch.
 
-### macOS (Gatekeeper)
+#### macOS (Gatekeeper)
 
 If macOS says **`"BattlePew" is damaged and can't be opened`** or blocks it as an unverified developer:
 
@@ -78,7 +107,7 @@ If macOS says **`"BattlePew" is damaged and can't be opened`** or blocks it as a
 
 Alternatively, try opening it once, then go to **System Settings -> Privacy & Security**, scroll to the security message for `BattlePew`, and click **Open Anyway**.
 
-### Windows (Microsoft Defender SmartScreen)
+#### Windows (Microsoft Defender SmartScreen)
 
 If Windows shows **`Windows protected your PC`**:
 
@@ -89,7 +118,7 @@ If Windows shows **`Windows protected your PC`**:
   Unblock-File -Path .\BattlePew-Windows-*.zip
   ```
 
-### Linux (Executable Permissions & USB HID Access)
+#### Linux (Executable Permissions & USB HID Access)
 
 1. Extract the archive and ensure the binary is executable:
    ```bash
@@ -109,29 +138,32 @@ If Windows shows **`Windows protected your PC`**:
 
 ---
 
-## Features
+## ✨ Features
 
-- **Hardware USB HID Engine**: Native, bidirectional communication with the UbiConnect base station (`044F:B365`) using `hidapi`.
-- **Persistent Pairing & Auto-Discovery**: Automatically discovers and pairs T-Blasters in pairing mode (`Hold Reload + Power`), reads stored profiles from EEPROM (player names & animal avatars), and keeps guns paired across matches.
-- **7 Fully-Functional Tier 1 Game Modes**:
-  - **Free Frag**: Instant action, infinite life & ammo — every hit scores +1 point.
-  - **Team Frag**: 2–4 squads (Red, Blue, Yellow, Green), Life Points, and T-Base respawn.
-  - **Free For All**: 2–8 players, solo combat with Life Points, clips, and T-Base respawn.
-  - **Last Man Standing**: High-stakes survival elimination — no respawns.
-  - **Wild West Duel**: 2-player quickdraw showdown across 5 tense rounds.
-  - **Starter Frag**: Infinite life with physical RFID Ammo Card reloads.
-  - **Tag'n Shoot**: Solo agility sprint — scan T-Bases then shoot the UbiConnect tower.
-- **TV-First 10-Foot Arena Master UI**:
-  - **Lobby Screen**: Mode cards, match settings, paired gun roster, manual pair controls, and pre-match bytecode upload verification.
-  - **Live Match View**: Giant monospace clock (`clamp()` scaling), high-contrast team/player scoreboard cards with animated HP/ammo bars, and real-time kill-feed.
-  - **Results Screen**: Winner announcements, final rankings podium, and rematch actions.
-  - **Simulator / Debug Screen**: Built-in simulator with Bot Arena and manual trigger deck for testing without physical hardware.
-- **Phone HUD (QR Code Join)**: Any player can scan the on-screen QR code with their smartphone to open a personalized, zero-install mobile HUD showing their real-time ammo, health, clips, and match timer.
-- **Original Audio & Visuals (User-Imported)**: Plays original Ubisoft voice lines, mode introductions, sound effects, music tracks, and icons once extracted from your copy of `BattleTag_Installer.zip`.
+| | |
+| :-- | :-- |
+| 🔌 **Native USB HID engine** | Bidirectional communication with the UbiConnect base station (`044F:B365`) via `hidapi`. |
+| 🤝 **Persistent pairing & auto-discovery** | Finds T-Blasters in pairing mode (`Hold Reload + Power`), reads stored player names and animal avatars from EEPROM, and keeps guns paired across matches. |
+| 📺 **TV-first 10-foot UI** | Lobby, live scoreboard with animated HP/ammo bars, adaptive live arena feed, and a results podium with score progression. |
+| 📱 **Phone HUD** | Scan the on-screen QR code for a personalised, zero-install HUD with real-time ammo, health, clips and match timer. |
+| 🧪 **Simulator mode** | Built-in simulator with a Bot Arena and manual trigger deck — test without any hardware. |
+| 🔊 **Original audio & visuals** | Voice lines, mode intros, sound effects, music and icons play once extracted from *your* copy of `BattleTag_Installer.zip`. |
+
+### 🎮 Game Modes
+
+| Mode | Description |
+| :-- | :-- |
+| **Free Frag** | Instant action, infinite life & ammo — every hit scores +1 point. |
+| **Team Frag** | 2–4 squads (Red, Blue, Yellow, Green), Life Points, and T-Base respawn. |
+| **Free For All** | 2–8 players, solo combat with Life Points, clips, and T-Base respawn. |
+| **Last Man Standing** | High-stakes survival elimination — no respawns. |
+| **Wild West Duel** | 2-player quickdraw showdown across 5 tense rounds. |
+| **Starter Frag** | Infinite life with physical RFID Ammo Card reloads. |
+| **Tag'n Shoot** | Solo agility sprint — scan T-Bases, then shoot the UbiConnect tower. |
 
 ---
 
-## Requirements (Running from Source)
+## 🧰 Requirements (Running from Source)
 
 - **macOS**, **Windows**, or **Linux**
 - **Python** 3.10 to 3.13
@@ -139,7 +171,7 @@ If Windows shows **`Windows protected your PC`**:
 
 ---
 
-## Quickstart (From Source)
+## 🚀 Run from Source
 
 ### 1. Clone & Set Up Virtual Environment
 
@@ -176,7 +208,7 @@ http://localhost:3466
 
 ---
 
-## Running Tests
+## ✅ Running Tests
 
 Automated tests verify packet framing, `0x95` status decoding, `0x92` configuration packets, and game engine scoring:
 
@@ -186,6 +218,12 @@ pytest -v
 
 ---
 
-## License
+## 📄 License
 
 MIT License. Ubisoft Battle Tag assets and audio are property of Ubisoft Entertainment and are not distributed with this repository.
+
+---
+
+<div align="center">
+  <sub>BattlePew is an independent fan project and is not affiliated with or endorsed by Ubisoft Entertainment.</sub>
+</div>
