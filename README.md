@@ -38,6 +38,13 @@ Directly communicates with the physical **UbiConnect** USB antenna/tower (`0x044
   <img src="docs/screenshots/phone-hud.png" alt="BattlePew Smartphone Player HUD" width="300" />
 </div>
 
+<div align="center">
+  <br />
+  <strong>Gameplay Demo</strong><br /><br />
+  <video src="docs/screenshots/gameplay.mp4" controls width="720"></video><br />
+  <a href="docs/screenshots/gameplay.mp4">Watch Gameplay Demo (MP4)</a>
+</div>
+
 ---
 
 ## Important: Original Assets Not Included
