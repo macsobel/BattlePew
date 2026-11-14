@@ -1087,7 +1087,7 @@
     </div>
 
     <div class="ammo-grid">
-      <div class="sub-vital" id="hudAmmoBlock">
+      <div class="sub-vital">
         <div style="width: 100%;">
           <div style="display: flex; align-items: baseline; justify-content: space-between; gap: 6px;">
             <div class="t-label"><svg class="ui-icon" style="color:#38BDF8;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 10h14l2-2h3v4h-3l-1 2H11l-2 6H6l1.5-6H4l-2-2v-2z" fill="currentColor" fill-opacity="0.2"/><path d="M2 10h14l2-2h3v4h-3l-1 2H11l-2 6H6l1.5-6H4l-2-2v-2z"/><path d="M13 14v2.5"/></svg> AMMO IN CLIP</div>
@@ -1096,7 +1096,7 @@
           <div id="hudAmmoBar" class="ammo-bar-grid"></div>
         </div>
       </div>
-      <div class="sub-vital" id="hudClipsBlock">
+      <div class="sub-vital">
         <div style="width: 100%;">
           <div style="display: flex; align-items: baseline; justify-content: space-between; gap: 6px;">
             <div class="t-label"><svg class="ui-icon" style="color:#F59E0B;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 4h10l1 3v12a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2V7l1-3z" fill="currentColor" fill-opacity="0.18"/><path d="M7 4h10l1 3v12a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2V7l1-3z"/><path d="M9 10h6M9 14h6"/></svg> CLIPS LEFT</div>
@@ -1588,19 +1588,13 @@
           ammoBar.innerHTML = `<div class="ammo-pill on"></div>`;
         }
       }
-      // Out of clips: hide the whole clips block (label, count, pips) and let
-      // the ammo card span the row, matching the scoreboard. Re-evaluated on
-      // every render, so an ammo-box reload brings the block back.
-      const outOfClips = showClips && me.clips <= 0;
-      const clipsBlock = document.getElementById('hudClipsBlock');
-      if (clipsBlock) clipsBlock.style.display = outOfClips ? 'none' : '';
-      const ammoBlock = document.getElementById('hudAmmoBlock');
-      if (ammoBlock) ammoBlock.style.gridColumn = outOfClips ? '1 / -1' : '';
       document.getElementById('hudClipsText').textContent = showClips ? `${me.clips}` : '∞';
       const clipsPips = document.getElementById('hudClipsPips');
       if (clipsPips) {
         if (showClips) {
-          const cap = Math.min(8, Math.max(me.clips, 1));
+          // Show full capacity: lit pips for clips left, empty pips for spent
+          // ones (like the ammo bar), so the row reads at a glance even at 0.
+          const cap = Math.min(8, Math.max(me.max_clips || me.clips, 1));
           clipsPips.innerHTML = Array.from({ length: cap }, (_, i) =>
             `<div class="clip-pip ${i < me.clips ? 'on' : ''}"></div>`
           ).join('') + (me.clips > 8 ? `<span style="font-size: 0.72rem; font-weight: 800; color: var(--bt-orange-bright);">+${me.clips - 8}</span>` : '');
