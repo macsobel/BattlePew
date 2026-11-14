@@ -34,9 +34,9 @@ join over Wi-Fi by scanning the QR code, exactly as before.
   server**. There are no orphaned background servers.
 - The phone HUD over LAN keeps working: the bundled server binds all
   interfaces, and the QR code on the main screen is unchanged.
-- Hardware authorization is explicit, every launch: if a UbiConnect is
-  plugged in, a native dialog asks whether to allow hardware control.
-  Simulator mode needs no authorization.
+- A plain launch always starts in hardware mode — no dialog. Hold the
+  Option (⌥) key while launching to run in simulator mode instead,
+  without touching any hardware.
 
 ## Quick start (download a built app)
 
@@ -97,14 +97,17 @@ to Applications (or another permanent folder) first.
 - **Quit:** Cmd-Q, BattlePew > Quit, or close the window. All three stop
   the server. Quitting mid-match ends the match (same as stopping it in
   the UI); guns keep whatever state the server last sent them.
-- **Hardware dialog:** on launch, if a UbiConnect is detected, you choose
-  *Allow Hardware Control* or *Simulator Only*. The choice applies to
-  that launch only — you are asked again next launch. If no UbiConnect
-  is plugged in, the app starts in simulator mode with no dialog.
+- **Simulator mode:** hold the Option (⌥) key while launching to run
+  without touching any hardware. A plain launch always starts in
+  hardware mode; if no UbiConnect is plugged in, the Arena Master UI
+  shows its "Connect Your UbiConnect" modal and hot-plug detection
+  activates as soon as one is plugged in.
 - **UbiConnect unplugged mid-game:** the app does not hot-plug. The
   Arena Master UI will show guns going stale (existing server behavior).
-  Quit, plug the UbiConnect back in, relaunch, and re-pair. Unplugging
-  before launch is handled: the app starts in simulator mode.
+  Quit, plug the UbiConnect back in, relaunch, and re-pair. Launching
+  with no UbiConnect attached starts in hardware mode with the
+  "Connect Your UbiConnect" modal; plug it in and hot-plug detection
+  picks it up.
 - **Port busy:** the app prefers port 3466 (keeps the QR URL stable). If
   3466 is taken, it tries 3467–3475 automatically. If another copy of
   BattlePew is already running, the new copy shows an "already running"
@@ -227,7 +230,7 @@ Details worth knowing:
 | "Cannot check for malicious software" / "damaged" | Unsigned build + quarantine. See [First launch](#first-launch-gatekeeper--unsigned-build). |
 | App bounces then nothing / error screen on launch | Open Show Server Log. Common: the bundle is incomplete (re-download/rebuild), or no free port (quit other BattlePew copies). |
 | No sound at all | CI build (no audio assets), or a local build without `--assets-dir`. Rebuild with assets. Also check the Mac is not muted — the shell enables autoplay, but system volume still applies. |
-| "UbiConnect: Disconnected" / simulator mode unexpectedly | UbiConnect not plugged in before launch, or the hardware dialog was answered "Simulator Only". Quit, plug in, relaunch, allow hardware. Check the USB cable; try another port. |
+| "UbiConnect: Disconnected" / simulator mode unexpectedly | UbiConnect not plugged in, or the app was launched while holding Option (simulator mode). Quit, plug in, relaunch without holding Option. Check the USB cable; try another port. |
 | Phones can't reach the HUD / QR doesn't load | Mac and phones must be on the same Wi-Fi. Check the Local Network permission (System Settings > Privacy & Security > Local Network > BattlePew allowed). VPNs and client-isolation Wi-Fi (hotels, some mesh guest networks) block LAN access. |
 | Port 3466 busy / "already running" | Another BattlePew (or another server) owns 3466. The app falls back to 3467–3475 automatically, except when another BattlePew answers — then it quits deliberately. Quit the other copy. |
 | App won't quit / server keeps running after quit | Should not happen (SIGTERM + SIGKILL grace). If it does: `pkill -f run_battletag.py`, then report it with the server log. |
@@ -260,8 +263,9 @@ report back before this is called working:
       UI with no browser chrome.
 - [ ] Announcer/music/UI audio plays in the shell (autoplay) on a
       build WITH assets; a no-assets build runs silently without errors.
-- [ ] The hardware dialog appears with a UbiConnect plugged in; allowing
-      it enables pairing/uploads; Simulator Only runs the simulator.
+- [ ] A plain launch with a UbiConnect plugged in enables
+      pairing/uploads with no dialog; holding Option at launch runs
+      the simulator instead.
 - [ ] A phone on the same Wi-Fi loads the HUD from the QR code; the
       Local Network prompt behaves as documented.
 - [ ] Cmd-Q, closing the window, and the error-screen Quit all stop the

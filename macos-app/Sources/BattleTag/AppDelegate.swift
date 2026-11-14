@@ -76,36 +76,25 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, WKNa
         runStartupSequence()
     }
 
-    /// Preflight → hardware choice → server start → web UI.
+    /// Preflight → server start → web UI. No dialog is ever shown: a plain
+    /// launch always starts in hardware mode (the server gets
+    /// --confirm-write; if no UbiConnect is attached, the web UI shows its
+    /// "Connect Your UbiConnect" modal and hot-plug detection activates when
+    /// one is plugged in). Hold the Option key while launching to run in
+    /// simulator mode instead, without touching any hardware.
     private func runStartupSequence() {
+        // Sampled here, synchronously at launch: the already-running check
+        // below is asynchronous, and the key may be released by the time
+        // its callback runs.
+        let simulatorRequested = NSEvent.modifierFlags.contains(.option)
         serverManager.checkAlreadyRunning { [weak self] alreadyRunning in
             guard let self = self else { return }
             if alreadyRunning {
                 self.showAlreadyRunningAlert()
                 return
             }
-            self.showLoading(message: "Looking for the UbiConnect…")
-            self.serverManager.probeHIDDeviceCount { [weak self] count in
-                guard let self = self else { return }
-                switch count {
-                case .some(let n) where n > 0:
-                    // A UbiConnect is plugged in: ask before the server is
-                    // allowed to write to hardware. This dialog IS the
-                    // per-launch hardware authorization; the server only
-                    // gets --confirm-write when the user allows it here.
-                    self.allowHardware = self.askHardwarePermission(deviceCount: n)
-                case .some:
-                    // No UbiConnect attached yet: start in hardware mode so
-                    // the "Connect Your UbiConnect" modal appears and hot-plug
-                    // detection activates as soon as it is plugged in.
-                    self.allowHardware = true
-                case .none:
-                    // Probe failed; fail open to the user's choice rather
-                    // than silently picking simulator mode.
-                    self.allowHardware = self.askHardwarePermission(deviceCount: nil)
-                }
-                self.startServerAndShowUI()
-            }
+            self.allowHardware = !simulatorRequested
+            self.startServerAndShowUI()
         }
     }
 
@@ -125,30 +114,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, WKNa
                                allowRelaunch: true)
             }
         }
-    }
-
-    /// Native authorization dialog. Returns true only when the user picks
-    /// the hardware button. Runs modally; called on the main queue.
-    private func askHardwarePermission(deviceCount: Int?) -> Bool {
-        let alert = NSAlert()
-        alert.messageText = "Allow BattlePew to control the UbiConnect?"
-        if let count = deviceCount {
-            alert.informativeText = """
-                \(count) UbiConnect device\(count == 1 ? " is" : "s are") connected. \
-                Hardware control lets BattlePew pair T-Blasters, upload game code, and write player names to the guns. \
-                Choose Simulator Only to run without touching any hardware.
-                """
-        } else {
-            alert.informativeText = """
-                BattlePew could not check for a UbiConnect. Hardware control lets BattlePew pair T-Blasters, \
-                upload game code, and write player names to the guns. \
-                Choose Simulator Only to run without touching any hardware.
-                """
-        }
-        alert.addButton(withTitle: "Allow Hardware Control")
-        alert.addButton(withTitle: "Simulator Only")
-        alert.alertStyle = .informational
-        return alert.runModal() == .alertFirstButtonReturn
     }
 
     private func showAlreadyRunningAlert() {
@@ -479,6 +444,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, WKNa
             Arena Master for the 2010 Battle Tag laser-tag system.
 
             Phones join by scanning the QR code on the main screen. If something goes wrong, choose Show Server Log from any error screen, or look in ~/Library/Logs/BattlePew/.
+
+            Hold the Option (⌥) key while launching BattlePew to run in simulator mode without touching any hardware.
             """
         alert.addButton(withTitle: "OK")
         alert.runModal()
