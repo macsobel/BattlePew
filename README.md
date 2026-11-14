@@ -18,7 +18,7 @@
 
 **For the first time, you can play Ubisoft Battle Tag on a Mac or a Linux PC** — as well as Windows.
 
-BattlePew is a open-source replacement for the original Battle Tag game software. Plug in your Battle Tag USB base station (the **UbiConnect**), turn on your **T-Blasters**, and BattlePew takes care of the rest: it connects your blasters, sets up the game, keeps score, and shows a big live scoreboard you can put up on a TV. Players can also follow their own ammo, health and score on their phone — just scan a QR code, no app to install.
+BattlePew is an open-source replacement for the original Battle Tag game software. Plug in your Battle Tag USB base station (the **UbiConnect**), turn on your **T-Blasters**, and BattlePew takes care of the rest: it connects your blasters, sets up the game, keeps score, and shows a big live scoreboard you can put up on a TV. Players can also follow their own ammo, health and score on their phone — just scan a QR code, no app to install.
 
 > [!NOTE]
 > This program was developed with the use of **Google Antigravity AI**.
