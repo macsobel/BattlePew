@@ -231,6 +231,12 @@
     }
 
     .hp-segment.active {
+      background: linear-gradient(180deg, #23D923 0%, var(--team-green) 100%);
+      border-color: #4ADE80;
+      box-shadow: 0 0 8px rgba(0, 171, 3, 0.5);
+    }
+
+    .hp-segment.low {
       background: linear-gradient(180deg, #FF3B1F 0%, var(--team-red) 100%);
       border-color: #FF7663;
       box-shadow: 0 0 8px rgba(212, 25, 0, 0.5);
@@ -1080,7 +1086,7 @@
   <section class="vitals-card" id="hudVitals">
     <div>
       <div class="vital-row-head">
-        <span class="vital-title"><svg class="ui-icon" style="color:#EF4444;" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 21s-6.8-4.35-9.4-8.36C.7 9.7 1.85 5.4 5.5 4.25c2.1-.66 4.4.12 5.75 1.8L12 7l.75-.95c1.35-1.68 3.65-2.46 5.75-1.8 3.65 1.15 4.8 5.45 2.9 8.39C18.8 16.65 12 21 12 21z"/></svg> LIFE POINTS</span>
+        <span class="vital-title"><svg class="ui-icon" style="color:var(--team-green);" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 21s-6.8-4.35-9.4-8.36C.7 9.7 1.85 5.4 5.5 4.25c2.1-.66 4.4.12 5.75 1.8L12 7l.75-.95c1.35-1.68 3.65-2.46 5.75-1.8 3.65 1.15 4.8 5.45 2.9 8.39C18.8 16.65 12 21 12 21z"/></svg> LIFE POINTS</span>
         <span class="vital-number" id="hudLifeText">∞</span>
       </div>
       <div id="hudHpBar" class="hp-bar-grid"></div>
@@ -1567,9 +1573,11 @@
       // Life Points & Ammo
       document.getElementById('hudLifeText').textContent = showLife ? `${me.life_points}/${me.max_life}` : '∞';
       const hpBar = document.getElementById('hudHpBar');
+      // Same rule as the main screen and teammate pills: green, red at 1 life.
+      const hpCls = me.life_points <= 1 ? 'active low' : 'active';
       hpBar.innerHTML = showLife
         ? Array.from({ length: Math.min(10, me.max_life) }, (_, i) =>
-            `<div class="hp-segment ${i < me.life_points ? 'active' : ''}"></div>`
+            `<div class="hp-segment ${i < me.life_points ? hpCls : ''}"></div>`
           ).join('')
         : `<div class="hp-segment active" style="grid-column: 1 / -1; background: var(--team-green);"></div>`;
 
