@@ -4,7 +4,7 @@
 
 # BattlePew
 
-**A modern, cross-platform Arena Master for the Ubisoft Battle Tag (2010) laser tag system.**
+**Play Ubisoft Battle Tag (2010) laser tag on your Mac, Windows or Linux computer.**
 
 [![macOS build](https://github.com/macsobel/BattlePew/actions/workflows/build-macos-app.yml/badge.svg)](https://github.com/macsobel/BattlePew/actions/workflows/build-macos-app.yml)
 [![Windows & Linux build](https://github.com/macsobel/BattlePew/actions/workflows/build-windows-linux.yml/badge.svg)](https://github.com/macsobel/BattlePew/actions/workflows/build-windows-linux.yml)
@@ -12,17 +12,19 @@
 ![Python](https://img.shields.io/badge/python-3.10%E2%80%933.13-3776AB?logo=python&logoColor=white)
 ![License](https://img.shields.io/badge/license-MIT-green)
 
-[Screenshots](#-screenshots) &nbsp;•&nbsp; [Download](#-download) &nbsp;•&nbsp; [Features](#-features) &nbsp;•&nbsp; [Game Modes](#-game-modes) &nbsp;•&nbsp; [Run from Source](#-run-from-source) &nbsp;•&nbsp; [Tests](#-running-tests)
+[Screenshots](#-screenshots) &nbsp;•&nbsp; [Download](#-download) &nbsp;•&nbsp; [What you can do](#-what-you-can-do) &nbsp;•&nbsp; [Game modes](#-game-modes) &nbsp;•&nbsp; [For developers](#for-developers)
 
 </div>
 
-For the first time, you can play Ubisoft Battle Tag on **macOS** or **Linux** (as well as Windows). BattlePew talks directly to the physical **UbiConnect** USB antenna (`0x044F:0xB365`), pairs up to 8 **T-Blasters** and **T-Vests**, flashes the original bytecode sequences over the air, tracks telemetry in real time, and serves a TV-first Arena Master display with a zero-install smartphone HUD.
+**For the first time, you can play Ubisoft Battle Tag on a Mac or a Linux PC** — as well as Windows.
+
+BattlePew is a free replacement for the original Battle Tag game software. Plug in your Battle Tag USB base station (the **UbiConnect**), turn on your **T-Blasters**, and BattlePew takes care of the rest: it connects your blasters, sets up the game, keeps score, and shows a big live scoreboard you can put up on a TV. Players can also follow their own ammo, health and score on their phone — just scan a QR code, no app to install.
 
 > [!NOTE]
 > This program was developed with the use of **Google Antigravity AI**.
 
 > [!IMPORTANT]
-> **No Ubisoft assets are included.** Announcer voices, music, sound effects, fonts and UI textures are extracted locally from your own copy of the official installer. See [Original Assets](#-original-assets-not-included).
+> **No Ubisoft game files are included.** The announcer voices, music, sound effects and artwork come from your own copy of the official Battle Tag installer, which BattlePew unpacks for you the first time you run it. See [Game files](#-game-files-not-included).
 
 ---
 
@@ -32,21 +34,21 @@ For the first time, you can play Ubisoft Battle Tag on **macOS** or **Linux** (a
   <tr>
     <td align="center" width="50%">
       <img src="docs/screenshots/lobby.png" alt="BattlePew Lobby" /><br />
-      <sub><b>Lobby &amp; T-Blaster Roster</b></sub>
+      <sub><b>Lobby — see who has joined</b></sub>
     </td>
     <td align="center" width="50%">
       <img src="docs/screenshots/game-selector.png" alt="BattlePew Game Mode Selector" /><br />
-      <sub><b>Game Mode &amp; Team Selector</b></sub>
+      <sub><b>Pick a game mode and teams</b></sub>
     </td>
   </tr>
   <tr>
     <td align="center" width="50%">
       <img src="docs/screenshots/live-match.png" alt="BattlePew Live Team Frag Match" /><br />
-      <sub><b>Live Match — Team Frag</b></sub>
+      <sub><b>Live scoreboard — Team Frag</b></sub>
     </td>
     <td align="center" width="50%">
       <img src="docs/screenshots/results.png" alt="BattlePew Results Screen" /><br />
-      <sub><b>Match Results &amp; Score Progression</b></sub>
+      <sub><b>Results and score over time</b></sub>
     </td>
   </tr>
 </table>
@@ -55,78 +57,69 @@ For the first time, you can play Ubisoft Battle Tag on **macOS** or **Linux** (a
   <tr>
     <td align="center" width="62%">
       <img src="docs/screenshots/gameplay.webp" alt="BattlePew Gameplay Demo" /><br />
-      <sub><b>Gameplay demo</b> · <a href="docs/screenshots/gameplay.mp4">full-resolution MP4</a></sub>
+      <sub><b>See it in action</b> · <a href="docs/screenshots/gameplay.mp4">full-resolution MP4</a></sub>
     </td>
     <td align="center" width="38%">
       <img src="docs/screenshots/phone-hud.png" alt="BattlePew Smartphone Player HUD" width="240" /><br />
-      <sub><b>Smartphone HUD</b> — join via the on-screen QR code</sub>
+      <sub><b>Phone screen</b> — join by scanning the QR code</sub>
     </td>
   </tr>
 </table>
 
 ---
 
-## 🔒 Original Assets Not Included
+## 🔒 Game files not included
 
-**This repository and its prebuilt releases do NOT include any of Ubisoft's copyrighted assets** (announcer voice lines, music, sound effects, fonts, or UI icons/textures).
+BattlePew does **not** ship any of Ubisoft's copyrighted material (announcer voices, music, sound effects, fonts or artwork). Instead, it borrows them from your own copy of the game. The first time you open BattlePew, a **"Original Game Assets Required"** window walks you through it:
 
-On first launch, BattlePew checks for extracted assets in your local user data folder. If they are missing, an **Original Game Assets Required** prompt appears automatically:
-
-1. Download the official Ubisoft Battle Tag installer from the link shown in the app:
-   `http://help.support.ubi.com/BattleTag_Installer.zip`
-2. Click **Select Installer...** and choose `BattleTag_Installer.zip` (or `Data1.cab`).
-3. BattlePew extracts and converts the required audio, fonts, and textures into your local app data directory automatically—no restart required.
+1. Download the official Battle Tag installer from Ubisoft: <http://help.support.ubi.com/BattleTag_Installer.zip>
+2. In BattlePew, click **Select Installer…** and choose the file you just downloaded (`BattleTag_Installer.zip`, or `Data1.cab` if you've unpacked it).
+3. BattlePew unpacks everything it needs and you're ready to play — no restart required.
 
 ---
 
 ## 📦 Download
 
-Grab the latest build for your platform from the [**Releases**](https://github.com/macsobel/BattlePew/releases) page, or from the artifacts of any [GitHub Actions run](https://github.com/macsobel/BattlePew/actions).
+Get the latest version for your computer from the [**Releases**](https://github.com/macsobel/BattlePew/releases) page (or from any [GitHub Actions run](https://github.com/macsobel/BattlePew/actions)).
 
-| Platform | Archive | First-launch notes |
+| Your computer | Download | Need help opening it? |
 | :-- | :-- | :-- |
-| 🍎 **macOS** (Apple Silicon, 13+) | `BattlePew-macOS-*.zip` | [Gatekeeper](#macos-gatekeeper) |
-| 🪟 **Windows** (x64) | `BattlePew-Windows-*.zip` | [SmartScreen](#windows-microsoft-defender-smartscreen) |
-| 🐧 **Linux** (x64) | `BattlePew-Linux-*.tar.gz` | [Permissions &amp; USB access](#linux-executable-permissions--usb-hid-access) |
+| 🍎 **Mac** (Apple Silicon, macOS 13 or newer) | `BattlePew-macOS-*.zip` | [Mac tips](#-mac) |
+| 🪟 **Windows** (64-bit) | `BattlePew-Windows-*.zip` | [Windows tips](#-windows) |
+| 🐧 **Linux** (64-bit) | `BattlePew-Linux-*.tar.gz` | [Linux tips](#-linux) |
 
-### Running Prebuilt Releases (Unsigned Binaries)
+### First time opening BattlePew
 
-Prebuilt desktop releases from GitHub Actions are not code-signed with an Apple Developer ID or Microsoft Authenticode certificate, so your operating system may warn you on first launch.
+BattlePew isn't signed with a paid Apple or Microsoft developer certificate, so your computer may show a warning the first time you open it. That's expected — here's how to get past it.
 
-#### macOS (Gatekeeper)
+#### 🍎 Mac
 
-If macOS says **`"BattlePew" is damaged and can't be opened`** or blocks it as an unverified developer:
+If macOS says **"BattlePew is damaged and can't be opened"** or blocks it from an unidentified developer:
 
-1. Move `BattlePew.app` to `/Applications` (or extract it to a folder).
-2. Remove the quarantine attribute in Terminal:
+1. Move `BattlePew.app` into your **Applications** folder.
+2. Open the **Terminal** app and paste this line, then press Return:
    ```bash
    xattr -cr /Applications/BattlePew.app
    ```
-   *(If you kept `BattlePew.app` in Downloads, replace the path with `~/Downloads/BattlePew.app`.)*
-3. Open **BattlePew** normally.
+3. Open BattlePew as normal.
 
-Alternatively, try opening it once, then go to **System Settings -> Privacy & Security**, scroll to the security message for `BattlePew`, and click **Open Anyway**.
+Prefer not to use Terminal? Try opening BattlePew once, then go to **System Settings → Privacy & Security**, scroll down to the message about BattlePew, and click **Open Anyway**.
 
-#### Windows (Microsoft Defender SmartScreen)
+#### 🪟 Windows
 
-If Windows shows **`Windows protected your PC`**:
+If you see **"Windows protected your PC"**, click **More info**, then **Run anyway**.
 
-- **Option 1 (SmartScreen dialog):** Click **More info**, then click **Run anyway**.
-- **Option 2 (Unblock before extracting):** Right-click the downloaded `BattlePew-Windows-*.zip` -> **Properties** -> check **Unblock** -> **Apply/OK**, then extract and run `BattlePew.exe`.
-  Or in PowerShell:
-  ```powershell
-  Unblock-File -Path .\BattlePew-Windows-*.zip
-  ```
+You can also avoid the warning by right-clicking the downloaded `.zip`, choosing **Properties**, ticking **Unblock**, and clicking **OK** *before* you extract it. Then open `BattlePew.exe`.
 
-#### Linux (Executable Permissions & USB HID Access)
+#### 🐧 Linux
 
-1. Extract the archive and ensure the binary is executable:
+1. Extract the download and start the app:
    ```bash
    tar -xzf BattlePew-Linux-*.tar.gz
    chmod +x BattlePew/BattlePew
    ./BattlePew/BattlePew
    ```
-2. **USB permissions for the UbiConnect antenna (`044F:B365`):** If your user does not have permission to open the USB HID device without `sudo`, add a udev rule:
+2. If BattlePew can't see your USB base station, your account probably needs permission to use it. Run this once, then unplug and re-plug the base station:
    ```bash
    sudo tee /etc/udev/rules.d/99-ubiconnect.rules <<'EOF'
    SUBSYSTEM=="usb", ATTR{idVendor}=="044f", ATTR{idProduct}=="b365", MODE="0666"
@@ -134,46 +127,57 @@ If Windows shows **`Windows protected your PC`**:
    EOF
    sudo udevadm control --reload-rules && sudo udevadm trigger
    ```
-   Unplug and replug the UbiConnect dongle after applying the rule.
 
 ---
 
-## ✨ Features
+## ✨ What you can do
 
 | | |
 | :-- | :-- |
-| 🔌 **Native USB HID engine** | Bidirectional communication with the UbiConnect base station (`044F:B365`) via `hidapi`. |
-| 🤝 **Persistent pairing & auto-discovery** | Finds T-Blasters in pairing mode (`Hold Reload + Power`), reads stored player names and animal avatars from EEPROM, and keeps guns paired across matches. |
-| 📺 **TV-first 10-foot UI** | Lobby, live scoreboard with animated HP/ammo bars, adaptive live arena feed, and a results podium with score progression. |
-| 📱 **Phone HUD** | Scan the on-screen QR code for a personalised, zero-install HUD with real-time ammo, health, clips and match timer. |
-| 🧪 **Simulator mode** | Built-in simulator with a Bot Arena and manual trigger deck — test without any hardware. |
-| 🔊 **Original audio & visuals** | Voice lines, mode intros, sound effects, music and icons play once extracted from *your* copy of `BattleTag_Installer.zip`. |
+| 🔌 **Plug in and play** | Connects straight to the original Battle Tag USB base station — no extra drivers or adapters. |
+| 🤝 **Easy pairing** | Turn on your T-Blasters (hold **Reload + Power** to pair) and they show up in the lobby with their saved names and animal avatars. They stay paired from one game to the next. |
+| 📺 **Made for the big screen** | A large, easy-to-read scoreboard with live health and ammo bars, a running feed of the action, and a podium and score graph when the match ends. |
+| 📱 **Follow along on your phone** | Scan the QR code on screen to see your own ammo, health, clips and match timer. Nothing to install. |
+| 🧪 **Try it without any gear** | A built-in practice mode with computer-controlled players lets you test everything without a base station or blasters. |
+| 🔊 **The original sound and look** | Announcer voices, music, sound effects and artwork from the original game, using your own copy of the files. |
 
-### 🎮 Game Modes
+### 🎮 Game modes
 
-| Mode | Description |
+| Mode | What it is |
 | :-- | :-- |
-| **Free Frag** | Instant action, infinite life & ammo — every hit scores +1 point. |
-| **Team Frag** | 2–4 squads (Red, Blue, Yellow, Green), Life Points, and T-Base respawn. |
-| **Free For All** | 2–8 players, solo combat with Life Points, clips, and T-Base respawn. |
-| **Last Man Standing** | High-stakes survival elimination — no respawns. |
-| **Wild West Duel** | 2-player quickdraw showdown across 5 tense rounds. |
-| **Starter Frag** | Infinite life with physical RFID Ammo Card reloads. |
-| **Tag'n Shoot** | Solo agility sprint — scan T-Bases, then shoot the UbiConnect tower. |
+| **Free Frag** | Pure, fast action. Unlimited health and ammo — every hit scores a point. |
+| **Team Frag** | Two to four teams (Red, Blue, Yellow, Green) with health points and respawns at your team's base. |
+| **Free For All** | Two to eight players, every player for themselves, with health, ammo clips and base respawns. |
+| **Last Man Standing** | Survival mode. Once you're out, you're out — last player standing wins. |
+| **Wild West Duel** | A two-player quick-draw showdown over five tense rounds. |
+| **Starter Frag** | Unlimited health, but you reload by scanning an RFID ammo card. |
+| **Tag'n Shoot** | A solo race: scan the base stations, then shoot the UbiConnect tower. |
 
 ---
 
-## 🧰 Requirements (Running from Source)
+## 🧰 What you'll need
 
-- **macOS**, **Windows**, or **Linux**
-- **Python** 3.10 to 3.13
-- **UbiConnect USB Antenna** (`0x044F:0xB365`) & **Ubisoft Battle Tag T-Blasters** (optional for simulator mode)
+- A **Mac, Windows PC or Linux PC**
+- The **Battle Tag USB base station (UbiConnect)** and **T-Blasters** — or nothing at all if you just want to try the practice mode
+- A copy of the **official Battle Tag installer** from Ubisoft (see [Game files](#-game-files-not-included))
+- Optional: a **TV or projector** for the big scoreboard, and **phones** for the player screens
 
 ---
 
-## 🚀 Run from Source
+## For developers
 
-### 1. Clone & Set Up Virtual Environment
+Everything below is for people who want to run BattlePew from its source code, or build their own software for Battle Tag hardware.
+
+### 📚 Build your own Battle Tag software
+
+Want to write your own game software, or just understand how the hardware works? The full write-up on how the UbiConnect, T-Blasters and T-Vests talk to each other — the USB connection, pairing, uploading game code, the match loop, game-mode behavior, audio, and the questions still open — is in **[`docs/reverse-engineering/`](docs/reverse-engineering/README.md)**. Start with the [overview](docs/reverse-engineering/01-overview-and-method.md) or the [glossary](docs/reverse-engineering/glossary.md).
+
+### Requirements
+
+- Python 3.10 – 3.13 on macOS, Windows or Linux
+- A UbiConnect base station and T-Blasters (optional — simulator mode needs no hardware)
+
+### Run from source
 
 ```bash
 git clone https://github.com/macsobel/BattlePew.git
@@ -184,37 +188,27 @@ source .venv/bin/activate   # On Windows PowerShell: .venv\Scripts\Activate.ps1
 pip install -r requirements.txt
 ```
 
-### 2. Run the Server
+**With real hardware** (plug in the UbiConnect first):
 
-#### Live Hardware Mode (Plug in UbiConnect USB):
 ```bash
 python run_battletag.py --port 3466 --confirm-write
 ```
 
-#### Simulator Mode (No hardware required):
+**Simulator mode** (no hardware required):
+
 ```bash
 python run_battletag.py --port 3466
 ```
 
-### 3. Open the Arena Master
+Then open <http://localhost:3466> in your browser. Connect a TV or projector for the big scoreboard; players can scan the on-screen QR code to open their own screen at `http://<your-lan-ip>:3466/hud`.
 
-Open your browser to:
-```
-http://localhost:3466
-```
-
-- Connect your TV or projector for the 10-foot spectator display.
-- Players can scan the QR code to open their personal HUD at `http://<your-lan-ip>:3466/hud`.
-
----
-
-## ✅ Running Tests
-
-Automated tests verify packet framing, `0x95` status decoding, `0x92` configuration packets, and game engine scoring:
+### Run the tests
 
 ```bash
 pytest -v
 ```
+
+The tests cover packet framing, status decoding, configuration packets and game scoring.
 
 ---
 
