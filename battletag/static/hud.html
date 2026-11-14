@@ -1473,7 +1473,7 @@
       const showGameStats = isRoundActive || (hasPrevStats && !isGameSelection);
       const resultsRevealed = !!state.results_revealed
         && (state.phase === 'GAME_OVER' || (state.phase === 'LOBBY' && hasPrevStats && !isGameSelection));
-      const hideRankAndScore = (state.phase === 'PLAYING' && state.remaining_seconds <= 20)
+      const hideRankAndScore = (state.phase === 'PLAYING' && state.remaining_seconds != null && state.remaining_seconds <= 20)
         || (state.phase === 'GAME_OVER' && !resultsRevealed);
 
       document.getElementById('hudWaitingCard').style.display = showGameStats ? 'none' : 'flex';

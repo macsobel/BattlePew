@@ -147,8 +147,9 @@ class AudioCue:
 # are no solo "takes the lead", streak, or per-mode intro lines in the set;
 # those pools use praise/excitement lines and the subtitle carries the
 # specifics. The FRAG_SURVIVAL count lines ("N players still in game")
-# need count-aware selection the pool API cannot do, so LMS eliminations
-# use the generic elimination lines instead.
+# need count-aware selection the pool API cannot do; LMS eliminations use
+# GameMasterAudio.play_lms_elimination, which picks the line by the actual
+# number of players still alive, instead of a pool.
 def _g(*nums: int) -> list[str]:
     return [f"DLG_GM_GLOBAL_{n:02d}.wav" for n in nums]
 
@@ -191,7 +192,10 @@ ANNOUNCER_POOLS: dict[str, dict[str, Any]] = {
         "subtitle": "15 seconds remaining!",
     },
     "hurry_up": {
-        "files": _g(48, 49, 85, 86, 87),
+        # Original hurry lines only (GLOBAL_48/49). The race lines
+        # 85-87 have no trigger in the shipped game and belong to the
+        # cut time-trial content, not to time warnings.
+        "files": _g(48, 49),
         "priority": 1,
         "proba": 0.45,
         "subtitle": "Hurry up! Time is running out!",
@@ -236,19 +240,23 @@ ANNOUNCER_POOLS: dict[str, dict[str, Any]] = {
         "subtitle": "Green Team takes the lead!",
     },
     "friendly_fire": {
-        "files": _g(41, 42, 43, 44),
+        "files": _g(41, 42),
         "priority": 2,
         "proba": 0.85,
         "subtitle": "Watch your fire! Friendly hit!",
     },
     "hit_scored": {
-        "files": _g(25, 26, 27, 28, 88),
+        # The original's non-fatal-hit event: the victim lines 29/30,
+        # fired with probability 1/3. The praise lines that used to live
+        # here belong to the streak/lead events, not to plain hits.
+        "files": _g(29, 30),
         "priority": 4,
-        "proba": 0.5,
+        "proba": 0.33,
         "subtitle": "Direct hit!",
     },
     "frag_scored": {
-        "files": _g(38, 39),
+        # The original's kill-event variants (27/28/37/38).
+        "files": _g(27, 28, 37, 38),
         "priority": 3,
         "proba": 0.7,
         "subtitle": "Player tagged out!",
@@ -259,11 +267,15 @@ ANNOUNCER_POOLS: dict[str, dict[str, Any]] = {
         "proba": 1.0,
         "subtitle": "Wins the round!",
     },
-    "lap_complete": {
-        "files": _g(93, 95),
+    "tower_hit": {
+        # TagThenShoot UbiConnect-hit event: the original's three
+        # variants (88/89/90). Formerly "lap_complete" with the cut
+        # race lines 93/95; the race lines belong to a time-trial
+        # variant, not to this mode.
+        "files": _g(88, 89, 90),
         "priority": 3,
         "proba": 0.85,
-        "subtitle": "Lap complete!",
+        "subtitle": "UbiConnect tower hit!",
     },
     "streak_3": {
         "files": _g(26, 27, 28),
@@ -284,19 +296,47 @@ ANNOUNCER_POOLS: dict[str, dict[str, Any]] = {
         "subtitle": "Low ammo — scan an Ammo pack!",
     },
     "medkit_used": {
-        "files": _g(16, 17, 18, 19, 77),
+        # The original's heal event is 16/17 only. 18/19 belong to the
+        # low-life ("Medic!") trigger; 77 has no trigger in the game.
+        "files": _g(16, 17),
         "priority": 3,
         "proba": 0.65,
         "subtitle": "Medkit scanned — life restored!",
     },
-    "lms_eliminated": {
-        "files": _g(38, 39),
-        "priority": 1,
+    "respawn": {
+        # "Back in game!" — fired when a dead player's life is restored
+        # (timer respawn in FreeForAll, scan+timer respawn in TeamFrag).
+        "files": _g(36),
+        "priority": 3,
         "proba": 1.0,
-        "subtitle": "Player eliminated!",
+        "subtitle": "Back in game!",
+    },
+    "low_life": {
+        # "Medic!" — fired when a player's life drops to exactly 1.
+        "files": _g(18, 19),
+        "priority": 2,
+        "proba": 1.0,
+        "subtitle": "Medic! Low life!",
+    },
+    "duel_setup": {
+        # Duel setup intros (OW_DUEL_01/02): the original plays them
+        # once at PlayersSetup, not every round.
+        "files": ["DLG_GM_OW_DUEL_01.wav", "DLG_GM_OW_DUEL_02.wav"],
+        "priority": 0,
+        "proba": 1.0,
+        "subtitle": "Duelists, take your positions!",
+    },
+    "duel_drawn": {
+        # "It's a draw!" — fired on both duel draw paths.
+        "files": _g(118),
+        "priority": 0,
+        "proba": 1.0,
+        "subtitle": "It's a draw!",
     },
     "duel_prepare": {
-        "files": [f"DLG_GM_OW_DUEL_0{i}.wav" for i in (1, 3, 4, 5)],
+        # Per-round intros are 03/04/05 only; 01 is a setup line and
+        # lives in the duel_setup pool.
+        "files": [f"DLG_GM_OW_DUEL_0{i}.wav" for i in (3, 4, 5)],
         "priority": 0,
         "proba": 1.0,
         "subtitle": "Duelists ready... wait for the signal!",
@@ -314,32 +354,25 @@ ANNOUNCER_POOLS: dict[str, dict[str, Any]] = {
         "subtitle": "Fired too early! Round forfeited!",
     },
     "tagnshoot_base": {
-        "files": _g(78, 79, 80),
+        # TagThenShoot tag confirmations: all four (78-81), played
+        # after the base-name callout for the base just tagged.
+        "files": _g(78, 79, 80, 81),
         "priority": 2,
         "proba": 0.85,
         "subtitle": "Base scanned! Now shoot the UbiConnect!",
     },
     "idle_banter": {
-        "files": [
-            "DLG_GM_GLOBAL_32.wav",
-            "DLG_GM_GLOBAL_33.wav",
-            "DLG_GM_GLOBAL_34.wav",
-            "DLG_GM_GLOBAL_35.wav",
-            "DLG_GM_FRAG_SURVIVAL_07.wav",
-            "DLG_GM_FRAG_SURVIVAL_08.wav",
-            "DLG_GM_FRAG_SURVIVAL_09.wav",
-        ],
+        # The original's idle taunts are 32-35 only; the survival
+        # ambiance lines belong to LastManStanding eliminations.
+        "files": _g(32, 33, 34, 35),
         "priority": 3,
         "proba": 1.0,
         "subtitle": "Come on, players! Keep moving and fire!",
     },
     "miss_taunt": {
-        "files": [
-            "DLG_GM_GLOBAL_43.wav",
-            "DLG_GM_GLOBAL_44.wav",
-            "DLG_GM_GLOBAL_91.wav",
-            "DLG_GM_FRAG_SURVIVAL_10.wav",
-        ],
+        # The original's blind/aim taunts are 43/44 only, fired after
+        # repeated misses.
+        "files": _g(43, 44),
         "priority": 3,
         "proba": 1.0,
         "subtitle": "Need some help aiming?",
@@ -519,8 +552,40 @@ class GameMasterAudio:
             )
         )
 
-    def check_time_remaining(self, remaining_sec: float) -> list[AudioCue]:
-        """Fire UTGameMaster negative-offset time warnings (-60, -57, -30, -27, -15, -12, 10..1)."""
+    def play_lms_elimination(self, remaining: int, subtitle: str | None = None) -> AudioCue | None:
+        """Play a LastManStanding elimination line for the actual alive count.
+
+        The survival count lines say "Seven/six/.../two players still in
+        game" (FRAG_SURVIVAL_01..06 for 7..2 remaining). The original
+        selected them with an index that assumed 8 players, so with
+        fewer players it announced the wrong number; this picks by the
+        actual remaining count. With one player left (or any count
+        outside 2..7) there is no count line, so a random ambiance line
+        (FRAG_SURVIVAL_07..12) plays instead.
+        """
+        if 2 <= remaining <= 7:
+            wav_name = f"DLG_GM_FRAG_SURVIVAL_{8 - remaining:02d}.wav"
+            sub = subtitle or f"{remaining} players still in game!"
+        else:
+            candidates = [
+                f"DLG_GM_FRAG_SURVIVAL_{n:02d}.wav"
+                for n in range(7, 13)
+                if (ANNOUNCER_DIR / f"DLG_GM_FRAG_SURVIVAL_{n:02d}.wav").exists()
+            ]
+            if not candidates:
+                return None
+            wav_name = random.choice(candidates)
+            sub = subtitle or "Player eliminated!"
+        return self.play_announcer_file(wav_name, sub, priority=1, duration=2.0)
+
+    def check_time_remaining(self, remaining_sec: float, mode_name: str | None = None) -> list[AudioCue]:
+        """Fire UTGameMaster negative-offset time warnings (-60, -57, -30, -27, -15, -12, 10..1).
+
+        TagThenShoot is a fixed 60 s match and the original registers no
+        60 s warning for it (its warnings are -30/-27/-15/-12 only), so
+        the 60 s and 57 s marks are skipped for that mode — otherwise
+        the match would open with "ONE MINUTE LEFT!".
+        """
         cues: list[AudioCue] = []
         rem_int = int(remaining_sec)
         schedule = [
@@ -531,6 +596,8 @@ class GameMasterAudio:
             (15, "time_15", True),
             (12, "hurry_up", False),
         ]
+        if mode_name == "TagThenShoot":
+            schedule = [s for s in schedule if s[0] not in (60, 57)]
         for sec_mark, pool_key, force in schedule:
             if rem_int == sec_mark and sec_mark not in self.fired_offsets:
                 self.fired_offsets.add(sec_mark)

@@ -1255,6 +1255,55 @@
       margin-top: 2px;
     }
 
+    /* Duel round display (Wild West Duel only): current round and
+       per-round results under the clock. */
+    .tv-duel-strip {
+      background: linear-gradient(180deg, #FFFFFF 0%, #E6E9F2 100%);
+      border: 2px solid var(--border-steel);
+      border-radius: 14px;
+      padding: 8px 12px;
+      margin-top: 10px;
+      box-shadow: 0 8px 28px rgba(40, 35, 35, 0.1);
+      text-align: center;
+    }
+
+    .tv-duel-head {
+      font-family: var(--font-display);
+      font-size: 1.05rem;
+      letter-spacing: 0.04em;
+      color: var(--text-dark);
+    }
+
+    .tv-duel-chips {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      justify-content: center;
+      margin-top: 6px;
+    }
+
+    .tv-duel-chip {
+      font-size: 0.75rem;
+      font-weight: 700;
+      letter-spacing: 0.03em;
+      color: var(--text-dark);
+      background: #FFFFFF;
+      border: 1px solid var(--border-steel);
+      border-radius: 999px;
+      padding: 2px 8px;
+      white-space: nowrap;
+    }
+
+    /* TagThenShoot per-card stat line: tags vs tower hits. */
+    .tv-tag-line {
+      font-size: 0.78rem;
+      font-weight: 700;
+      letter-spacing: 0.03em;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      margin-top: 4px;
+    }
+
     /* TV Scoreboard Grid */
     .match-tv-main {
       position: relative;
@@ -3600,6 +3649,9 @@
               <div class="tv-clock-sub" id="tvClockSub">Time Remaining</div>
             </div>
 
+            <!-- Duel round display (Wild West Duel only) -->
+            <div class="tv-duel-strip" id="duelStrip" style="display: none;"></div>
+
             <!-- TV Kill-Feed (Starts empty, newest first) -->
             <div class="tv-killfeed-panel">
               <div class="tv-killfeed-title">Live Arena Feed</div>
@@ -5106,7 +5158,7 @@
       const seeResultsGate = document.getElementById('seeResultsGate');
       const tvGridEl = document.getElementById('tvScoreboardGrid');
       const isGameOverGate = state.phase === 'GAME_OVER' && awaitingSeeResults;
-      const hidePlayerCards = (state.phase === 'PLAYING' && state.remaining_seconds <= 20) || isGameOverGate;
+      const hidePlayerCards = (state.phase === 'PLAYING' && state.remaining_seconds != null && state.remaining_seconds <= 20) || isGameOverGate;
 
       if (endBtn) endBtn.style.display = state.phase === 'GAME_OVER' ? 'none' : '';
       if (seeResultsGate) seeResultsGate.classList.toggle('visible', isGameOverGate);
@@ -5127,8 +5179,31 @@
         clockDigits.classList.remove('urgent');
       } else {
         clockDigits.textContent = state.clock;
-        clockSub.textContent = 'Time Remaining';
-        clockDigits.classList.toggle('urgent', state.remaining_seconds <= 15);
+        // Timerless modes (duel, LMS) count up: remaining_seconds is
+        // null and the clock shows elapsed time, never urgent.
+        const untimed = state.mode && state.mode.timed === false;
+        clockSub.textContent = untimed ? 'Elapsed Time' : 'Time Remaining';
+        clockDigits.classList.toggle('urgent', !untimed && state.remaining_seconds != null && state.remaining_seconds <= 15);
+      }
+
+      // Duel round display: current round, subphase, per-round results.
+      const duelStrip = document.getElementById('duelStrip');
+      if (duelStrip) {
+        const ds = state.duel_state;
+        const showDuel = state.mode && state.mode.id === 'OldFashionDuel' && ds && ['COUNTDOWN', 'PLAYING', 'GAME_OVER'].includes(state.phase);
+        if (showDuel) {
+          const subLabels = { INTRO: 'GET READY', WAIT: 'WAIT FOR THE SIGNAL…', DRAW: 'DRAW!', ROUND_END: 'ROUND OVER', COMPLETE: 'DUEL COMPLETE' };
+          const chips = (ds.round_results || []).map((r) => {
+            const label = r.winner_gun_num ? `P${r.winner_gun_num} ★` : 'DRAW';
+            return `<span class="tv-duel-chip">${esc('R' + r.round + ': ' + label)}</span>`;
+          }).join('');
+          duelStrip.innerHTML = `<div class="tv-duel-head">ROUND ${ds.round} OF ${ds.max_rounds} · ${esc(subLabels[ds.subphase] || ds.subphase || '')}</div>`
+            + (chips ? `<div class="tv-duel-chips">${chips}</div>` : '');
+          duelStrip.style.display = '';
+        } else {
+          duelStrip.style.display = 'none';
+          duelStrip.innerHTML = '';
+        }
       }
 
       // Scoreboard Cards (TV format)
@@ -5233,6 +5308,7 @@
               ${p.gun_online === false ? `<div><span class="tv-vest-warn">T-BLASTER OFFLINE — RECONNECTING</span></div>` : !p.vest_ok ? `<div><span class="tv-vest-warn">NO VEST — HITS WON'T REGISTER</span></div>` : ''}
               ${state.phase === 'PLAYING' && p.signal_lost ? `<div><span class="tv-signal-warn">NO SIGNAL — CHECK THE BLASTER</span></div>` : ''}
               ${vitalsHtml}
+              ${state.mode.id === 'TagThenShoot' ? `<div class="tv-tag-line">Tags ${p.tags} · Tower ${p.tower_hits}</div>` : ''}
             </div>
 
             <div class="tv-score-box">
@@ -5251,7 +5327,7 @@
       const gridSignature = JSON.stringify([
         state.mode.id,
         state.phase,
-        state.players.map((p) => [p.gun_id, p.name, p.avatar, p.score, p.life_points, p.max_life, p.ammo, p.max_ammo, p.clips, p.vest_ok, p.signal_lost, p.team_id, p.team_color]),
+        state.players.map((p) => [p.gun_id, p.name, p.avatar, p.score, p.life_points, p.max_life, p.ammo, p.max_ammo, p.clips, p.vest_ok, p.signal_lost, p.team_id, p.team_color, p.tags, p.tower_hits]),
       ]);
       if (gridSignature !== lastGridSignature) {
         lastGridSignature = gridSignature;
