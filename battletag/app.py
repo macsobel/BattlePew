@@ -772,7 +772,6 @@ async def api_return_to_lobby() -> JSONResponse:
     # VICTORY line). The match record itself is kept in match_history.
     # Guns stay paired — returning to setup never unpairs anything.
     engine.events.clear()
-    engine.excitement_banner = None
     for p in engine.players.values():
         p.status_badge = "READY"
     engine.audio.play_music("musicmenu.wav")
@@ -798,12 +797,6 @@ async def api_trigger_pairing() -> JSONResponse:
     # PAIRING pauses the lobby auto-pair loop (it only runs in LOBBY), so the
     # manual scan is the only reader on the HID handle while it runs.
     engine.phase = "PAIRING"
-    engine._set_banner(
-        "PAIRING T-BLASTERS...",
-        "Turn on your T-Blasters and keep them in range (power cycle if one doesn't respond)...",
-        theme="orange",
-        duration_s=8.0,
-    )
     await broadcast_state()
 
     try:
@@ -817,19 +810,6 @@ async def api_trigger_pairing() -> JSONResponse:
         # the default "connected", before the first upload.
         await _refresh_vest_states()
         engine.audio.play_ui("GunDetect.wav", subtitle=f"Paired {len(paired)} T-Blasters!")
-        engine._set_banner(
-            f"PAIRED {len(paired)} T-BLASTER(S)",
-            ", ".join(f"{g['name']}" for g in paired),
-            theme="orange",
-            duration_s=4.0,
-        )
-    else:
-        engine._set_banner(
-            "NO NEW T-BLASTERS SEEN",
-            "Make sure your T-Blasters are powered on and in range, or power cycle them and try again.",
-            theme="orange",
-            duration_s=4.0,
-        )
     await broadcast_state()
     return JSONResponse({"ok": True, "paired_count": len(engine.players)})
 
@@ -881,21 +861,7 @@ async def api_retry_config() -> JSONResponse:
     engine.last_upload_failed_guns = list(still_failed)
     if not still_failed:
         engine.bytecode_ready = True
-        engine._set_banner(
-            f"{MODE_CATALOG[engine.mode_name]['title'].upper()} READY",
-            "T-Blasters primed and verified. Ready for launch!",
-            theme="orange",
-            duration_s=3.0,
-        )
         engine.audio.play_ui("Validation.wav")
-    else:
-        engine._set_banner(
-            "CONFIG FAILED",
-            f"{', '.join(f'Player {engine.players[g].gun_num}' for g in still_failed if g in engine.players)} "
-            "did not acknowledge their game settings. Retry again, or remove the gun on the pairing page.",
-            theme="red",
-            duration_s=6.0,
-        )
     await broadcast_state()
     return JSONResponse(
         {
@@ -1209,12 +1175,6 @@ async def _execute_bytecode_upload_inner() -> bool:
     engine.phase = "UPLOADING"
     engine.upload_progress = {"current": 0, "total": total_steps}
     engine.audio.play_music("musicintroduction.wav")
-    engine._set_banner(
-        f"UPLOADING {MODE_CATALOG[engine.mode_name]['title'].upper()}",
-        f"Flashing {total_chunks} bytecode chunks to T-Blasters...",
-        theme="orange",
-        duration_s=15.0,
-    )
     await broadcast_state()
 
     if engine.use_simulator:
@@ -1260,15 +1220,6 @@ async def _execute_bytecode_upload_inner() -> bool:
             engine.bytecode_uploaded = False
             engine.config_failed_guns = []
             engine.phase = "LOBBY"
-            failed_nums = [
-                engine.players[g].gun_num for g in engine.hw.upload_failed_guns if g in engine.players
-            ]
-            engine._set_banner(
-                "UPLOAD FAILED",
-                f"{', '.join(f'Player {n}' for n in failed_nums) or 'A player'} did not acknowledge the game code. Retry the upload.",
-                theme="red",
-                duration_s=6.0,
-            )
             await broadcast_state()
             return False
         engine.bytecode_uploaded = True
@@ -1297,12 +1248,6 @@ async def _execute_bytecode_upload_inner() -> bool:
             engine.config_failed_guns = list(config_failed)
             engine.bytecode_ready = False
             engine.phase = "LOBBY"
-            engine._set_banner(
-                "CONFIG FAILED",
-                f"{', '.join(f'Player {engine.players[g].gun_num}' for g in config_failed)} did not acknowledge their game settings. Retry just the settings, or remove the gun on the pairing page.",
-                theme="red",
-                duration_s=6.0,
-            )
             await broadcast_state()
             return False
 
@@ -1319,12 +1264,6 @@ async def _execute_bytecode_upload_inner() -> bool:
     engine.bytecode_uploaded = True
     engine.bytecode_ready = True
     engine.phase = prev_phase if prev_phase in ("LOBBY", "READY") else "LOBBY"
-    engine._set_banner(
-        f"{MODE_CATALOG[engine.mode_name]['title'].upper()} READY",
-        "T-Blasters primed and verified. Ready for launch!",
-        theme="orange",
-        duration_s=3.0,
-    )
     engine.audio.play_ui("Validation.wav")
     await broadcast_state()
     return True
@@ -1345,12 +1284,6 @@ async def _run_match_lifecycle() -> None:
             if len(engine.players) < min_required:
                 engine.phase = "PAIRING"
                 engine.audio.play_music("musicintroduction.wav")
-                engine._set_banner(
-                    f"PAIRING NEEDED ({len(engine.players)}/{min_required} PLAYERS)",
-                    "Hold Reload + Power on T-Blasters to enter pairing mode...",
-                    theme="orange",
-                    duration_s=8.0,
-                )
                 await broadcast_state()
                 paired = await asyncio.to_thread(engine.hw.init_and_pair, 8, 6.0)
                 if paired:
@@ -1360,12 +1293,6 @@ async def _run_match_lifecycle() -> None:
                 await _broadcast_toast(
                     f"Pairing incomplete: need at least {min_required} {'player' if min_required == 1 else 'players'}.",
                     kind="pairing_incomplete",
-                )
-                engine._set_banner(
-                    f"PAIRING INCOMPLETE ({len(engine.players)}/{min_required} PLAYERS)",
-                    "Put T-Blasters into pairing mode and click Start Match again.",
-                    theme="red",
-                    duration_s=6.0,
                 )
                 engine.phase = "LOBBY"
                 await broadcast_state()
@@ -1419,12 +1346,6 @@ async def _run_match_lifecycle() -> None:
         for rem in range(cd_secs, 0, -1):
             engine.countdown_remaining = rem
             engine.audio.play_countdown_number(rem)
-            engine._set_banner(
-                f"MATCH STARTS IN {rem}",
-                "Raise your T-Blasters and prepare to engage!",
-                theme="orange",
-                duration_s=1.2,
-            )
             await broadcast_state()
             if not engine.use_simulator and engine.hw and rem == 5:
                 await asyncio.to_thread(engine.hw.send_ping)
@@ -1439,7 +1360,6 @@ async def _run_match_lifecycle() -> None:
         engine.match_start_ts = time.time()
         engine.audio.play_music("musicingame.wav")
         engine.audio.trigger_pool("game_start", force=True)
-        engine._set_banner("BATTLE PEW — GO! GO! GO!", MODE_CATALOG[engine.mode_name]["subtitle"], theme="orange", duration_s=2.5)
         engine.add_event("system", f"{MODE_CATALOG[engine.mode_name]['title']} match started!")
         await broadcast_state()
 
@@ -1579,12 +1499,9 @@ async def _finish_match(reason: str = "Match Over") -> None:
     winners = [engine.players[gid].display_name for gid, won in outcomes.items() if won and gid in engine.players]
     if winners:
         headline = f"VICTORY: {', '.join(winners).upper()}!"
-        sub = f"{reason} · Green LED on winning T-Blaster"
     else:
         headline = "DRAW GAME — TIE SCORE!"
-        sub = f"{reason} · Both T-Blasters flash Red LED"
 
-    engine._set_banner(headline, sub, theme="orange", duration_s=10.0)
     engine.add_event("system", f"{headline} ({reason})")
 
     engine.match_history.append(

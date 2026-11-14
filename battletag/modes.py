@@ -630,7 +630,6 @@ class ArenaEngine:
         self.match_duration_s: int = int(self.settings.get("durationSeconds", 300))
         self.countdown_remaining: int = 0
         self.current_leader_key: str = ""
-        self.excitement_banner: dict[str, Any] | None = None
         self.duel_state: dict[str, Any] = {
             "round": 0,
             "max_rounds": 5,
@@ -1107,14 +1106,6 @@ class ArenaEngine:
         """
         self._explicit_profiles.discard(gun_num)
 
-    def _set_banner(self, title: str, subtitle: str, theme: str = "orange", duration_s: float = 3.0) -> None:
-        self.excitement_banner = {
-            "title": title,
-            "subtitle": subtitle,
-            "theme": theme,
-            "expires_at": time.time() + duration_s,
-        }
-
     def _is_timed_mode(self) -> bool:
         """Whether the current mode runs against a match clock.
 
@@ -1357,12 +1348,6 @@ class ArenaEngine:
                 self.audio.trigger_pool(
                     "duel_setup" if next_rnd == 1 else "duel_prepare", force=True
                 )
-                self._set_banner(
-                    f"DUEL ROUND {next_rnd} OF {max_rnd} — WAIT FOR SIGNAL!",
-                    "Keep your T-Blaster aimed down! Hitting early forfeits the round.",
-                    theme="orange",
-                    duration_s=4.5,
-                )
             elif sub == "WAIT":
                 self.duel_state["subphase"] = "DRAW"
                 self.duel_state["phase_code"] = 1
@@ -1381,12 +1366,6 @@ class ArenaEngine:
                 else:
                     delay = 1.0
                 self._schedule_audio_followup(delay, "duel_can_shoot")
-                self._set_banner(
-                    "🔥 DRAW! FIRE NOW! 🔥",
-                    f"Round {self.duel_state['round']} — First hit wins the round!",
-                    theme="red",
-                    duration_s=3.5,
-                )
             elif sub == "DRAW":
                 # Timeout without a hit -> round draw
                 self.duel_state["subphase"] = "ROUND_END"
@@ -1832,7 +1811,6 @@ class ArenaEngine:
             self.audio.trigger_pool("frag_scored", custom_subtitle=f"{shooter.display_name} fragged {victim.display_name}!")
         elif shooter.streak == 5:
             self.audio.trigger_pool("streak_5", custom_subtitle=f"{shooter.display_name} is on a 5-hit streak!")
-            self._set_banner(f"{shooter.display_name} UNSTOPPABLE!", "5-Hit Streak Without Taking Damage", theme="orange", duration_s=2.8)
         elif shooter.streak == 3:
             self.audio.trigger_pool("streak_3", custom_subtitle=f"{shooter.display_name} — 3-hit streak!")
         else:
@@ -1855,12 +1833,6 @@ class ArenaEngine:
                     t_id = standings[0]["team_id"]
                     pool_map = {1: "lead_red", 2: "lead_blue", 3: "lead_yellow", 4: "lead_green"}
                     self.audio.trigger_pool(pool_map.get(t_id, "lead_red"))
-                    self._set_banner(
-                        f"{standings[0]['name'].upper()} TAKES THE LEAD!",
-                        f"Score: {standings[0]['score']} pts",
-                        theme=standings[0]["short"].lower(),
-                        duration_s=2.8,
-                    )
         else:
             ranked = self.get_sorted_players()
             if len(ranked) >= 2 and ranked[0].score > ranked[1].score:
@@ -1868,12 +1840,6 @@ class ArenaEngine:
                 if lead_key != self.current_leader_key:
                     self.current_leader_key = lead_key
                     self.audio.trigger_pool("lead_change_ffa", custom_subtitle=f"{ranked[0].display_name} takes the lead!")
-                    self._set_banner(
-                        f"{ranked[0].display_name} TAKES THE LEAD!",
-                        f"{ranked[0].score} pts · {ranked[0].hits_landed} hits",
-                        theme="orange",
-                        duration_s=2.5,
-                    )
 
     def get_sorted_players(self) -> list[PlayerState]:
         if self.mode_name == "LastManStanding":
@@ -2057,10 +2023,6 @@ class ArenaEngine:
         now = time.time()
         if self.phase == "PLAYING":
             self.record_score_snapshot()
-        banner = self.excitement_banner
-        if banner and now > banner.get("expires_at", 0):
-            self.excitement_banner = None
-            banner = None
 
         ranked = [p.to_dict() for p in self.get_sorted_players()]
         teams = self.get_team_standings() if MODE_CATALOG[self.mode_name]["teams"] else []
@@ -2088,7 +2050,6 @@ class ArenaEngine:
             "players": ranked,
             "teams": teams,
             "events": [e.to_dict() for e in self.events[:25]],
-            "excitement_banner": banner,
             "disconnect_prompt": self.get_disconnect_prompt(now),
             "lobby_notices": list(self.lobby_notices),
             "config_retry_pending": [

@@ -431,56 +431,6 @@
       font-size: 0.74rem;
     }
 
-    /* Light Theme Banner */
-    .honeycomb-banner {
-      position: relative;
-      overflow: hidden;
-      border-radius: 10px;
-      border: 2px solid var(--bt-orange);
-      background:
-        linear-gradient(95deg, #FFFFFF 0%, #F5F6FA 55%, rgba(242, 99, 20, 0.14) 100%);
-      color: var(--text-dark);
-      padding: 12px 20px;
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      box-shadow: 0 6px 18px rgba(40, 35, 35, 0.08);
-      animation: bannerSlide 0.25s cubic-bezier(0.16, 1, 0.3, 1);
-    }
-
-    .honeycomb-banner.hidden {
-      display: none;
-    }
-
-    .honeycomb-banner.theme-red {
-      border-color: var(--team-red);
-      background: linear-gradient(95deg, #FFFFFF 0%, #FFF5F4 55%, rgba(212, 25, 0, 0.14) 100%);
-    }
-
-    .honeycomb-banner.theme-blue {
-      border-color: var(--team-blue);
-      background: linear-gradient(95deg, #FFFFFF 0%, #F4F8FF 55%, rgba(7, 103, 197, 0.14) 100%);
-    }
-
-    .honeycomb-banner .banner-text h2 {
-      font-family: var(--font-display);
-      font-size: clamp(1.1rem, 2.5vw, 1.45rem);
-      letter-spacing: 0.04em;
-      text-transform: uppercase;
-      color: var(--text-dark);
-    }
-
-    .honeycomb-banner .banner-text p {
-      font-size: 0.88rem;
-      color: var(--text-muted);
-      font-weight: 600;
-    }
-
-    @keyframes bannerSlide {
-      from { opacity: 0; transform: translateY(-8px); }
-      to { opacity: 1; transform: translateY(0); }
-    }
-
     /* Screens */
     .app-screen {
       display: none;
@@ -3490,15 +3440,6 @@
 
     <div id="reconnectPillArena">Connection lost — reconnecting…</div>
 
-    <!-- Global Excitement Banner -->
-    <div id="excitementBanner" class="honeycomb-banner hidden">
-      <div class="banner-text">
-        <h2 id="bannerTitle">Arena Notice</h2>
-        <p id="bannerSub">BattlePew Ready</p>
-      </div>
-      <div id="bannerRight" style="font-family: var(--font-display); font-size: 2rem; color: var(--bt-orange);"></div>
-    </div>
-
     <!-- Global 3-Step Status & Navigation: Pair T-Blasters -> Game Mode -> Play Game -->
     <div class="wizard-steps" id="wizardSteps">
       <button type="button" class="wizard-chip" id="wizardChip1" onclick="navigateToWizardStep(1)">
@@ -4662,10 +4603,6 @@
       if (navLobbyBtn) navLobbyBtn.style.display = 'none';
       if (navSettingsBtn) navSettingsBtn.style.display = 'inline-flex';
       document.body.classList.toggle('show-radar-sweep', screenName === 'match');
-      if (screenName === 'lobby') {
-        const bannerEl = document.getElementById('excitementBanner');
-        if (bannerEl) bannerEl.className = 'honeycomb-banner hidden';
-      }
       syncWizardStepper();
       syncQrBadge();
       reportWizardStep(screenName === 'lobby' ? wizardStep : 2);
@@ -4727,12 +4664,6 @@
           : (state.use_simulator ? 'UbiConnect: Simulator Mode' : 'UbiConnect: Disconnected');
       }
       syncUbiconnectModal(state);
-
-      // Excitement Banner. Hidden on lobby, live match, countdown, and results.
-      const bannerEl = document.getElementById('excitementBanner');
-      if (bannerEl) {
-        bannerEl.className = 'honeycomb-banner hidden';
-      }
 
       // Automatically transition screens based on game phase (unless in Simulator
       // or Settings — those screens stay put during setup, but a live match or
