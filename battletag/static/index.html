@@ -993,23 +993,6 @@
       background: rgba(212, 25, 0, 0.08);
     }
 
-    /* Pairing/liveness notes ("went quiet", host Removes, UbiConnect
-       transitions) shown under the Step 1 roster. */
-    .lobby-notices {
-      margin-top: 10px;
-      display: grid;
-      gap: 6px;
-    }
-
-    .lobby-notice {
-      font-size: 0.76rem;
-      color: var(--text-muted);
-      background: #F7F7F7;
-      border: 1px solid var(--border-steel);
-      border-radius: 8px;
-      padding: 6px 10px;
-    }
-
     /* Mid-match disconnect prompt above the scoreboard: prominent,
        but never blocking — the match keeps running until the host
        chooses to end it. */
@@ -1606,6 +1589,8 @@
       display: flex;
       flex-direction: column;
       gap: 8px;
+      min-height: 0;
+      overflow: hidden;
     }
 
     .tv-killfeed-title {
@@ -1614,12 +1599,17 @@
       letter-spacing: 0.05em;
       text-transform: uppercase;
       color: var(--text-muted);
+      flex-shrink: 0;
     }
 
     .tv-killfeed-list {
       display: flex;
       flex-direction: column;
       gap: 8px;
+      flex: 1 1 auto;
+      min-height: 0;
+      overflow-y: auto;
+      padding-right: 2px;
     }
 
     .tv-killfeed-item {
@@ -3381,7 +3371,7 @@
       color: #F4F6FA;
       opacity: 0;
       transition: opacity 0.22s ease, transform 0.22s ease;
-      max-width: min(92vw, 380px);
+      max-width: min(92vw, 560px);
     }
     .impatient-toast.show {
       opacity: 1;
@@ -3416,7 +3406,7 @@
     <img id="impatientToastAvatar" src="" alt="" />
     <div class="impatient-toast-text">
       <span id="impatientToastName" class="impatient-toast-name"></span>
-      <span>is getting impatient!</span>
+      <span id="impatientToastMessage">is getting impatient!</span>
     </div>
   </div>
   <!-- Background Reticle Motif -->
@@ -3555,7 +3545,6 @@
           <div class="bt-panel-body">
             <p style="font-size: 0.78rem; color: var(--text-muted); margin: 0 0 10px;">Select a player to edit their name and avatar — saving writes it straight into the T-Blaster, like the original game. Names and avatars can only be changed here, on the pairing page.</p>
             <div class="guns-roster" id="gunsRoster"></div>
-            <div class="lobby-notices" id="lobbyNotices"></div>
           </div>
         </section>
 
@@ -4977,10 +4966,6 @@
         }).join('');
       }
       document.getElementById('gunsRoster').innerHTML = rosterHtml;
-      const noticesEl = document.getElementById('lobbyNotices');
-      if (noticesEl) {
-        noticesEl.innerHTML = (state.lobby_notices || []).map((n) => `<div class="lobby-notice">${esc(n.text)}</div>`).join('');
-      }
       renderTeamsPanel(state);
       const pairCount = document.getElementById('pairCountLabel');
       if (pairCount) pairCount.textContent = `${(state.players || []).length} of 8 paired`;
@@ -5404,9 +5389,10 @@
       // Laser blasts for hits/frags that landed since the last render.
       processBlasts(state);
 
-      // Kill-Feed: Top 4-5 events, newest on top (only rebuild on change so items don't re-animate/flash every poll)
+      // Kill-Feed: show all available events, newest on top, in a panel sized to the remaining viewport height.
+      updateKillfeedHeight();
       const feedList = document.getElementById('tvKillfeedList');
-      const topEvents = (state.events || []).slice(0, 5);
+      const topEvents = state.events || [];
       const feedSignature = JSON.stringify(topEvents.map((e) => [e.id, e.match_clock, e.text, e.icon_url, e.kind]));
       if (feedSignature !== lastFeedSignature) {
         lastFeedSignature = feedSignature;
@@ -5435,6 +5421,21 @@
     // card for each new hit/frag event. Events carry gun numbers (see
     // EventEntry in modes.py); the overlay layer sits outside the grid so
     // it survives the card rebuilds.
+    function updateKillfeedHeight() {
+      const panel = document.querySelector('#screen-match .tv-killfeed-panel');
+      if (!panel) return;
+      if (window.innerWidth <= 1024 || panel.offsetParent === null) {
+        panel.style.height = '';
+        return;
+      }
+      const rect = panel.getBoundingClientRect();
+      if (rect.top <= 0) return;
+      const bottomBuffer = 16;
+      const avail = Math.max(180, Math.floor(window.innerHeight - rect.top - bottomBuffer));
+      panel.style.height = `${avail}px`;
+    }
+    window.addEventListener('resize', updateKillfeedHeight);
+
     function processBlasts(state) {
       if (state.phase !== 'PLAYING' || !state.events || state.events.length === 0) return;
       const maxId = Math.max(...state.events.map((e) => e.id));
@@ -7181,15 +7182,33 @@
 
     // WebSocket Connection
     let impatientToastTimer = null;
-    function showImpatientToast(data) {
+    function showToast(data) {
       const toast = document.getElementById('impatientToast');
       const avatarEl = document.getElementById('impatientToastAvatar');
       const nameEl = document.getElementById('impatientToastName');
-      if (!toast || !avatarEl || !nameEl || !data) return;
-      const av = data.avatar || 'Bear';
-      avatarEl.src = `/static/assets/textures/Avatars/80x/${av}.png`;
-      avatarEl.alt = av;
-      nameEl.textContent = (data.name || `P${data.gun_num || 1}`).toUpperCase();
+      const msgEl = document.getElementById('impatientToastMessage');
+      if (!toast || !avatarEl || !nameEl || !msgEl || !data) return;
+      if (data.icon_url) {
+        avatarEl.src = data.icon_url;
+        avatarEl.alt = '';
+        avatarEl.style.display = '';
+      } else if (data.avatar) {
+        avatarEl.src = `/static/assets/textures/Avatars/80x/${data.avatar}.png`;
+        avatarEl.alt = data.avatar;
+        avatarEl.style.display = '';
+      } else if (data.gun_num) {
+        avatarEl.src = `/static/assets/textures/Avatars/80x/Bear.png`;
+        avatarEl.alt = 'Bear';
+        avatarEl.style.display = '';
+      } else {
+        avatarEl.src = '/static/assets/textures/Ui/Loading_Logo.png';
+        avatarEl.alt = '';
+        avatarEl.style.display = '';
+      }
+      const label = data.name ? data.name.toUpperCase() : (data.gun_num ? `P${data.gun_num}` : '');
+      nameEl.textContent = label;
+      nameEl.style.display = label ? '' : 'none';
+      msgEl.textContent = data.message || 'is getting impatient!';
       toast.classList.add('show');
       toast.setAttribute('aria-hidden', 'false');
       if (impatientToastTimer) clearTimeout(impatientToastTimer);
@@ -7197,6 +7216,15 @@
         toast.classList.remove('show');
         toast.setAttribute('aria-hidden', 'true');
       }, 2800);
+    }
+
+    function showImpatientToast(data) {
+      showToast({
+        gun_num: data && data.gun_num,
+        name: (data && (data.name || `P${data.gun_num || 1}`)),
+        avatar: (data && data.avatar) || 'Bear',
+        message: 'is getting impatient!',
+      });
     }
 
     function connectWebSocket() {
@@ -7211,6 +7239,8 @@
             handleAudioCue(msg.cue);
           } else if (msg.type === 'impatient_toast') {
             showImpatientToast(msg.data);
+          } else if (msg.type === 'toast') {
+            showToast(msg.data);
           }
         } catch (err) {
           console.error(err);

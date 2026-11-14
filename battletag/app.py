@@ -114,6 +114,27 @@ def _enqueue_notification(msg: dict[str, Any]) -> None:
     pending_notifications.append(msg)
 
 
+async def _broadcast_toast(
+    message: str,
+    *,
+    name: str | None = None,
+    avatar: str | None = None,
+    gun_num: int | None = None,
+    icon_url: str | None = None,
+) -> None:
+    """Push a temporary top-middle pill toast to all connected UI clients."""
+    payload: dict[str, Any] = {"message": message}
+    if name is not None:
+        payload["name"] = name
+    if avatar is not None:
+        payload["avatar"] = avatar
+    if gun_num is not None:
+        payload["gun_num"] = gun_num
+    if icon_url is not None:
+        payload["icon_url"] = icon_url
+    await ws_manager.broadcast({"type": "toast", "data": payload})
+
+
 engine = ArenaEngine(notify_cb=_enqueue_notification)
 # Never pre-populate the lobby with simulator players on startup.
 engine.players.clear()
@@ -511,6 +532,12 @@ async def api_remove_player(gun_num: int) -> JSONResponse:
     if not engine.use_simulator and engine.hw is not None and ref_hex:
         engine.hw.unpair_gun(ref_hex, ignore=True)
     engine.audio.play_ui("ChangeValue.wav")
+    await _broadcast_toast(
+        "was removed by the host.",
+        name=removed.display_name,
+        avatar=removed.avatar,
+        gun_num=removed.gun_num,
+    )
     await broadcast_state()
     return JSONResponse({"ok": True, "removed_gun_num": gun_num})
 
@@ -942,6 +969,10 @@ async def _lobby_auto_pairing_loop() -> None:
                         engine.add_lobby_notice(
                             "UbiConnect lost — guns will need to re-pair when it returns."
                         )
+                        await _broadcast_toast(
+                            "UbiConnect lost — guns will need to re-pair when it returns.",
+                            icon_url="/static/assets/textures/Ui/ubiconnect-disconnected.png",
+                        )
                     elif (
                         engine.phase == "LOBBY"
                         and not engine.use_simulator
@@ -954,6 +985,10 @@ async def _lobby_auto_pairing_loop() -> None:
                         # ref map (saved file mapping + session memory
                         # shared with the fresh transport).
                         engine.add_lobby_notice("UbiConnect found — re-pairing guns…")
+                        await _broadcast_toast(
+                            "UbiConnect found — re-pairing guns…",
+                            icon_url="/static/assets/textures/Ui/ubiconnect-connected.png",
+                        )
                         try:
                             if engine.hw is not None:
                                 try:
@@ -969,12 +1004,18 @@ async def _lobby_auto_pairing_loop() -> None:
                                 engine.bytecode_ready = False
                                 await _refresh_vest_states()
                                 last_vest_sweep = time.time()
-                                engine.add_lobby_notice(
-                                    f"Re-paired {len(repaired)} T-Blaster(s) after the UbiConnect reconnect."
+                                msg = f"Re-paired {len(repaired)} T-Blaster(s) after the UbiConnect reconnect."
+                                engine.add_lobby_notice(msg)
+                                await _broadcast_toast(
+                                    msg,
+                                    icon_url="/static/assets/textures/Ui/ubiconnect-connected.png",
                                 )
                             else:
-                                engine.add_lobby_notice(
-                                    "No T-Blasters re-paired yet — run a pairing scan when they are on and in range."
+                                msg = "No T-Blasters re-paired yet — run a pairing scan when they are on and in range."
+                                engine.add_lobby_notice(msg)
+                                await _broadcast_toast(
+                                    msg,
+                                    icon_url="/static/assets/textures/Ui/ubiconnect-connected.png",
                                 )
                         except Exception:
                             pass
@@ -1100,6 +1141,12 @@ async def _refresh_vest_states(announce_changes: bool = False) -> None:
             for p in removed_by_gid.values():
                 if p.ref_hex:
                     engine.hw.unpair_gun(p.ref_hex)
+                await _broadcast_toast(
+                    "went quiet and was removed from the roster.",
+                    name=p.display_name,
+                    avatar=p.avatar,
+                    gun_num=p.gun_num,
+                )
             engine.bytecode_ready = False
             engine.bytecode_uploaded = False
 
