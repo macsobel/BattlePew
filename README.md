@@ -16,7 +16,7 @@
 
 </div>
 
-BattlePew talks directly to the physical **UbiConnect** USB antenna (`0x044F:0xB365`), pairs up to 8 **T-Blasters** and **T-Vests**, flashes the original bytecode sequences over the air, tracks telemetry in real time, and serves a TV-first Arena Master display with a zero-install smartphone HUD.
+For the first time, you can play Ubisoft Battle Tag on **macOS** or **Linux** (as well as Windows). BattlePew talks directly to the physical **UbiConnect** USB antenna (`0x044F:0xB365`), pairs up to 8 **T-Blasters** and **T-Vests**, flashes the original bytecode sequences over the air, tracks telemetry in real time, and serves a TV-first Arena Master display with a zero-install smartphone HUD.
 
 > [!NOTE]
 > This program was developed with the use of **Google Antigravity AI**.
