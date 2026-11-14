@@ -361,6 +361,29 @@ ANNOUNCER_POOLS: dict[str, dict[str, Any]] = {
         "proba": 0.85,
         "subtitle": "Base scanned! Now shoot the UbiConnect!",
     },
+    "race_finish": {
+        # TagThenShoot timed turns: the course-complete line, played
+        # when the active runner finishes all bases + tower shots.
+        "files": _g(93),
+        "priority": 1,
+        "proba": 1.0,
+        "subtitle": "Finish line!",
+    },
+    "race_new_best": {
+        # Timed turns: the celebration when a finished run is the
+        # fastest of the match or a new session best.
+        "files": _g(95),
+        "priority": 1,
+        "proba": 1.0,
+        "subtitle": "Yes! You did it!",
+    },
+    "race_over": {
+        # Timed turns: the match-end line, played instead of game_end.
+        "files": _g(94, 96),
+        "priority": 0,
+        "proba": 1.0,
+        "subtitle": "Race over!",
+    },
     "idle_banter": {
         # The original's idle taunts are 32-35 only; the survival
         # ambiance lines belong to LastManStanding eliminations.

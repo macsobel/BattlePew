@@ -276,7 +276,7 @@ MODE_CATALOG: dict[str, dict[str, Any]] = {
     "TagThenShoot": {
         "id": "TagThenShoot",
         "title": "Tag'n Shoot",
-        "subtitle": "Solo: Scan the bases, then shoot the UbiConnect",
+        "subtitle": "Timed turns: pull the trigger, run the course, beat the clock",
         "tier": 1,
         "badge": "Solo Course",
         "timed": True,
@@ -288,11 +288,11 @@ MODE_CATALOG: dict[str, dict[str, Any]] = {
         "icon": "/static/assets/textures/Ui/Pictograms/96x/TagNShoot.png",
         "banner": "/static/assets/textures/Packages/TagThenShoot/Ui/Loading_TagNShoot.png",
         "ranking_bg": "/static/assets/textures/Ui/Ranking_Bg_TagNShoot.png",
-        "description": "Solo obstacle course! Scan the T-Bases in sequence, then shoot the UbiConnect tower itself. Every T-Base tag and every tower hit scores 1 point — most points in 60 seconds wins!",
+        "description": "Solo timed turns! Each player pulls the trigger to start their run, scans the T-Bases in order, and shoots the UbiConnect tower after each one. Fastest finished course wins — points still count if the 60-second cap runs out!",
         "bullets": [
-            "Sprint & scan T-Bases in order",
-            "Tags and tower hits each score +1 pt",
-            "Most points in 60 seconds wins",
+            "Each player runs the course solo, in turn",
+            "Pull the trigger to start your run",
+            "Fastest finished course wins (60 s cap)",
         ],
         "defaults": {
             "durationSeconds": 60,
@@ -348,6 +348,12 @@ class PlayerState:
     # poll downlink sends the running tower-hit count from it.
     tags: int = 0
     tower_hits: int = 0
+    # Timed TagThenShoot turns: the finished run's elapsed seconds, or
+    # None when the run never completed (cap expiry). Set at turn end;
+    # reset every match. Ranking, winner LEDs, and the results screen
+    # all read these, so they ride in to_dict with the other stats.
+    run_time: float | None = None
+    run_completed: bool = False
     shots_fired: int = 0
     streak: int = 0
     best_streak: int = 0
@@ -425,6 +431,8 @@ class PlayerState:
             "deaths": self.deaths,
             "tags": self.tags,
             "tower_hits": self.tower_hits,
+            "run_time": self.run_time,
+            "run_completed": self.run_completed,
             "shots_fired": self.shots_fired,
             "accuracy": self.accuracy,
             "streak": self.streak,
@@ -659,6 +667,21 @@ class ArenaEngine:
         self._last_miss_taunt_ts: float = 0.0
         self._last_reload_reminder_ts: float = 0.0
         self._manual_launch_triggered: bool = False
+        # Timed TagThenShoot turns: set when the player whose turn it is
+        # pulls the trigger (API endpoint in the simulator, hardware
+        # trigger poll on real guns); consumed by tick_race_turns when
+        # the wait releases. Separate from _manual_launch_triggered,
+        # which releases the match-level wait other modes use.
+        self._turn_triggered: bool = False
+        # Timed-turn machine state (TagThenShoot only; {} otherwise).
+        # Shape is built by reset_stats_for_new_match; see
+        # tick_race_turns for the WAIT_TRIGGER -> COUNTDOWN -> RUNNING
+        # -> TURN_END -> DONE machine.
+        self.race_state: dict[str, Any] = {}
+        # Best finished run per gun id across matches in this server
+        # run: {gun_id: {"time": seconds, "name": display name}}.
+        # In-memory only; no persistent personal-best storage yet.
+        self.race_session_best: dict[int, dict[str, Any]] = {}
         self.results_revealed: bool = False
         self._impatient_timestamps: dict[int, list[float]] = {}
         self._impatient_last_global_ts: float = 0.0
@@ -1139,6 +1162,17 @@ class ArenaEngine:
         """Seconds left on the match clock, or None for timerless modes."""
         if not self._is_timed_mode():
             return None
+        if self.mode_name == "TagThenShoot":
+            # Timed turns: the clock is the active run's cap, not the
+            # match. Outside a live run it shows the full cap, so the
+            # 60 s warning stays skipped and the match never ends on
+            # this clock — the turn machine owns the cap.
+            rs = self.race_state
+            if self.phase == "PLAYING" and rs and rs.get("turn_phase") == "RUNNING":
+                return max(0.0, rs.get("turn_ends_at", 0.0) - time.time())
+            if self.phase == "GAME_OVER":
+                return 0.0
+            return float(self.match_duration_s)
         if self.phase == "PLAYING":
             elapsed = time.time() - self.match_start_ts
             return max(0.0, self.match_duration_s - elapsed)
@@ -1254,6 +1288,7 @@ class ArenaEngine:
         self._last_miss_taunt_ts = 0.0
         self._last_reload_reminder_ts = 0.0
         self._manual_launch_triggered = False
+        self._turn_triggered = False
         self.results_revealed = False
         self.match_end_ts = 0.0
         self._pending_audio = []
@@ -1282,6 +1317,8 @@ class ArenaEngine:
             p.deaths = 0
             p.tags = 0
             p.tower_hits = 0
+            p.run_time = None
+            p.run_completed = False
             p.shots_fired = 0
             p.streak = 0
             p.best_streak = 0
@@ -1317,6 +1354,40 @@ class ArenaEngine:
                 "round_scores": {gid: 0 for gid in self.players},
                 "round_results": [],
             }
+
+        if self.mode_name == "TagThenShoot":
+            order = sorted(self.players.keys(), key=lambda gid: self.players[gid].gun_num)
+            first = order[0] if order else None
+            self.race_state = {
+                "turn_order": order,
+                "turn_index": 0,
+                "turn_phase": "WAIT_TRIGGER" if order else "DONE",
+                "active_gun_id": first,
+                # False until a trigger poll observes the trigger
+                # released, so a trigger held over from the previous
+                # turn cannot auto-release the next wait.
+                "trigger_armed": False,
+                "countdown_seconds": 0,
+                "countdown_remaining": 0,
+                "countdown_ends_at": 0.0,
+                "countdown_sent": True,
+                "next_number": 0,
+                "next_number_at": 0.0,
+                "turn_started_at": 0.0,
+                "turn_ends_at": 0.0,
+                "beat_ends_at": 0.0,
+                "elapsed": 0.0,
+                "turn_cap_s": int(self.settings.get("durationSeconds", 60)),
+                "bases": max(1, int(self.settings.get("numberOfBase", 4))),
+            }
+            if first is not None:
+                fp = self.players[first]
+                self.add_event(
+                    "system",
+                    f"{fp.display_name} is up first — pull the trigger to start the run!",
+                )
+        else:
+            self.race_state = {}
 
     def tick_mode_timers(self) -> None:
         """Advance OldFashionDuel round subphases (`INTRO`/`ROUND_END` phase=2 -> `WAIT` phase=1 -> `DRAW`)."""
@@ -1376,6 +1447,177 @@ class ArenaEngine:
                 self.add_event("duel", f"Round {self.duel_state['round']} ended in a draw!")
                 self.audio.trigger_pool("duel_drawn", force=True)
 
+    def _race_run_active(self, player: PlayerState) -> bool:
+        """True when `player` is the runner of a live timed turn."""
+        if self.mode_name != "TagThenShoot":
+            return False
+        rs = self.race_state
+        return bool(rs) and rs.get("turn_phase") == "RUNNING" and rs.get("active_gun_id") == player.gun_id
+
+    def tick_race_turns(self, now: float | None = None) -> None:
+        """Advance the TagThenShoot timed-turn machine.
+
+        WAIT_TRIGGER (the active player pulls the trigger; mandatory,
+        one pull per turn) -> COUNTDOWN (halved, as the match-level
+        manual launch halves it) -> RUNNING (one course; the cap ends
+        an unfinished run) -> TURN_END (3 s beat) -> the next turn's
+        WAIT_TRIGGER, or DONE once every player has run. Called once
+        per match-loop cycle, next to tick_mode_timers; the hardware
+        trigger poll and the per-turn countdown command live in the
+        loop, because they need blocking HID calls this sync tick
+        cannot make.
+        """
+        if self.phase != "PLAYING" or self.mode_name != "TagThenShoot":
+            return
+        rs = self.race_state
+        if not rs:
+            return
+        now = time.time() if now is None else now
+        phase = rs.get("turn_phase")
+        if phase == "WAIT_TRIGGER":
+            if self._turn_triggered:
+                self._turn_triggered = False
+                cd = max(1, int(self.settings.get("countdownSeconds", 3)) // 2)
+                rs["turn_phase"] = "COUNTDOWN"
+                rs["countdown_seconds"] = cd
+                rs["countdown_remaining"] = cd
+                rs["countdown_ends_at"] = now + cd
+                rs["countdown_sent"] = False
+                rs["next_number"] = cd
+                rs["next_number_at"] = now
+                self.countdown_remaining = cd
+                self.audio.trigger_pool("countdown_intro", force=True)
+        elif phase == "COUNTDOWN":
+            if rs.get("next_number", 0) >= 1 and now >= rs.get("next_number_at", 0.0):
+                self.audio.play_countdown_number(rs["next_number"])
+                self.countdown_remaining = rs["next_number"]
+                rs["countdown_remaining"] = rs["next_number"]
+                rs["next_number"] -= 1
+                rs["next_number_at"] = now + 1.0
+            if now >= rs.get("countdown_ends_at", 0.0):
+                self._start_race_run(now)
+        elif phase == "RUNNING":
+            rs["elapsed"] = max(0.0, now - rs.get("turn_started_at", now))
+            if now >= rs.get("turn_ends_at", 0.0):
+                self._complete_race_turn(completed=False, now=now)
+        elif phase == "TURN_END":
+            if now >= rs.get("beat_ends_at", 0.0):
+                self._advance_race_turn(now)
+
+    def _start_race_run(self, now: float) -> None:
+        """Enter RUNNING for the active player's turn: fresh run counters, a reset course, re-armed time warnings."""
+        rs = self.race_state
+        gid = rs.get("active_gun_id")
+        player = self.players.get(gid) if gid is not None else None
+        rs["turn_phase"] = "RUNNING"
+        rs["turn_started_at"] = now
+        rs["turn_ends_at"] = now + float(rs.get("turn_cap_s", 60))
+        rs["elapsed"] = 0.0
+        self.countdown_remaining = 0
+        rs["countdown_remaining"] = 0
+        if player is not None:
+            player.tags = 0
+            player.tower_hits = 0
+            player.score = 0
+            player.run_time = None
+            player.run_completed = False
+        if self.use_simulator and gid is not None:
+            self.sim.reset_race_course(gid)
+        self.audio.reset_match_timers()
+        self.audio.trigger_pool("game_start", force=True)
+        if player is not None:
+            self.add_event("system", f"{player.display_name} started the run — go!")
+
+    def _complete_race_turn(self, completed: bool, now: float | None = None) -> None:
+        """Record the active run's result and open the TURN_END beat.
+
+        Called from the ingest paths when the runner finishes the
+        course, and from the tick when the cap expires. No-op unless a
+        run is live, so a late tower report cannot re-complete a turn.
+        """
+        rs = self.race_state
+        if not rs or rs.get("turn_phase") != "RUNNING":
+            return
+        now = time.time() if now is None else now
+        gid = rs.get("active_gun_id")
+        player = self.players.get(gid) if gid is not None else None
+        elapsed = max(0.0, now - rs.get("turn_started_at", now))
+        rs["turn_phase"] = "TURN_END"
+        rs["beat_ends_at"] = now + 3.0
+        rs["elapsed"] = elapsed
+        if player is None:
+            return
+        player.run_completed = completed
+        if not completed:
+            player.run_time = None
+            self.add_event(
+                "system",
+                f"{player.display_name} ran out of time — {player.score} points.",
+            )
+            return
+        player.run_time = elapsed
+        others = [
+            p.run_time
+            for p in self.players.values()
+            if p.gun_id != gid and p.run_completed and p.run_time is not None
+        ]
+        is_match_best = not others or elapsed < min(others)
+        prev_session = self.race_session_best.get(gid)
+        is_session_best = prev_session is None or elapsed < prev_session["time"]
+        if is_session_best:
+            self.race_session_best[gid] = {"time": elapsed, "name": player.display_name}
+        if is_match_best and is_session_best:
+            tail = " — fastest so far, and a new session best!"
+        elif is_match_best:
+            tail = " — fastest so far!"
+        elif is_session_best:
+            tail = " — a new session best!"
+        else:
+            tail = ""
+        self.add_event(
+            "system",
+            f"{player.display_name} finished the course in {elapsed:.1f}s!{tail}",
+        )
+        cue = self.audio.trigger_pool(
+            "race_finish",
+            custom_subtitle=f"{player.display_name} finished in {elapsed:.1f}s!",
+            force=True,
+        )
+        if is_match_best or is_session_best:
+            if cue is not None:
+                delay = max(0.1, self.audio.active_until - now) + 0.25
+            else:
+                delay = 0.1
+            self._schedule_audio_followup(
+                delay,
+                "pool",
+                pool_key="race_new_best",
+                subtitle=f"{player.display_name} — new best time!",
+                force=True,
+            )
+
+    def _advance_race_turn(self, now: float) -> None:
+        """Move to the next player's WAIT_TRIGGER, or DONE after the last turn."""
+        rs = self.race_state
+        rs["turn_index"] = int(rs.get("turn_index", 0)) + 1
+        order = rs.get("turn_order", [])
+        if rs["turn_index"] >= len(order):
+            rs["turn_phase"] = "DONE"
+            rs["active_gun_id"] = None
+            return
+        gid = order[rs["turn_index"]]
+        rs["active_gun_id"] = gid
+        rs["turn_phase"] = "WAIT_TRIGGER"
+        rs["trigger_armed"] = False
+        rs["elapsed"] = 0.0
+        self._turn_triggered = False
+        player = self.players.get(gid)
+        if player is not None:
+            self.add_event(
+                "system",
+                f"{player.display_name} is up — pull the trigger to start the run!",
+            )
+
     def ingest_ubiconnect_hits(self, hits_by_gid: dict[int, int]) -> None:
         """Process 0xC3 IR shots received directly by the UbiConnect tower in TagThenShoot.
 
@@ -1393,7 +1635,13 @@ class ArenaEngine:
             if total_hits > player.frags:
                 delta = total_hits - player.frags
                 player.frags = total_hits
-                player.tower_hits = total_hits
+                # Only the active runner scores during a timed turn.
+                # The frags mirror above still advances for every gun,
+                # so a stray tower shot during someone else's turn
+                # never leaks into a later turn as phantom credit.
+                if not self._race_run_active(player):
+                    continue
+                player.tower_hits += delta
                 player.score += delta
                 player.hits_landed += delta
                 player.streak += delta
@@ -1406,6 +1654,11 @@ class ArenaEngine:
                 )
                 self.audio.trigger_pool("tower_hit", custom_subtitle=f"{player.display_name} hit the UbiConnect tower!")
                 self._check_lead_change()
+                # The final tower shot finishes the run: all bases
+                # tagged and every tower shot landed.
+                bases = max(1, int(self.settings.get("numberOfBase", 4)))
+                if player.tags >= bases and player.tower_hits >= bases:
+                    self._complete_race_turn(completed=True)
 
     def ingest_status_report(self, status: DecodedStatus) -> None:
         """Process a single gun's 0x95 status report and update scores, streaks, and kill-feed."""
@@ -1638,42 +1891,52 @@ class ArenaEngine:
             curr_tags = status.hits_received or 0
             if curr_tags > player.prev_hits_rec:
                 delta = curr_tags - player.prev_hits_rec
-                player.tags += delta
-                player.score += delta
-                bases = max(1, int(self.settings.get("numberOfBase", 4)))
-                base_num = ((player.tags - 1) % bases) + 1
-                if delta == 1:
-                    text = f"{player.display_name} tagged T-Base {base_num}! (+1 pt)"
-                else:
-                    text = f"{player.display_name} tagged {delta} T-Bases! (+{delta} pt)"
-                self.add_event(
-                    "hit",
-                    text,
-                    actor=player,
-                    icon_url="/static/assets/textures/Ui/Pictograms/64x/RF08.png",
-                )
-                # Base-name callout (T-Base 1-4), then a confirmation
-                # line once the callout finishes. The gun enforces scan
-                # order, so the tag count modulo the base count is the
-                # stage of the base just tagged.
-                cue = self.audio.play_announcer_file(
-                    f"DLG_GM_GLOBAL_{72 + base_num - 1:02d}.wav",
-                    f"T-Base {base_num}!",
-                    priority=2,
-                    duration=1.5,
-                )
-                if cue is not None:
-                    delay = max(0.1, self.audio.active_until - time.time()) + 0.25
-                else:
-                    delay = 0.1
-                self._schedule_audio_followup(
-                    delay,
-                    "pool",
-                    pool_key="tagnshoot_base",
-                    subtitle=f"{player.display_name} tagged T-Base {base_num}!",
-                    force=False,
-                )
-                self._check_lead_change()
+                # Only the active runner scores during a timed turn;
+                # the baseline below still advances for every gun, so
+                # a stray scan during someone else's turn never counts
+                # toward the stray gun's own run.
+                if self._race_run_active(player):
+                    player.tags += delta
+                    player.score += delta
+                    bases = max(1, int(self.settings.get("numberOfBase", 4)))
+                    base_num = ((player.tags - 1) % bases) + 1
+                    if delta == 1:
+                        text = f"{player.display_name} tagged T-Base {base_num}! (+1 pt)"
+                    else:
+                        text = f"{player.display_name} tagged {delta} T-Bases! (+{delta} pt)"
+                    self.add_event(
+                        "hit",
+                        text,
+                        actor=player,
+                        icon_url="/static/assets/textures/Ui/Pictograms/64x/RF08.png",
+                    )
+                    # Base-name callout (T-Base 1-4), then a confirmation
+                    # line once the callout finishes. The gun enforces scan
+                    # order, so the tag count modulo the base count is the
+                    # stage of the base just tagged.
+                    cue = self.audio.play_announcer_file(
+                        f"DLG_GM_GLOBAL_{72 + base_num - 1:02d}.wav",
+                        f"T-Base {base_num}!",
+                        priority=2,
+                        duration=1.5,
+                    )
+                    if cue is not None:
+                        delay = max(0.1, self.audio.active_until - time.time()) + 0.25
+                    else:
+                        delay = 0.1
+                    self._schedule_audio_followup(
+                        delay,
+                        "pool",
+                        pool_key="tagnshoot_base",
+                        subtitle=f"{player.display_name} tagged T-Base {base_num}!",
+                        force=False,
+                    )
+                    self._check_lead_change()
+                    # Safety net: a batched report can carry the last
+                    # tag together with an already-landed final tower
+                    # shot. Normally the tower path completes the run.
+                    if player.tags >= bases and player.tower_hits >= bases:
+                        self._complete_race_turn(completed=True)
             player.prev_hits_rec = curr_tags
             player.prev_phase_flag = status.phase_flag if status.phase_flag is not None else 1
 
@@ -1824,6 +2087,12 @@ class ArenaEngine:
         # line would interrupt that sequence.
         if self.mode_name == "OldFashionDuel":
             return
+        # Timed TagThenShoot turns have no lead concept either: players
+        # run solo, one at a time, and a points lead mid-run says
+        # nothing about who is fastest. Run results are announced at
+        # completion instead.
+        if self.mode_name == "TagThenShoot":
+            return
         if self.mode_name == "TeamFrag":
             standings = self.get_team_standings()
             if len(standings) >= 2 and standings[0]["score"] > standings[1]["score"]:
@@ -1848,6 +2117,16 @@ class ArenaEngine:
                 key=lambda p: (p.life_points > 0, p.life_points, p.score, p.hits_landed, -p.deaths),
                 reverse=True,
             )
+        if self.mode_name == "TagThenShoot":
+            # Timed turns: finished runs rank by elapsed time, fastest
+            # first; unfinished runs (cap expiry, or not yet run) rank
+            # after them by points, then tags, then gun number.
+            def race_key(p: PlayerState) -> tuple[int, float, int, int, int]:
+                if p.run_completed and p.run_time is not None:
+                    return (0, p.run_time, 0, 0, p.gun_num)
+                return (1, 0.0, -p.score, -p.tags, p.gun_num)
+
+            return sorted(self.players.values(), key=race_key)
         return sorted(
             self.players.values(),
             key=lambda p: (p.score, p.hits_landed, -p.hits_received, p.accuracy),
@@ -1912,6 +2191,21 @@ class ArenaEngine:
                 gid: (not is_tie and p.team_id == top_teams[0])
                 for gid, p in self.players.items()
             }
+
+        if self.mode_name == "TagThenShoot":
+            # Timed turns: the fastest finished run wins. An exact time
+            # tie wins nobody (same rule as the solo score tie below).
+            # When nobody finished, fall through to the score rule.
+            completed = [
+                p for p in self.players.values() if p.run_completed and p.run_time is not None
+            ]
+            if completed:
+                best = min(p.run_time for p in completed)
+                winners = [p.gun_id for p in completed if p.run_time == best]
+                is_tie = len(winners) > 1
+                return {
+                    gid: (not is_tie and gid == winners[0]) for gid in self.players
+                }
 
         ranked = self.get_sorted_players()
         top_score = ranked[0].score
@@ -1990,13 +2284,21 @@ class ArenaEngine:
         if self.phase != "PLAYING":
             return False
         # Timerless modes (duel, LMS) never end on the clock; the
-        # original has no stalemate rule for them either.
-        if self._is_timed_mode() and (self.get_remaining_seconds() or 0.0) <= 0:
+        # original has no stalemate rule for them either. TagThenShoot
+        # is excluded too: its cap belongs to each timed turn, enforced
+        # by the turn machine, not to the match.
+        if (
+            self._is_timed_mode()
+            and self.mode_name != "TagThenShoot"
+            and (self.get_remaining_seconds() or 0.0) <= 0
+        ):
             return True
         score_limit = int(self.settings.get("scoreLimit", 0))
         if score_limit > 0 and any(p.score >= score_limit for p in self.players.values()):
             return True
         if self.mode_name == "OldFashionDuel" and self.duel_state.get("subphase") == "COMPLETE":
+            return True
+        if self.mode_name == "TagThenShoot" and self.race_state.get("turn_phase") == "DONE":
             return True
         if self.mode_name == "LastManStanding" and len(self.players) >= 2:
             alive = [p for p in self.players.values() if p.life_points > 0]
@@ -2057,6 +2359,12 @@ class ArenaEngine:
             ],
             "impatient_status": self.get_impatient_status(now),
             "duel_state": self.duel_state if self.mode_name == "OldFashionDuel" else None,
+            "race_state": self.race_state if self.mode_name == "TagThenShoot" else None,
+            "race_session_best": (
+                {str(k): dict(v) for k, v in self.race_session_best.items()}
+                if self.mode_name == "TagThenShoot"
+                else None
+            ),
             "avatars": AVATAR_NAMES,
             "team_catalog": list(TEAM_INFO.values()),
             "rfid_catalog": list(RFID_CARDS.values()),
