@@ -220,7 +220,7 @@ pytest -v
 
 ## 📄 License
 
-MIT License. Ubisoft Battle Tag assets and audio are property of Ubisoft Entertainment and are not distributed with this repository.
+MIT License — see [LICENSE](LICENSE). Ubisoft Battle Tag assets and audio are property of Ubisoft Entertainment and are not distributed with this repository.
 
 ---
 
