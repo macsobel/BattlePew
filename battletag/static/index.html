@@ -62,9 +62,17 @@
       position: relative;
     }
 
+    /* Centered square sized to the smaller viewport dimension: the SVG's
+       1000x1000 viewBox maps 1:1 onto it, so the reticle circles stay
+       centered on the viewport. (Without explicit dimensions, the SVG's
+       intrinsic 1:1 ratio stretched the box to the viewport WIDTH and
+       pushed the circles' center below the viewport center.) */
     .reticle-watermark {
       position: fixed;
       inset: 0;
+      width: 100vmin;
+      height: 100vmin;
+      margin: auto;
       pointer-events: none;
       z-index: 0;
       opacity: 0.35;
@@ -2616,10 +2624,21 @@
       letter-spacing: 0.03em;
     }
 
-    /* Rotating radar sweep over the reticle watermark, match screen only. */
+    /* Rotating radar sweep over the reticle watermark, match screen only.
+       Sized to the reticle's outer circle (r=420 of the 1000-unit viewBox
+       = 84vmin) and clipped to a circle, so the wedge sweeps inside the
+       target instead of swinging a viewport-sized rectangle around it.
+       The square box also keeps the conic gradient's angles true (on a
+       wide rectangle the wedge stretched and changed width as it turned).
+       margin:auto centering leaves `transform` free for the rotate
+       animation, whose origin is the element center = viewport center. */
     .reticle-sweep {
       position: fixed;
       inset: 0;
+      width: 84vmin;
+      height: 84vmin;
+      margin: auto;
+      border-radius: 50%;
       pointer-events: none;
       z-index: 0;
       display: none;
@@ -4607,6 +4626,9 @@
       syncQrBadge();
       reportWizardStep(screenName === 'lobby' ? wizardStep : 2);
       window.scrollTo({ top: 0, behavior: 'smooth' });
+      // Re-size the kill-feed panel for the newly shown screen; the
+      // scroll listener keeps it correct as the smooth scroll settles.
+      updateKillfeedHeight();
     }
 
     // The header QR badge is the persistent join code — except on step 1,
@@ -5366,6 +5388,20 @@
       panel.style.height = `${avail}px`;
     }
     window.addEventListener('resize', updateKillfeedHeight);
+    // The sidebar is sticky, so scrolling moves the panel's top and the
+    // remaining height changes with it: re-measure on scroll (throttled
+    // to one update per frame) so the panel bottom keeps tracking the
+    // window bottom instead of leaving white space once scrolled.
+    let killfeedHeightQueued = false;
+    function scheduleKillfeedHeight() {
+      if (killfeedHeightQueued) return;
+      killfeedHeightQueued = true;
+      requestAnimationFrame(() => {
+        killfeedHeightQueued = false;
+        updateKillfeedHeight();
+      });
+    }
+    window.addEventListener('scroll', scheduleKillfeedHeight, { passive: true });
 
     function processBlasts(state) {
       if (state.phase !== 'PLAYING' || !state.events || state.events.length === 0) return;
