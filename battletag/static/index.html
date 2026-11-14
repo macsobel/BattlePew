@@ -1251,10 +1251,16 @@
       min-width: 0;
     }
 
+    /* Team modes use these columns; solo modes add .solo-staircase
+       below. align-items keeps uneven team groups at natural height
+       instead of stretching to the row. transform-origin is the anchor
+       for the auto-fit scale (see fitScoreboard). */
     .tv-scoreboard-grid {
       display: grid;
       grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
       gap: 12px;
+      align-items: start;
+      transform-origin: top left;
       transition: opacity 3s ease, filter 3s ease;
     }
 
@@ -4626,9 +4632,11 @@
       syncQrBadge();
       reportWizardStep(screenName === 'lobby' ? wizardStep : 2);
       window.scrollTo({ top: 0, behavior: 'smooth' });
-      // Re-size the kill-feed panel for the newly shown screen; the
-      // scroll listener keeps it correct as the smooth scroll settles.
+      // Re-size the kill-feed panel and re-fit the scoreboard for the
+      // newly shown screen; the scroll listener keeps both correct as
+      // the smooth scroll settles.
       updateKillfeedHeight();
+      fitScoreboard();
     }
 
     // The header QR badge is the persistent join code — except on step 1,
@@ -5283,7 +5291,9 @@
         tvGrid.style.setProperty('--tv-gap', `${tvGap}px`);
         tvGrid.style.setProperty('--team-card-gap', `${teamCardGap}px`);
 
-        tvGrid.classList.add('solo-staircase');
+        // The staircase is the SOLO look: in team modes the grid keeps
+        // its responsive columns so every team stays on screen.
+        tvGrid.classList.toggle('solo-staircase', !state.mode.teams);
         if (state.mode.teams) {
           const teamById = {};
           (state.team_catalog || []).forEach((t) => { teamById[parseInt(t.id, 10)] = t; });
@@ -5295,11 +5305,9 @@
             players: members[teamId].slice().sort((a, b) => b.score - a.score),
             total: members[teamId].reduce((s, p) => s + p.score, 0),
           })).sort((a, b) => b.total - a.total || a.teamId - b.teamId);
-          const teamStep = groups.length <= 2 ? 72 : (groups.length === 3 ? 52 : 36);
-          tvGrid.innerHTML = groups.map((g, gi) => {
-            const teamOffset = Math.min(gi * teamStep, 160);
+          tvGrid.innerHTML = groups.map((g) => {
             return `
-          <div class="team-group" style="background: ${(g.team && g.team.light_bg) || 'transparent'}; margin-left: ${teamOffset}px; width: min(500px, calc(100% - ${teamOffset}px));">
+          <div class="team-group" style="background: ${(g.team && g.team.light_bg) || 'transparent'};">
             <div class="team-group-header">
               <span class="team-dot" style="background: ${g.team ? g.team.color : 'var(--bt-orange)'};"></span>
               <span class="team-group-name">${g.team ? `Team ${g.teamId} · ${g.team.name}` : `Team ${g.teamId}`}</span>
@@ -5312,13 +5320,20 @@
         tvGrid.innerHTML = state.players.map((p, idx) => tvCardHtml(p, idx)).join('');
       }
 
+      // Re-fit after the rebuild: content height changed, so the scale
+      // must be recomputed before FLIP measures card positions.
+      fitScoreboard();
+
         if (!REDUCED_MOTION && flipBefore.size > 0) {
           tvGrid.querySelectorAll('.tv-player-card[data-gun-num]').forEach((el) => {
             const old = flipBefore.get(el.dataset.gunNum);
             if (!old) return;
             const r = el.getBoundingClientRect();
-            const dx = old.x - r.left;
-            const dy = old.y - r.top;
+            // Positions are viewport coordinates, scaled when the board
+            // is fitted; the card's own translate is pre-scale, so divide
+            // the delta back out to land the glide exactly.
+            const dx = (old.x - r.left) / scoreboardFitScale;
+            const dy = (old.y - r.top) / scoreboardFitScale;
             if (Math.abs(dx) < 2 && Math.abs(dy) < 2) return;
             el.animate(
               [{ transform: `translate(${dx}px, ${dy}px)` }, { transform: 'translate(0, 0)' }],
@@ -5388,20 +5403,67 @@
       panel.style.height = `${avail}px`;
     }
     window.addEventListener('resize', updateKillfeedHeight);
+    window.addEventListener('resize', fitScoreboard);
     // The sidebar is sticky, so scrolling moves the panel's top and the
     // remaining height changes with it: re-measure on scroll (throttled
     // to one update per frame) so the panel bottom keeps tracking the
-    // window bottom instead of leaving white space once scrolled.
-    let killfeedHeightQueued = false;
-    function scheduleKillfeedHeight() {
-      if (killfeedHeightQueued) return;
-      killfeedHeightQueued = true;
+    // window bottom instead of leaving white space once scrolled. The
+    // scoreboard fit re-runs here too — its available height moves with
+    // scroll the same way.
+    let matchLayoutQueued = false;
+    function scheduleMatchLayout() {
+      if (matchLayoutQueued) return;
+      matchLayoutQueued = true;
       requestAnimationFrame(() => {
-        killfeedHeightQueued = false;
+        matchLayoutQueued = false;
         updateKillfeedHeight();
+        fitScoreboard();
       });
     }
-    window.addEventListener('scroll', scheduleKillfeedHeight, { passive: true });
+    window.addEventListener('scroll', scheduleMatchLayout, { passive: true });
+
+    // Auto-fit: shrink the scoreboard just enough to keep every player
+    // on screen. Only ever shrinks (never enlarges), and never below
+    // SCOREBOARD_FIT_MIN_SCALE — past that the board scrolls rather than
+    // turning unreadable. The explicit height compensates for the
+    // transform, which on its own does not change layout size.
+    let scoreboardFitScale = 1;
+    const SCOREBOARD_FIT_MIN_SCALE = 0.65;
+    function fitScoreboard() {
+      const grid = document.getElementById('tvScoreboardGrid');
+      if (!grid) return;
+      if (window.innerWidth <= 1024 || grid.offsetParent === null) {
+        grid.style.transform = '';
+        grid.style.height = '';
+        scoreboardFitScale = 1;
+        return;
+      }
+      const top = grid.getBoundingClientRect().top;
+      if (top <= 0) return;
+      // Measure at natural size: clear the previous fit first, so the
+      // content height is not distorted by the transform or the height
+      // override. The clear/measure/apply all happens in one task, so no
+      // intermediate state ever paints. (The top edge is invariant under
+      // the top-left-origin scale, so it was safe to read above.)
+      grid.style.transform = '';
+      grid.style.height = '';
+      const natural = grid.scrollHeight;
+      if (natural <= 0) {
+        scoreboardFitScale = 1;
+        return;
+      }
+      const bottomBuffer = 16;
+      const avail = window.innerHeight - top - bottomBuffer;
+      const scale = Math.max(SCOREBOARD_FIT_MIN_SCALE, Math.min(1, avail / natural));
+      scoreboardFitScale = scale;
+      if (scale < 1) {
+        grid.style.transform = `scale(${scale})`;
+        grid.style.height = `${Math.floor(natural * scale)}px`;
+      } else {
+        grid.style.transform = '';
+        grid.style.height = '';
+      }
+    }
 
     function processBlasts(state) {
       if (state.phase !== 'PLAYING' || !state.events || state.events.length === 0) return;
