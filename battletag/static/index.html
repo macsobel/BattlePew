@@ -4472,6 +4472,28 @@
       playAudioFile(path, vol);
     }
 
+    // Display contract: one derivation of per-mode display flags from
+    // the snapshot's mode id + contract slices (duel_state /
+    // race_state). Render functions destructure from this instead of
+    // re-deriving mode identity inline; the per-mode render blocks
+    // themselves are unchanged.
+    function modeDisplay(state) {
+      const id = state.mode && state.mode.id;
+      const isDuel = id === 'OldFashionDuel';
+      const isLMS = id === 'LastManStanding';
+      const isRace = id === 'TagThenShoot';
+      return {
+        id,
+        isDuel,
+        isLMS,
+        isRace,
+        showLife: ['TeamFrag', 'FreeForAll', 'LastManStanding'].includes(id),
+        showAmmo: ['TeamFrag', 'FreeForAll', 'LastManStanding', 'StarterFrag', 'OldFashionDuel'].includes(id),
+        showDuelStrip: isDuel && !!state.duel_state && ['COUNTDOWN', 'PLAYING', 'GAME_OVER'].includes(state.phase),
+        showRaceStrip: isRace && !!state.race_state && ['PLAYING', 'GAME_OVER'].includes(state.phase),
+      };
+    }
+
     function getRoundReadiness(state) {
       const players = (state && state.players) || [];
       const mode = (state && state.mode) || {};
@@ -5395,7 +5417,7 @@
       const container = document.getElementById('raceRosterGroups');
       const panel = document.getElementById('raceOrderPanel');
       if (!container || !panel) return;
-      const isRace = state.mode.id === 'TagThenShoot';
+      const { isRace } = modeDisplay(state);
       panel.style.display = isRace ? '' : 'none';
       const columns = document.getElementById('step2Columns');
       if (columns) columns.classList.toggle('solo', !state.mode.teams && !isRace);
@@ -5715,7 +5737,7 @@
       const duelStrip = document.getElementById('duelStrip');
       if (duelStrip) {
         const ds = state.duel_state;
-        const showDuel = state.mode && state.mode.id === 'OldFashionDuel' && ds && ['COUNTDOWN', 'PLAYING', 'GAME_OVER'].includes(state.phase);
+        const showDuel = modeDisplay(state).showDuelStrip;
         if (showDuel) {
           const rndNum = Math.max(1, ds.round || 0);
           const roundLabel = ds.subphase === 'WAIT'
@@ -5775,7 +5797,7 @@
       const raceStrip = document.getElementById('raceStrip');
       if (raceStrip) {
         const rs = state.race_state;
-        const showRace = state.mode && state.mode.id === 'TagThenShoot' && rs && ['PLAYING', 'GAME_OVER'].includes(state.phase);
+        const showRace = modeDisplay(state).showRaceStrip;
         if (showRace) {
           const players = state.players || [];
           const active = players.find((p) => p.gun_id === rs.active_gun_id);
@@ -5839,8 +5861,7 @@
         '/static/assets/textures/Ui/Ranking_Medal_Bronze.png',
       ];
 
-      const showLife = ['TeamFrag', 'FreeForAll', 'LastManStanding'].includes(state.mode.id);
-      const showAmmo = ['TeamFrag', 'FreeForAll', 'LastManStanding', 'StarterFrag', 'OldFashionDuel'].includes(state.mode.id);
+      const { showLife, showAmmo } = modeDisplay(state);
 
       // Scoreboard: in team modes players are grouped under team headers
       // ordered by team total; solo modes keep the flat score-ordered grid.
@@ -5879,9 +5900,7 @@
         : (state.players || []);
 
       const tvCardHtml = (p, soloIdx = null) => {
-        const isDuel = state.mode.id === 'OldFashionDuel';
-        const isLMS = state.mode.id === 'LastManStanding';
-        const isRace = state.mode.id === 'TagThenShoot';
+        const { isDuel, isLMS, isRace } = modeDisplay(state);
         // The big number is mode-specific: rounds won in Duel (score
         // already counts those), eliminations in LMS (score there is a
         // sort-order artifact, not points), the best finished time in
@@ -6381,8 +6400,7 @@
       resultsRenderedOnce = true;
 
       document.getElementById('resultsModeName').textContent = state.mode.title;
-      const isRace = state.mode.id === 'TagThenShoot';
-      const isLMS = state.mode.id === 'LastManStanding';
+      const { isRace, isLMS } = modeDisplay(state);
       // The race and LastManStanding arrive in the server's mode ranking
       // (race: finished runs by time then unfinished by points; LMS:
       // alive > life_points > score > hits_landed); re-sorting by score

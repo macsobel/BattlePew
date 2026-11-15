@@ -1796,6 +1796,28 @@
 
     let redirectingToJoin = false;
 
+    // Display contract: one derivation of per-mode display flags from
+    // the snapshot's mode id + contract slices (duel_state /
+    // race_state). Render functions destructure from this instead of
+    // re-deriving mode identity inline; the per-mode render blocks
+    // themselves are unchanged.
+    function modeDisplay(state) {
+      const id = state.mode && state.mode.id;
+      const isDuel = id === 'OldFashionDuel';
+      const isLMS = id === 'LastManStanding';
+      const isRace = id === 'TagThenShoot';
+      return {
+        id,
+        isDuel,
+        isLMS,
+        isRace,
+        showLife: ['TeamFrag', 'FreeForAll', 'LastManStanding'].includes(id),
+        showAmmo: ['TeamFrag', 'FreeForAll', 'LastManStanding', 'StarterFrag', 'OldFashionDuel'].includes(id),
+        showDuelStrip: isDuel && !!state.duel_state && ['COUNTDOWN', 'PLAYING', 'GAME_OVER'].includes(state.phase),
+        showRaceStrip: isRace && !!state.race_state && ['PLAYING', 'GAME_OVER'].includes(state.phase),
+      };
+    }
+
     function renderHud(state) {
       latestState = state;
       const allPlayers = [...state.players].sort((a, b) => a.gun_num - b.gun_num);
@@ -1811,9 +1833,7 @@
       overlay.style.display = 'none';
 
       // Mode-specific display: duel rounds, race course, LMS elims.
-      const isDuel = state.mode.id === 'OldFashionDuel';
-      const isLMS = state.mode.id === 'LastManStanding';
-      const isRace = state.mode.id === 'TagThenShoot';
+      const { isDuel, isLMS, isRace } = modeDisplay(state);
 
       // Header. Team identity only shows in team modes; solo modes get
       // Solo modes (no teams) and the lobby pairing page (wizard_step === 1)
@@ -2245,7 +2265,7 @@
 
       // Alert Banner (active match only)
       const alertEl = document.getElementById('hudAlert');
-      const showLife = ['TeamFrag', 'FreeForAll', 'LastManStanding'].includes(state.mode.id);
+      const { showLife } = modeDisplay(state);
       if (state.phase === 'PLAYING' && showLife && me.life_points <= 0) {
         alertEl.className = 'alert-banner visible';
         alertEl.textContent = state.mode.id === 'LastManStanding'
@@ -2269,7 +2289,7 @@
           ).join('')
         : `<div class="hp-segment active" style="grid-column: 1 / -1; background: var(--team-green);"></div>`;
 
-      const showAmmo = ['TeamFrag', 'FreeForAll', 'LastManStanding', 'StarterFrag', 'OldFashionDuel'].includes(state.mode.id);
+      const { showAmmo } = modeDisplay(state);
       const showClips = showAmmo && state.mode.id !== 'OldFashionDuel';
       document.getElementById('hudAmmoText').textContent = showAmmo ? `${me.ammo}/${me.max_ammo}` : '∞';
       const ammoBar = document.getElementById('hudAmmoBar');
