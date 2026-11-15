@@ -224,11 +224,11 @@ MODE_CATALOG: dict[str, dict[str, Any]] = {
         "icon": "/static/assets/textures/Ui/Pictograms/96x/OldFashionDuel.png",
         "banner": "/static/assets/textures/Packages/OldFashionDuel/Ui/Loading_OldFashionDuel.png",
         "ranking_bg": "/static/assets/textures/Ui/Ranking_Bg_OldFashionDuel.png",
-        "description": "Classic 2-player showdown across 5 tense rounds! Point your T-Blaster down during the 5–8s standoff; when the announcer yells DRAW, fire first — you have 6 bullets per round. Hitting your opponent before the signal forfeits the round!",
+        "description": "Classic 2-player showdown across 3, 5, or 7 tense rounds! Player 1 pulls the trigger to start the match. Point your T-Blaster down during the 5–8s standoff; when the announcer yells FIRE, shoot first — you have 6 bullets per round. Firing before the signal gives the round point to your opponent!",
         "bullets": [
-            "1v1 quickdraw standoff",
-            "6 bullets per round · Fire on DRAW",
-            "Hitting early forfeits the round",
+            "1v1 quickdraw · Player 1 pulls trigger to start",
+            "6 bullets per round · First hit after FIRE wins +1 pt",
+            "Firing before FIRE awards the point to your opponent",
         ],
         "defaults": {
             "countdownSeconds": 5,
@@ -560,6 +560,9 @@ MATCH_DISCONNECT_TIMEOUT_S = 10.0
 # A gun that answered this match and then goes quiet for this long is
 # flagged signal_lost on the scoreboard.
 SIGNAL_LOST_TIMEOUT_S = 3.0
+# Duel: seconds after the "Fire!" cue starts before shots count as legal
+# (covers browser audio start latency and the gun's poll interval).
+DUEL_FIRE_GRACE_S = 0.35
 
 
 class ArenaEngine:
@@ -642,14 +645,18 @@ class ArenaEngine:
             "round": 0,
             "max_rounds": 5,
             "phase_code": 2,  # 2 = between rounds (reload 6 bullets), 0/1 = active standoff/draw
-            "subphase": "INTRO",  # INTRO | WAIT | DRAW | ROUND_END
+            "subphase": "INTRO",  # INTRO | WAIT | DRAW | ROUND_END | WAIT_TRIGGER | COMPLETE
             "can_shoot": False,
             "next_transition_at": 0.0,
             "round_scores": {},
             # Per-round results, oldest first: {"round": n,
-            # "winner_gun_num": g | None} — None means the round was a draw.
+            # "winner_gun_num": g | None, "fault_gun_num": g | None}.
             "round_results": [],
+            "last_result_text": "",
+            "last_winner_gun_num": None,
+            "trigger_armed": False,
         }
+        self._duel_round_triggered: bool = False
         # Deferred actions the match loop fires when their time comes:
         # sequenced announcer followups (a second line that must start
         # after the first finishes) and the duel can_shoot flip, which
@@ -1349,6 +1356,7 @@ class ArenaEngine:
         ]
 
         if self.mode_name == "OldFashionDuel":
+            self._duel_round_triggered = False
             self.duel_state = {
                 "round": 0,
                 "max_rounds": int(self.settings.get("rounds", 5)),
@@ -1358,6 +1366,9 @@ class ArenaEngine:
                 "next_transition_at": time.time() + 3.0,
                 "round_scores": {gid: 0 for gid in self.players},
                 "round_results": [],
+                "last_result_text": "",
+                "last_winner_gun_num": None,
+                "trigger_armed": False,
             }
 
         if self.mode_name == "TagThenShoot":
@@ -1394,99 +1405,88 @@ class ArenaEngine:
         else:
             self.race_state = {}
 
+    def _reset_duel_ammo(self) -> None:
+        """Reset all duelists' ammo to 6 bullets for the next round."""
+        for p in self.players.values():
+            p.ammo = 6
+            p.prev_ammo = 6
+        if self.use_simulator:
+            for sg in self.sim.guns.values():
+                sg.ammo = 6
+
+    def _begin_duel_round(self, next_rnd: int, max_rnd: int, now: float) -> None:
+        """Enter WAIT for round `next_rnd` with fresh ammo and round audio."""
+        self.duel_state["round"] = next_rnd
+        self.duel_state["phase_code"] = 1
+        self.duel_state["subphase"] = "WAIT"
+        self.duel_state["can_shoot"] = False
+        self.duel_state["last_result_text"] = ""
+        self.duel_state["last_winner_gun_num"] = None
+        # Round 1 carries the setup intro after the round announcement, so
+        # its standoff floor covers both lines (6 s) and the DRAW cue never
+        # talks over the intro; later rounds keep the usual 5 s floor.
+        wait_floor = 6.0 if next_rnd == 1 else 5.0
+        self.duel_state["next_transition_at"] = now + random.uniform(wait_floor, 8.0)
+        self._reset_duel_ammo()
+        if next_rnd == 1:
+            round_file, round_sub, round_dur = ("DLG_GM_GLOBAL_115.wav", "First round!", 1.2)
+        elif next_rnd >= max_rnd:
+            round_file, round_sub, round_dur = ("DLG_GM_GLOBAL_116.wav", "Final round", 1.4)
+        else:
+            round_file, round_sub, round_dur = ("DLG_GM_GLOBAL_114.wav", "Next round!", 1.1)
+        self.audio.play_ui("Validation.wav")
+        self.add_event(
+            "duel",
+            f"ROUND {next_rnd} OF {max_rnd} — Hold fire and wait for the FIRE! signal!",
+        )
+        cue = self.audio.play_announcer_file(round_file, round_sub, priority=-1, duration=round_dur)
+        delay = (max(0.1, self.audio.active_until - now) + 0.25) if cue is not None else 0.1
+        self._schedule_audio_followup(
+            delay,
+            "pool",
+            pool_key="duel_setup" if next_rnd == 1 else "duel_prepare",
+            force=True,
+        )
+
     def tick_mode_timers(self) -> None:
-        """Advance OldFashionDuel round subphases (`INTRO`/`ROUND_END` phase=2 -> `WAIT` phase=1 -> `DRAW`)."""
+        """Advance OldFashionDuel round subphases (`INTRO` -> `WAIT` -> `DRAW` -> `ROUND_END` -> next round `WAIT`)."""
         if self.phase != "PLAYING" or self.mode_name != "OldFashionDuel":
             return
         now = time.time()
         sub = self.duel_state.get("subphase", "INTRO")
+        max_rnd = int(self.duel_state.get("max_rounds", 5))
+        curr_rnd = int(self.duel_state.get("round", 0))
         if now >= self.duel_state.get("next_transition_at", 0.0):
             if sub in ("INTRO", "ROUND_END"):
-                next_rnd = int(self.duel_state.get("round", 0)) + 1
-                max_rnd = int(self.duel_state.get("max_rounds", 5))
-                if next_rnd > max_rnd:
+                # The match itself starts on a manual trigger pull
+                # (WAIT_TRIGGER phase); rounds then follow one another
+                # automatically with fresh ammo.
+                if curr_rnd + 1 > max_rnd:
                     self.duel_state["subphase"] = "COMPLETE"
                     return
-                self.duel_state["round"] = next_rnd
-                self.duel_state["phase_code"] = 1
-                self.duel_state["subphase"] = "WAIT"
-                self.duel_state["can_shoot"] = False
-                # Round 1 carries the setup intro after the round
-                # announcement, so its standoff floor covers both
-                # lines (6 s) and the DRAW cue never talks over the
-                # intro; later rounds keep the usual 5 s floor.
-                wait_floor = 6.0 if next_rnd == 1 else 5.0
-                self.duel_state["next_transition_at"] = now + random.uniform(
-                    wait_floor, 8.0
-                )
-                for p in self.players.values():
-                    p.ammo = 6
-                    p.prev_ammo = 6
-                if self.use_simulator:
-                    for sg in self.sim.guns.values():
-                        sg.ammo = 6
-                # Round announcement (F21): "First round!" opens the
-                # match, "Final round" heads the last round, "Next
-                # round!" the rest. The announcement plays first and
-                # the setup intro (round 1, OW_DUEL_01/02, which the
-                # original plays once at PlayersSetup) or the per-round
-                # position calls (03/04/05) follow once its modeled
-                # window ends, via the pending-audio queue.
-                if next_rnd == 1:
-                    round_file, round_sub, round_dur = (
-                        "DLG_GM_GLOBAL_115.wav",
-                        "First round!",
-                        1.2,
-                    )
-                elif next_rnd >= max_rnd:
-                    round_file, round_sub, round_dur = (
-                        "DLG_GM_GLOBAL_116.wav",
-                        "Final round",
-                        1.4,
-                    )
-                else:
-                    round_file, round_sub, round_dur = (
-                        "DLG_GM_GLOBAL_114.wav",
-                        "Next round!",
-                        1.1,
-                    )
-                cue = self.audio.play_announcer_file(
-                    round_file, round_sub, priority=-1, duration=round_dur
-                )
-                if cue is not None:
-                    delay = max(0.1, self.audio.active_until - now) + 0.25
-                else:
-                    delay = 0.1
-                self._schedule_audio_followup(
-                    delay,
-                    "pool",
-                    pool_key="duel_setup" if next_rnd == 1 else "duel_prepare",
-                    force=True,
-                )
+                self._begin_duel_round(curr_rnd + 1, max_rnd, now)
             elif sub == "WAIT":
                 self.duel_state["subphase"] = "DRAW"
                 self.duel_state["phase_code"] = 1
-                # Shooting opens when the DRAW line finishes, not when
-                # it starts: the original sets canShoot on completion
-                # of the Go line. No completion callback exists, so
-                # arm shooting at the end of the host's modeled line
-                # window (the pool's active_until, ~2.4 s, covers both
-                # DRAW recordings); fall back to 1 s when no cue
-                # emitted (assets absent).
+                # The clear "Fire!" clip (GLOBAL_83, 0.87 s) is the
+                # signal. Shooting opens a short grace after the cue
+                # starts (browser playback latency) instead of at the
+                # end of the line, so a player reacting to the word is
+                # never penalized as early.
                 self.duel_state["can_shoot"] = False
                 self.duel_state["next_transition_at"] = now + 8.0
-                cue = self.audio.trigger_pool("duel_draw", force=True)
-                if cue is not None:
-                    delay = max(0.1, self.audio.active_until - now)
-                else:
-                    delay = 1.0
-                self._schedule_audio_followup(delay, "duel_can_shoot")
+                self.audio.trigger_pool("duel_draw", force=True)
+                self._schedule_audio_followup(DUEL_FIRE_GRACE_S, "duel_can_shoot")
             elif sub == "DRAW":
                 # Timeout without a hit -> round draw
                 self.duel_state["subphase"] = "ROUND_END"
                 self.duel_state["phase_code"] = 2
                 self.duel_state["can_shoot"] = False
-                self.duel_state["next_transition_at"] = now + 3.5
+                self.duel_state["next_transition_at"] = now + 7.0
+                self.duel_state["last_winner_gun_num"] = None
+                self.duel_state["last_result_text"] = (
+                    f"ROUND {self.duel_state['round']}: DRAW — NO POINT AWARDED"
+                )
                 self._record_duel_round_result(None)
                 self.add_event("duel", f"Round {self.duel_state['round']} ended in a draw!")
                 self.audio.trigger_pool("duel_drawn", force=True)
@@ -1757,8 +1757,14 @@ class ArenaEngine:
             player.clips = status.clips
             player.prev_clips = status.clips
 
+        ammo_dropped = False
         if status.ammo is not None:
-            if status.ammo > player.prev_ammo and (status.clips or 0) >= player.prev_clips:
+            ammo_dropped = status.ammo < player.prev_ammo
+            if (
+                self.mode_name != "OldFashionDuel"
+                and status.ammo > player.prev_ammo
+                and (status.clips or 0) >= player.prev_clips
+            ):
                 player.last_rfid = "RF01"
                 self.add_event(
                     "ammo",
@@ -1871,59 +1877,105 @@ class ArenaEngine:
 
         elif self.mode_name == "OldFashionDuel":
             curr_hits = status.hits_received or 0
-            if curr_hits > player.prev_hits_rec and self.duel_state.get("phase_code", 2) <= 1:
-                delta = curr_hits - player.prev_hits_rec
-                player.hits_received += delta
-                shooters = count_new_shooters(player.prev_slots, status.hit_ids, delta)
-                shooter = self.players.get(shooters[0]) if shooters else None
-                if shooter:
-                    if self.duel_state.get("can_shoot", False):
+            if self.duel_state.get("phase_code", 2) <= 1:
+                rnd = self.duel_state.get("round", 1)
+                can_shoot = self.duel_state.get("can_shoot", False)
+                if not can_shoot and (curr_hits > player.prev_hits_rec or ammo_dropped):
+                    # Firing (or landing a hit) before the DRAW signal:
+                    # the opponent gets the round point and the round ends.
+                    early_shooter: PlayerState | None = None
+                    if curr_hits > player.prev_hits_rec:
+                        delta = curr_hits - player.prev_hits_rec
+                        player.hits_received += delta
+                        shooters = count_new_shooters(player.prev_slots, status.hit_ids, delta)
+                        early_shooter = self.players.get(shooters[0]) if shooters else None
+                    else:
+                        early_shooter = player
+                    opponent = (
+                        next((p for p in self.players.values() if p.gun_id != early_shooter.gun_id), None)
+                        if early_shooter is not None
+                        else None
+                    )
+                    if early_shooter is not None and opponent is not None:
+                        opponent.score += 1
+                        self._record_duel_round_result(opponent)
+                        self.duel_state["last_winner_gun_num"] = opponent.gun_num
+                        self.duel_state["last_result_text"] = (
+                            f"EARLY FIRE BY P{early_shooter.gun_num} ({early_shooter.display_name})! "
+                            f"+1 PT TO PLAYER {opponent.gun_num} ({opponent.display_name})"
+                        )
+                        self.add_event(
+                            "duel",
+                            f"Round {rnd}: {early_shooter.display_name} fired before FIRE! Point awarded to Player {opponent.gun_num} ({opponent.display_name})! (+1 pt)",
+                            actor=opponent,
+                            target=early_shooter,
+                        )
+                        cheat_sub = (
+                            f"Early shot by {early_shooter.display_name}! "
+                            f"Player {opponent.gun_num} ({opponent.display_name}) gets the point!"
+                        )
+                        self.audio.trigger_pool("duel_cheat", custom_subtitle=cheat_sub, force=True)
+                        cheat_wait = max(0.5, self.audio.active_until - time.time()) + 0.25
+                        self._announce_duel_round_win(opponent, initial_delay=cheat_wait)
+                        next_wait = 9.5
+                    else:
+                        self._record_duel_round_result(None)
+                        self.duel_state["last_winner_gun_num"] = None
+                        self.duel_state["last_result_text"] = f"ROUND {rnd}: DRAW — NO POINT"
+                        self.audio.trigger_pool("duel_drawn", force=True)
+                        next_wait = 7.0
+                    self.duel_state["subphase"] = "ROUND_END"
+                    self.duel_state["phase_code"] = 2
+                    self.duel_state["can_shoot"] = False
+                    self.duel_state["next_transition_at"] = time.time() + next_wait
+                    self._check_lead_change()
+                elif can_shoot and curr_hits > player.prev_hits_rec:
+                    delta = curr_hits - player.prev_hits_rec
+                    player.hits_received += delta
+                    shooters = count_new_shooters(player.prev_slots, status.hit_ids, delta)
+                    shooter = self.players.get(shooters[0]) if shooters else None
+                    if shooter:
                         shooter.score += 1
                         shooter.hits_landed += 1
                         shooter.frags += 1
+                        self.duel_state["last_winner_gun_num"] = shooter.gun_num
+                        self.duel_state["last_result_text"] = (
+                            f"PLAYER {shooter.gun_num} ({shooter.display_name}) GETS THE POINT! (+1 PT)"
+                        )
                         self.add_event(
                             "frag",
-                            f"Round {self.duel_state.get('round', 1)}: {shooter.display_name} outdrew {player.display_name}! (+1 pt)",
+                            f"Round {rnd}: {shooter.display_name} outdrew {player.display_name}! (+1 pt)",
                             actor=shooter,
                             target=player,
                         )
                         self._record_duel_round_result(shooter)
                         self._announce_duel_round_win(shooter)
                     else:
-                        # Early hit before DRAW signal -> victim wins the round!
-                        # (The forfeit triggers on a hit landing, not on a
-                        # shot fired: an early miss only spends ammo.)
-                        player.score += 1
-                        self._record_duel_round_result(player)
-                        self.add_event(
-                            "duel",
-                            f"Round {self.duel_state.get('round', 1)}: {shooter.display_name} fired before DRAW! Point awarded to {player.display_name}!",
-                            actor=player,
-                            target=shooter,
-                        )
-                        self.audio.trigger_pool("duel_cheat", force=True)
-                else:
-                    # A hit with no identifiable shooter is a draw in the
-                    # original: GLOBAL_118, round over.
+                        self._record_duel_round_result(None)
+                        self.duel_state["last_winner_gun_num"] = None
+                        self.duel_state["last_result_text"] = f"ROUND {rnd}: DRAW — NO POINT"
+                        self.audio.trigger_pool("duel_drawn", force=True)
+                    self.duel_state["subphase"] = "ROUND_END"
+                    self.duel_state["phase_code"] = 2
+                    self.duel_state["can_shoot"] = False
+                    self.duel_state["next_transition_at"] = time.time() + 7.0
+                    self._check_lead_change()
+                elif (
+                    can_shoot
+                    and len(self.players) >= 2
+                    and all(p.ammo == 0 for p in self.players.values())
+                ):
+                    self.duel_state["subphase"] = "ROUND_END"
+                    self.duel_state["phase_code"] = 2
+                    self.duel_state["can_shoot"] = False
+                    self.duel_state["next_transition_at"] = time.time() + 7.0
+                    self.duel_state["last_winner_gun_num"] = None
+                    self.duel_state["last_result_text"] = (
+                        f"ROUND {rnd}: BOTH OUT OF AMMO — DRAW (NO POINT)"
+                    )
                     self._record_duel_round_result(None)
+                    self.add_event("duel", f"Round {rnd}: Both duelists missed — Draw!")
                     self.audio.trigger_pool("duel_drawn", force=True)
-                self.duel_state["subphase"] = "ROUND_END"
-                self.duel_state["phase_code"] = 2
-                self.duel_state["can_shoot"] = False
-                self.duel_state["next_transition_at"] = time.time() + 4.0
-                self._check_lead_change()
-            elif (
-                self.duel_state.get("phase_code", 2) <= 1
-                and len(self.players) >= 2
-                and all(p.ammo == 0 for p in self.players.values())
-            ):
-                self.duel_state["subphase"] = "ROUND_END"
-                self.duel_state["phase_code"] = 2
-                self.duel_state["can_shoot"] = False
-                self.duel_state["next_transition_at"] = time.time() + 4.0
-                self._record_duel_round_result(None)
-                self.add_event("duel", f"Round {self.duel_state.get('round', 1)}: Both duelists missed — Draw!")
-                self.audio.trigger_pool("duel_drawn", force=True)
             player.prev_hits_rec = curr_hits
 
         elif self.mode_name == "TagThenShoot":
@@ -1986,29 +2038,69 @@ class ArenaEngine:
 
         player.prev_slots = list(status.hit_ids)
 
-    def _announce_duel_round_win(self, shooter: PlayerState) -> None:
-        """Announce a duel round win as the original does: the winner's
-        player-number callout (Set A, GLOBAL_54+classId), then GLOBAL_119
-        "Wins the round!" once the callout finishes. The followup is
-        scheduled at the end of the host's modeled callout window (the
-        recordings run ~1.2 s); see _pending_audio."""
-        subtitle = f"{shooter.display_name} wins Round {self.duel_state.get('round', 1)}!"
+    def _announce_duel_round_win(
+        self, shooter: PlayerState, initial_delay: float = 0.0
+    ) -> None:
+        """Announce a duel round win: 'Player X!' (GLOBAL_54+gun_num) then
+        'Wins the round!' (GLOBAL_119) once the callout finishes.
+
+        Uses priority=-1 so the player-number callout preempts 'Fire!'
+        (priority=0) both on the server and in the browser. When
+        `initial_delay > 0` (e.g. after an early-fire foul line), both
+        clips are scheduled sequentially via `_pending_audio`."""
+        rnd = self.duel_state.get("round", 1)
+        subtitle = f"Player {shooter.gun_num} ({shooter.display_name}) wins Round {rnd}! (+1 pt)"
         if 1 <= shooter.gun_num <= 16:
-            cue = self.audio.play_announcer_file(
-                f"DLG_GM_GLOBAL_{54 + shooter.gun_num:02d}.wav",
-                f"Player {shooter.gun_num}!",
-                priority=3,
-                duration=1.4,
-            )
-            if cue is not None:
-                delay = max(0.1, self.audio.active_until - time.time()) + 0.25
+            player_file = f"DLG_GM_GLOBAL_{54 + shooter.gun_num:02d}.wav"
+            player_sub = f"Player {shooter.gun_num} ({shooter.display_name})!"
+            if initial_delay <= 0.0:
+                self.audio.active_until = 0.0
+                cue = self.audio.play_announcer_file(
+                    player_file,
+                    player_sub,
+                    priority=-1,
+                    duration=1.35,
+                )
+                if cue is not None:
+                    delay = max(0.1, self.audio.active_until - time.time()) + 0.2
+                else:
+                    delay = 0.1
+                self._schedule_audio_followup(
+                    delay,
+                    "pool",
+                    pool_key="duel_round_win",
+                    subtitle=subtitle,
+                    force=True,
+                )
             else:
-                delay = 0.1
-            self._schedule_audio_followup(
-                delay, "pool", pool_key="duel_round_win", subtitle=subtitle, force=True
-            )
+                self._schedule_audio_followup(
+                    initial_delay,
+                    "file",
+                    filename=player_file,
+                    subtitle=player_sub,
+                    priority=-1,
+                    duration=1.35,
+                )
+                self._schedule_audio_followup(
+                    initial_delay + 1.55,
+                    "pool",
+                    pool_key="duel_round_win",
+                    subtitle=subtitle,
+                    force=True,
+                )
         else:
-            self.audio.trigger_pool("duel_round_win", custom_subtitle=subtitle, force=True)
+            if initial_delay <= 0.0:
+                self.audio.trigger_pool(
+                    "duel_round_win", custom_subtitle=subtitle, force=True
+                )
+            else:
+                self._schedule_audio_followup(
+                    initial_delay,
+                    "pool",
+                    pool_key="duel_round_win",
+                    subtitle=subtitle,
+                    force=True,
+                )
 
     def _record_lms_hits(self, shooters: list[int], victim: PlayerState, curr_life: int) -> None:
         """Score LastManStanding hits by the original's survival formula.

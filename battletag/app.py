@@ -1344,11 +1344,16 @@ async def _run_match_lifecycle() -> None:
 
         engine.reset_stats_for_new_match()
 
-        # Optional Manual Launch: Player 1 pulls their trigger to begin a 5s countdown.
-        # TagThenShoot skips the match-level wait: its timed turns each
-        # wait for their own player's trigger inside PLAYING.
+        # Manual Launch: Player 1 pulls their trigger to begin the countdown.
+        # OldFashionDuel always starts in manual launch mode; other modes
+        # honor the global gameLaunch setting (TagThenShoot handles per-turn
+        # trigger waits inside PLAYING).
         cd_secs = int(engine.settings.get("countdownSeconds", 10))
-        if int(engine.settings.get("gameLaunch", 0)) == 1 and engine.players and engine.mode_name != "TagThenShoot":
+        manual_start = (
+            int(engine.settings.get("gameLaunch", 0)) == 1
+            or engine.mode_name == "OldFashionDuel"
+        )
+        if manual_start and engine.players and engine.mode_name != "TagThenShoot":
             p1 = min(engine.players.values(), key=lambda p: p.gun_num)
             engine.phase = "WAIT_TRIGGER"
             engine._manual_launch_triggered = False

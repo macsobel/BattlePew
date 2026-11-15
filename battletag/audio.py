@@ -8,10 +8,23 @@ import random
 import subprocess
 import sys
 import time
+import wave
 from dataclasses import dataclass, field
 from typing import Any, Callable
 
 ROOT = pathlib.Path(__file__).resolve().parent.parent
+
+
+def _wav_duration_s(path: pathlib.Path, default: float) -> float:
+    """Return WAV clip duration in seconds, falling back to `default` if unreadable."""
+    try:
+        with wave.open(str(path), "rb") as w:
+            rate = w.getframerate()
+            if rate > 0:
+                return w.getnframes() / float(rate)
+    except Exception:
+        pass
+    return default
 
 
 def _default_user_assets_dir() -> pathlib.Path:
@@ -263,8 +276,9 @@ ANNOUNCER_POOLS: dict[str, dict[str, Any]] = {
     },
     "duel_round_win": {
         "files": _g(119),
-        "priority": 3,
+        "priority": 0,
         "proba": 1.0,
+        "duration": 1.8,
         "subtitle": "Wins the round!",
     },
     "tower_hit": {
@@ -342,16 +356,21 @@ ANNOUNCER_POOLS: dict[str, dict[str, Any]] = {
         "subtitle": "Duelists ready... wait for the signal!",
     },
     "duel_draw": {
-        "files": ["DLG_GM_OW_DUEL_06.wav", "DLG_GM_OW_DUEL_07.wav"],
+        # A single clear "Fire!" (GLOBAL_83, 0.87 s): the original's
+        # DUEL_06 ("Ready? Fire!") says the word at the very end of a
+        # 2 s line and DUEL_07 is just "Quick draw!", both too easy to
+        # misjudge against the shooting window.
+        "files": ["DLG_GM_GLOBAL_83.wav"],
         "priority": 0,
         "proba": 1.0,
-        "subtitle": "DRAW! Fire now!",
+        "subtitle": "FIRE!",
     },
     "duel_cheat": {
         "files": ["DLG_GM_OW_DUEL_08.wav", "DLG_GM_OW_DUEL_09.wav"],
         "priority": 0,
         "proba": 1.0,
-        "subtitle": "Fired too early! Round forfeited!",
+        "duration": 4.0,
+        "subtitle": "Fired too early! Point awarded to opponent!",
     },
     "tagnshoot_base": {
         # TagThenShoot tag confirmations: all four (78-81), played
@@ -563,8 +582,9 @@ class GameMasterAudio:
         if not candidates:
             return None
         chosen = random.choice(candidates)
+        default_dur = float(pool.get("duration", 2.4 if priority <= 2 else 1.5))
         self.active_priority = priority
-        self.active_until = now + (2.4 if priority <= 2 else 1.5)
+        self.active_until = now + _wav_duration_s(ANNOUNCER_DIR / chosen, default_dur)
         return self._emit(
             AudioCue(
                 category="announcer",

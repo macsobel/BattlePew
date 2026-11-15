@@ -1196,23 +1196,78 @@
       margin-top: 2px;
     }
 
-    /* Duel round display (Wild West Duel only): current round and
-       per-round results under the clock. */
+    /* Duel round display (Wild West Duel only): prominent round banner,
+       phase signal, winner callout, and per-round chips under the clock. */
     .tv-duel-strip {
       background: linear-gradient(180deg, #FFFFFF 0%, #E6E9F2 100%);
       border: 2px solid var(--border-steel);
-      border-radius: 14px;
-      padding: 8px 12px;
+      border-radius: 16px;
+      padding: 12px 14px;
       margin-top: 10px;
-      box-shadow: 0 8px 28px rgba(40, 35, 35, 0.1);
+      box-shadow: 0 10px 28px rgba(40, 35, 35, 0.12);
       text-align: center;
+      transition: background 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
     }
+
+    .tv-duel-strip.phase-wait {
+      background: linear-gradient(180deg, #FFFBEB 0%, #FEF3C7 100%);
+      border: 3px solid #F59E0B;
+      box-shadow: 0 10px 30px rgba(245, 158, 11, 0.24);
+      animation: duelWaitPulse 1.4s ease-in-out infinite;
+    }
+
+    .tv-duel-strip.phase-draw {
+      background: linear-gradient(180deg, #ECFDF5 0%, #BBF7D0 100%);
+      border: 3px solid #16A34A;
+      box-shadow: 0 10px 34px rgba(22, 163, 74, 0.34);
+    }
+
+    .tv-duel-strip.phase-end {
+      background: linear-gradient(180deg, #FFF7ED 0%, #FED7AA 100%);
+      border: 3px solid #EA580C;
+      box-shadow: 0 10px 30px rgba(234, 88, 12, 0.24);
+    }
+
+    @keyframes duelWaitPulse {
+      0%, 100% { box-shadow: 0 8px 24px rgba(245, 158, 11, 0.18); }
+      50% { box-shadow: 0 10px 34px rgba(245, 158, 11, 0.42); }
+    }
+
+    .tv-duel-badge {
+      display: inline-block;
+      font-family: var(--font-display);
+      font-size: 0.78rem;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: #FFFFFF;
+      background: var(--text-dark);
+      border-radius: 999px;
+      padding: 3px 10px;
+      margin-bottom: 6px;
+    }
+
+    .tv-duel-strip.phase-wait .tv-duel-badge { background: #B45309; }
+    .tv-duel-strip.phase-draw .tv-duel-badge { background: #15803D; }
+    .tv-duel-strip.phase-end .tv-duel-badge { background: #C2410C; }
 
     .tv-duel-head {
       font-family: var(--font-display);
-      font-size: 1.05rem;
+      font-size: 1.28rem;
+      line-height: 1.2;
       letter-spacing: 0.04em;
       color: var(--text-dark);
+    }
+
+    .tv-duel-strip.phase-draw .tv-duel-head {
+      font-size: 1.55rem;
+      color: #14532D;
+    }
+
+    .tv-duel-sub {
+      font-size: 0.85rem;
+      font-weight: 700;
+      color: var(--text-muted);
+      margin-top: 4px;
     }
 
     .tv-duel-chips {
@@ -1220,7 +1275,7 @@
       flex-wrap: wrap;
       gap: 6px;
       justify-content: center;
-      margin-top: 6px;
+      margin-top: 8px;
     }
 
     .tv-duel-chip {
@@ -4259,7 +4314,7 @@
       if (cat === 'announcer') {
         const prio = cue.priority != null ? cue.priority : 3;
         if (currentAnnouncerAudio && !currentAnnouncerAudio.ended && !currentAnnouncerAudio.paused) {
-          if (prio >= currentAnnouncerPriority) {
+          if (prio > currentAnnouncerPriority) {
             return;
           }
           currentAnnouncerAudio.pause();
@@ -5274,21 +5329,58 @@
         clockDigits.classList.toggle('urgent', !untimed && state.remaining_seconds != null && state.remaining_seconds <= 15);
       }
 
-      // Duel round display: current round, subphase, per-round results.
+      // Duel round display: current round, subphase, round winner, per-round results.
       const duelStrip = document.getElementById('duelStrip');
       if (duelStrip) {
         const ds = state.duel_state;
         const showDuel = state.mode && state.mode.id === 'OldFashionDuel' && ds && ['COUNTDOWN', 'PLAYING', 'GAME_OVER'].includes(state.phase);
         if (showDuel) {
-          const subLabels = { INTRO: 'GET READY', WAIT: 'WAIT FOR THE SIGNAL…', DRAW: 'DRAW!', ROUND_END: 'ROUND OVER', COMPLETE: 'DUEL COMPLETE' };
+          const rndNum = Math.max(1, ds.round || 0);
+          const roundLabel = ds.subphase === 'WAIT'
+            ? `ROUND ${rndNum} OF ${ds.max_rounds} · NEW ROUND`
+            : `ROUND ${rndNum} OF ${ds.max_rounds}`;
+          const nextSecs = ds.next_transition_at
+            ? Math.max(0, Math.ceil(ds.next_transition_at - Date.now() / 1000))
+            : 0;
+          let headText = '';
+          let subText = '';
+          let phaseCls = '';
+          if (ds.subphase === 'WAIT') {
+            phaseCls = 'phase-wait';
+            headText = 'HOLD FIRE — WAIT FOR "FIRE!"';
+            subText = 'Get into position · Do not pull the trigger early!';
+          } else if (ds.subphase === 'DRAW') {
+            phaseCls = 'phase-draw';
+            headText = '🔥 FIRE! SHOOT NOW! 🔥';
+            subText = 'First hit wins the point!';
+          } else if (ds.subphase === 'ROUND_END') {
+            phaseCls = 'phase-end';
+            headText = ds.last_result_text || 'ROUND COMPLETE';
+            const hasMore = (ds.round || 0) < (ds.max_rounds || 0);
+            subText = hasMore
+              ? (nextSecs > 0 ? `Next round starting in ${nextSecs}s…` : 'Starting next round…')
+              : 'Final round complete — finishing duel…';
+          } else if (ds.subphase === 'COMPLETE') {
+            phaseCls = 'phase-end';
+            headText = 'DUEL COMPLETE';
+            subText = 'All rounds finished!';
+          } else {
+            headText = 'GET READY FOR ROUND 1…';
+            subText = 'Duelists take your positions';
+          }
+          duelStrip.className = 'tv-duel-strip' + (phaseCls ? ` ${phaseCls}` : '');
           const chips = (ds.round_results || []).map((r) => {
             const label = r.winner_gun_num ? `P${r.winner_gun_num} ★` : 'DRAW';
             return `<span class="tv-duel-chip">${esc('R' + r.round + ': ' + label)}</span>`;
           }).join('');
-          duelStrip.innerHTML = `<div class="tv-duel-head">ROUND ${Math.max(1, ds.round)} OF ${ds.max_rounds} · ${esc(subLabels[ds.subphase] || ds.subphase || '')}</div>`
+          duelStrip.innerHTML =
+            `<div class="tv-duel-badge">${esc(roundLabel)}</div>`
+            + `<div class="tv-duel-head">${esc(headText)}</div>`
+            + (subText ? `<div class="tv-duel-sub">${esc(subText)}</div>` : '')
             + (chips ? `<div class="tv-duel-chips">${chips}</div>` : '');
           duelStrip.style.display = '';
         } else {
+          duelStrip.className = 'tv-duel-strip';
           duelStrip.style.display = 'none';
           duelStrip.innerHTML = '';
         }

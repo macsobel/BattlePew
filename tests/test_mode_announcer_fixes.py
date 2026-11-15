@@ -173,9 +173,9 @@ def test_lms_survival_scoring_and_alive_based_outcomes() -> None:
         eng.sim.sim_fire_shot(2, 4)
         _poll_all(eng)
     assert eng.players[4].score == 3 - 1
-    # The survivor never took a hit, so their score stayed 0 — but
-    # alive-based outcomes still declare them the winner.
-    assert eng.players[2].score == 0
+    # The survivor never took a hit: their score is the starting
+    # life + #players (5 + 3), above every eliminated player's.
+    assert eng.players[2].score == 5 + 3
     assert eng.compute_gameover_outcomes() == {2: True, 3: False, 4: False}
     assert eng.check_auto_end_conditions() is True
 
@@ -426,3 +426,64 @@ def test_sim_auto_reload() -> None:
     assert eng2.sim.sim_fire_shot(2, None)["ok"] is False
     eng2.sim.poll_gun(2, "OldFashionDuel")
     assert sg2.ammo == 0  # no clips: no refill
+
+
+@AUDIO
+def test_duel_announces_round_winner_on_hit_and_early_fire() -> None:
+    """Normal hit preempts 'Fire!' with Player X! (priority -1) + Wins the round!,
+    and early fire awards +1 pt to opponent and schedules Player X! + Wins the round!
+    after the full duel_cheat clip finishes."""
+    eng = ArenaEngine()
+    _start(eng, "OldFashionDuel")
+
+    # Round 1: INTRO -> WAIT (flush setup intro) -> DRAW -> can_shoot -> P1 hits P2
+    eng.duel_state["next_transition_at"] = 0
+    eng.tick_mode_timers()  # INTRO -> WAIT
+    eng.tick_pending_audio(now=time.time() + 2.5)  # flush duel_setup during WAIT
+    eng.duel_state["next_transition_at"] = 0
+    eng.tick_mode_timers()  # WAIT -> DRAW (triggers duel_draw at priority=0)
+    eng.tick_pending_audio(now=time.time() + 1.0)
+    assert eng.duel_state["can_shoot"] is True
+
+    eng.audio.recent_cues.clear()
+    eng.sim.sim_fire_shot(2, 3)  # P1 (gun_num 1) hits P2
+    _poll_all(eng)
+    assert eng.duel_state["last_winner_gun_num"] == 1
+    assert "PLAYER 1" in eng.duel_state["last_result_text"]
+    assert eng.duel_state["next_transition_at"] - time.time() >= 6.0
+
+    # Immediate cue is DLG_GM_GLOBAL_55.wav ("Player 1!") with priority=-1
+    assert [c.filename for c in eng.audio.recent_cues] == ["DLG_GM_GLOBAL_55.wav"]
+    assert eng.audio.recent_cues[0].priority == -1
+
+    # Flush followup -> DLG_GM_GLOBAL_119.wav ("Wins the round!")
+    eng.tick_pending_audio(now=time.time() + 3.0)
+    assert [c.filename for c in eng.audio.recent_cues] == [
+        "DLG_GM_GLOBAL_55.wav",
+        "DLG_GM_GLOBAL_119.wav",
+    ]
+
+    # Round 2: early fire during WAIT by P1 -> P2 gets the point + full sequence
+    eng.duel_state["next_transition_at"] = 0
+    eng.tick_mode_timers()  # ROUND_END -> WAIT (round 2)
+    eng.tick_pending_audio(now=time.time() + 2.5)  # flush duel_prepare during WAIT
+    assert eng.duel_state["round"] == 2
+    assert eng.duel_state["last_winner_gun_num"] is None
+    assert eng.duel_state["last_result_text"] == ""
+
+    eng.audio.recent_cues.clear()
+    eng.sim.sim_fire_shot(2, None)  # P1 misses early
+    _poll_all(eng)
+    assert eng.players[3].score == 1
+    assert eng.duel_state["last_winner_gun_num"] == 2
+    assert "PLAYER 2" in eng.duel_state["last_result_text"]
+    assert eng.duel_state["next_transition_at"] - time.time() >= 8.5
+
+    # duel_cheat fires immediately; Player 2! + Wins the round! are queued
+    assert eng.audio.recent_cues[0].filename in ("DLG_GM_OW_DUEL_08.wav", "DLG_GM_OW_DUEL_09.wav")
+    eng.tick_pending_audio(now=time.time() + 10.0)
+    assert [c.filename for c in eng.audio.recent_cues[1:]] == [
+        "DLG_GM_GLOBAL_56.wav",
+        "DLG_GM_GLOBAL_119.wav",
+    ]
+    assert eng.audio.recent_cues[1].priority == -1

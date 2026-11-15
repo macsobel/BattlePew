@@ -285,9 +285,9 @@
       letter-spacing: 0.03em;
     }
 
-    .duel-subphase.wait { color: #F59E0B; }
-    .duel-subphase.draw { color: var(--team-green); font-size: 2.6rem; }
-    .duel-subphase.end { color: #9BA3B5; font-size: 1.5rem; }
+    .duel-subphase.wait { color: #F59E0B; font-size: 1.5rem; }
+    .duel-subphase.draw { color: var(--team-green); font-size: 2.3rem; }
+    .duel-subphase.end { color: #FDBA74; font-size: 1.2rem; }
     .duel-subphase.complete { color: var(--team-yellow); }
 
     .duel-tally {
@@ -1746,10 +1746,22 @@
       const showDuelBlock = isDuel && isRoundActive && !!ds && typeof ds.round === 'number' && !resultsRevealed;
       duelBlock.style.display = showDuelBlock ? 'flex' : 'none';
       if (showDuelBlock) {
-        const subLabels = { INTRO: 'GET READY', WAIT: 'WAIT FOR THE SIGNAL…', DRAW: 'DRAW!', ROUND_END: 'ROUND OVER', COMPLETE: 'DUEL COMPLETE' };
-        document.getElementById('hudDuelRound').textContent = `ROUND ${Math.max(1, ds.round)} OF ${ds.max_rounds}`;
+        const subLabels = {
+          INTRO: 'GET READY…',
+          WAIT: 'HOLD FIRE — WAIT FOR "FIRE!"',
+          DRAW: '🔥 FIRE! SHOOT NOW! 🔥',
+          ROUND_END: ds.last_result_text || 'ROUND OVER',
+          COMPLETE: 'DUEL COMPLETE',
+        };
+        const roundTag = ds.subphase === 'WAIT' ? ' · NEW ROUND' : '';
+        document.getElementById('hudDuelRound').textContent = `ROUND ${Math.max(1, ds.round)} OF ${ds.max_rounds}${roundTag}`;
         const subEl = document.getElementById('hudDuelSubphase');
-        subEl.textContent = subLabels[ds.subphase] || ds.subphase || '';
+        const nextSecs = ds.next_transition_at ? Math.max(0, Math.ceil(ds.next_transition_at - Date.now() / 1000)) : 0;
+        const hasMoreRounds = ds.round < ds.max_rounds;
+        const endTail = (ds.subphase === 'ROUND_END' && hasMoreRounds && nextSecs > 0)
+          ? ` (Next round in ${nextSecs}s…)`
+          : '';
+        subEl.textContent = (subLabels[ds.subphase] || ds.subphase || '') + endTail;
         subEl.className = 'duel-subphase ' + (ds.subphase === 'WAIT' ? 'wait' : ds.subphase === 'DRAW' ? 'draw' : ds.subphase === 'COMPLETE' ? 'complete' : 'end');
         const rival = allPlayers.find((p) => p.gun_id !== me.gun_id) || null;
         const scores = ds.round_scores || {};
@@ -1989,7 +2001,7 @@
         } else if (state.mode.id === 'StarterFrag') {
           hint = 'Ammo boxes reload your clip';
         } else if (state.mode.id === 'OldFashionDuel') {
-          hint = 'Wait for DRAW — an early hit forfeits the round';
+          hint = 'Wait for the "FIRE!" call — firing early gives the point to your opponent';
         } else if (state.mode.id === 'TagThenShoot') {
           hint = 'Pull the trigger to start — scan bases in order, then shoot the tower';
         } else if (state.mode.id === 'FreeFrag' && state.settings && state.settings.scoreLimit > 0) {
