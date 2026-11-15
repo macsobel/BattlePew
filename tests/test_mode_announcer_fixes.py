@@ -44,7 +44,15 @@ def _poll_all(eng: ArenaEngine) -> None:
 
 
 def _start_run(eng: ArenaEngine) -> None:
-    """Drive the active player's timed turn from WAIT_TRIGGER to RUNNING."""
+    """Drive the active player's timed turn from the round intro to RUNNING."""
+    if eng.race_state["turn_phase"] == "ROUND_INTRO":
+        eng.tick_race_turns()
+        eng.race_state["intro_ends_at"] = time.time() - 1.0
+        eng.tick_race_turns()
+    if eng.race_state["turn_phase"] == "PLAYER_INTRO":
+        eng.tick_race_turns()
+        eng.race_state["callout_ends_at"] = time.time() - 1.0
+        eng.tick_race_turns()
     assert eng.race_state["turn_phase"] == "WAIT_TRIGGER"
     eng._turn_triggered = True
     eng.tick_race_turns()

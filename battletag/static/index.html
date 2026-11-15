@@ -1332,6 +1332,114 @@
       cursor: pointer;
     }
 
+    /* Host-only skip-run control on the race strip. */
+    .tv-race-skip-btn {
+      margin-top: 6px;
+      margin-left: 8px;
+      font-family: var(--font-display);
+      font-size: 0.85rem;
+      letter-spacing: 0.04em;
+      color: var(--text-dark);
+      background: #FFFFFF;
+      border: 2px solid var(--border-steel);
+      border-radius: 999px;
+      padding: 4px 16px;
+      cursor: pointer;
+    }
+
+    /* Per-round chips on race cards and results: one chip per round.
+       The live chip (current run in progress) pulses its border only —
+       the text never fades. */
+    .tv-round-chips {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 4px;
+      margin-top: 4px;
+    }
+
+    .tv-round-chip {
+      font-size: 0.72rem;
+      font-weight: 800;
+      letter-spacing: 0.02em;
+      color: var(--text-dark);
+      background: #EEF0F5;
+      border: 1px solid var(--border-steel);
+      border-radius: 999px;
+      padding: 2px 8px;
+      font-variant-numeric: tabular-nums;
+      white-space: nowrap;
+    }
+
+    .tv-round-chip.live {
+      border-color: var(--bt-orange);
+      color: var(--bt-orange);
+    }
+
+    .tv-round-chip.dnf {
+      color: var(--text-muted);
+    }
+
+    .tv-total-line {
+      font-size: 0.78rem;
+      font-weight: 800;
+      letter-spacing: 0.04em;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      margin-top: 3px;
+    }
+
+    /* Race Order panel (step 2): order badges, bench/drop controls.
+       Cards reuse the .gun-row/.team-group patterns. */
+    .race-order-num {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-width: 26px;
+      height: 26px;
+      border-radius: 50%;
+      background: var(--bt-orange);
+      color: #FFFFFF;
+      font-family: var(--font-display);
+      font-size: 0.85rem;
+      flex: none;
+    }
+
+    .race-roster-x-btn,
+    .race-roster-add-btn {
+      font-family: var(--font-display);
+      font-size: 0.8rem;
+      font-weight: 800;
+      border-radius: 999px;
+      cursor: pointer;
+      padding: 4px 10px;
+      flex: none;
+    }
+
+    .race-roster-x-btn {
+      color: var(--team-red);
+      background: #FFFFFF;
+      border: 2px solid var(--team-red);
+    }
+
+    .race-roster-add-btn {
+      color: #FFFFFF;
+      background: var(--team-green);
+      border: 2px solid var(--team-green);
+    }
+
+    .race-sitter-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 8px 10px;
+      border-top: 1px dashed var(--border-steel);
+      font-size: 0.8rem;
+      font-weight: 700;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.03em;
+    }
+
     /* TagThenShoot finished-run time on the card. */
     .tv-run-time {
       font-size: 0.9rem;
@@ -1361,6 +1469,21 @@
       background: var(--bt-orange);
       border-radius: 999px;
       padding: 2px 8px;
+      margin-top: 4px;
+    }
+
+    /* UP NEXT: same pill family as UP NOW, but an outline/muted
+       treatment so UP NOW stays dominant. */
+    .tv-next-badge {
+      display: inline-block;
+      font-size: 0.7rem;
+      font-weight: 800;
+      letter-spacing: 0.06em;
+      color: var(--text-muted);
+      background: transparent;
+      border: 1.5px solid var(--text-muted);
+      border-radius: 999px;
+      padding: 1px 8px;
       margin-top: 4px;
     }
 
@@ -3746,6 +3869,17 @@
             <div class="teams-groups" id="gunsRosterTeams"></div>
           </div>
         </section>
+
+        <!-- Race order (Tag'n Shoot only) -->
+        <section class="bt-panel" id="raceOrderPanel" style="display: none;">
+          <div class="bt-panel-header">
+            <h3><span class="accent-pip"></span> Race Order</h3>
+            <span class="panel-caption">Drag to reorder. ✕ sits a player out (they stay paired). Order locks at match start.</span>
+          </div>
+          <div class="bt-panel-body">
+            <div class="teams-groups" id="raceRosterGroups"></div>
+          </div>
+        </section>
         </div>
 
         <div class="wizard-nav" style="align-items: center;">
@@ -4346,6 +4480,29 @@
       const title = mode.title || 'this mode';
       if (players.length === 0) {
         return { ready: false, reason: 'Pair at least one T-Blaster first' };
+      }
+      // Tag'n Shoot gates on the RACE ROSTER, not the pairing list: a
+      // benched player never runs, so their vest/blaster must not
+      // block the launch.
+      if (mode.id === 'TagThenShoot') {
+        const roster = (state && state.race_roster) || { order: [], bench: [] };
+        const orderNums = Array.isArray(roster.order) && roster.order.length
+          ? roster.order
+          : players.map((p) => p.gun_num);
+        const racers = players.filter((p) => orderNums.includes(p.gun_num));
+        if (racers.length < minP) {
+          return { ready: false, reason: `Need at least ${minP} racer${minP === 1 ? '' : 's'} for ${title} (${racers.length} racing)` };
+        }
+        if (racers.length > maxP) {
+          return { ready: false, reason: `${title} supports at most ${maxP} racers (${racers.length} racing)` };
+        }
+        if (racers.some((p) => p.gun_online === false)) {
+          return { ready: false, reason: 'All racers\u2019 T-Blasters must be online' };
+        }
+        if (racers.some((p) => !p.vest_ok)) {
+          return { ready: false, reason: 'All racers must have their vests connected' };
+        }
+        return { ready: true, reason: '' };
       }
       if (players.length < minP) {
         return { ready: false, reason: `Need at least ${minP} T-Blaster${minP === 1 ? '' : 's'} for ${title} (${players.length} paired)` };
@@ -5008,22 +5165,28 @@
       `).join('');
 
       // 3. Settings Grid: horizontal segmented controls with sliding swish indicator
+      const isRaceSettings = state.mode.id === 'TagThenShoot';
       const SETTING_EXPLAIN = {
         durationSeconds: 'How long the match lasts. The timer runs on the Arena Master.',
-        gameLaunch: 'Auto starts a 10s countdown right away. Manual waits for Player 1 to pull their T-Blaster trigger, then runs a 5s countdown.',
+        gameLaunch: isRaceSettings
+          ? 'Auto runs a 10s countdown before every run. Manual waits for each player to pull their trigger, then runs a 5s countdown.'
+          : 'Auto starts a 10s countdown right away. Manual waits for Player 1 to pull their T-Blaster trigger, then runs a 5s countdown.',
         scoreLimit: 'First player to this many hits wins right away. Timed means the highest score wins when the clock ends.',
         lifePoints: 'Hits a player can take before they are out of action.',
         ammunitions: 'Shots in each clip.',
         clips: 'Spare clips. Scan an ammo box to reload.',
         teamFrag: 'When on, teammates’ shots hurt each other.',
-        rounds: 'How many quickdraw rounds the duel lasts.',
+        rounds: isRaceSettings
+          ? 'How many times every racer runs the course. Each racer runs once per round, in race order; the best finished time wins.'
+          : 'How many quickdraw rounds the duel lasts.',
+        numberOfBase: 'T-Bases on the course. Each base must be tagged, then the tower shot, in order.',
         medkit: 'Medkit boxes available to heal during combat.',
         swap: 'When on, you must alternate between the two different Ammo/Medkit boxes to reload or heal.',
         respawnTime: 'Delay after scanning a T-Base before returning to the game (cannot shoot or be hit during this time).',
       };
       const segLabel = (key, c) => {
         if (key === 'durationSeconds') return `${Math.round(c / 60)}m`;
-        if (key === 'gameLaunch') return c === 0 ? 'Auto' : 'Manual (P1 Trigger)';
+        if (key === 'gameLaunch') return c === 0 ? 'Auto' : (isRaceSettings ? 'Manual (Each Player)' : 'Manual (P1 Trigger)');
         if (key === 'scoreLimit') return c === 0 ? 'Timed' : `${c}`;
         if (key === 'teamFrag' || key === 'swap') return c === 1 ? 'On' : 'Off';
         if (key === 'medkit') return c === 1 ? 'Yes' : 'No';
@@ -5115,6 +5278,7 @@
       }
       document.getElementById('gunsRoster').innerHTML = rosterHtml;
       renderTeamsPanel(state);
+      renderRaceRosterPanel(state);
       const pairCount = document.getElementById('pairCountLabel');
       if (pairCount) pairCount.textContent = `${(state.players || []).length} of 8 paired`;
 
@@ -5220,6 +5384,191 @@
       if (p && p.team_id !== teamId) saveProfile(gunNum, { team_id: teamId });
     }
 
+    // Race Order panel (step 2, Tag'n Shoot only): one ordered Racing
+    // list plus a bench. Dragging reorders (dropping on a card inserts
+    // before it; dropping on the group appends) or moves a player to
+    // the bench and back. The ✕ button drops a player to the bench
+    // WITHOUT unpairing them; the + button re-adds at the end. Every
+    // change POSTs the full roster; the next state broadcast
+    // re-renders, so a rejected change snaps back on its own.
+    function renderRaceRosterPanel(state) {
+      const container = document.getElementById('raceRosterGroups');
+      const panel = document.getElementById('raceOrderPanel');
+      if (!container || !panel) return;
+      const isRace = state.mode.id === 'TagThenShoot';
+      panel.style.display = isRace ? '' : 'none';
+      const columns = document.getElementById('step2Columns');
+      if (columns) columns.classList.toggle('solo', !state.mode.teams && !isRace);
+      if (!isRace) return;
+      const roster = state.race_roster || { order: [], bench: [] };
+      const byNum = {};
+      (state.players || []).forEach((p) => { byNum[p.gun_num] = p; });
+      let orderNums = (roster.order || []).filter((n) => byNum[n]);
+      let benchNums = (roster.bench || []).filter((n) => byNum[n]);
+      // Safety: a paired player missing from both lists races last.
+      (state.players || []).forEach((p) => {
+        if (!orderNums.includes(p.gun_num) && !benchNums.includes(p.gun_num)) orderNums.push(p.gun_num);
+      });
+      const raceCard = (p, idx) => `
+        <div class="gun-row draggable" draggable="true" data-gun-num="${p.gun_num}"
+            ondragstart="onRaceDragStart(event, ${p.gun_num})" ondragend="onRaceDragEnd(event)"
+            ondragover="onRaceDragOver(event)" ondragleave="onTeamDragLeave(event)" ondrop="onRaceDropOn(event, ${p.gun_num})">
+          <span class="drag-grip" title="Drag to reorder">⋮⋮</span>
+          <span class="race-order-num">${idx + 1}</span>
+          <span class="gun-avatar-btn" style="cursor: default;">
+            <img src="/static/assets/textures/Avatars/64x/${p.avatar}.png" alt="${p.avatar}" />
+            ${playerNumBadge(p.gun_num, 24)}
+          </span>
+          <div class="gun-info-block">
+            <div class="gun-name-row">
+              <span class="gun-name-text">${esc((p.name || '').toUpperCase())}</span>
+            </div>
+            <div class="gun-meta">
+              <span>${p.gun_online === false ? 'T-Blaster: OFFLINE' : (p.vest_ok ? 'Vest: Connected' : 'Vest: Not detected')}</span>
+            </div>
+          </div>
+          <div style="text-align: right; display: flex; align-items: center; gap: 6px;">
+            ${readyMarkHtml(p)}
+            <button type="button" class="race-roster-x-btn" onclick="raceBenchPlayer(${p.gun_num})" title="Sit this player out — they stay paired">✕ Sit out</button>
+          </div>
+        </div>`;
+      const benchCard = (p) => `
+        <div class="gun-row draggable" draggable="true" data-gun-num="${p.gun_num}"
+            ondragstart="onRaceDragStart(event, ${p.gun_num})" ondragend="onRaceDragEnd(event)">
+          <span class="drag-grip" title="Drag back to Racing">⋮⋮</span>
+          <span class="gun-avatar-btn" style="cursor: default;">
+            <img src="/static/assets/textures/Avatars/64x/${p.avatar}.png" alt="${p.avatar}" />
+            ${playerNumBadge(p.gun_num, 24)}
+          </span>
+          <div class="gun-info-block">
+            <div class="gun-name-row">
+              <span class="gun-name-text">${esc((p.name || '').toUpperCase())}</span>
+            </div>
+            <div class="gun-meta">
+              <span>Sitting out — stays paired</span>
+            </div>
+          </div>
+          <div style="text-align: right;">
+            <button type="button" class="race-roster-add-btn" onclick="raceAddPlayer(${p.gun_num})" title="Add back to the race (goes last)">+ Race</button>
+          </div>
+        </div>`;
+      container.innerHTML = `
+        <div class="team-group"
+            ondragover="onRaceDragOver(event)" ondragleave="onTeamDragLeave(event)" ondrop="onRaceDropGroup(event, true)">
+          <div class="team-group-header">
+            <span class="team-group-name">Racing · in run order</span>
+            <span class="team-group-meta">${orderNums.length} racer${orderNums.length === 1 ? '' : 's'}</span>
+          </div>
+          ${orderNums.map((n, i) => raceCard(byNum[n], i)).join('') || '<div class="team-drop-hint">Drop racers here</div>'}
+        </div>
+        <div class="team-group"
+            ondragover="onRaceDragOver(event)" ondragleave="onTeamDragLeave(event)" ondrop="onRaceDropGroup(event, false)">
+          <div class="team-group-header">
+            <span class="team-group-name">Sitting out</span>
+            <span class="team-group-meta">${benchNums.length} player${benchNums.length === 1 ? '' : 's'}</span>
+          </div>
+          ${benchNums.map((n) => benchCard(byNum[n])).join('') || '<div class="team-drop-hint">Drop players here to sit them out</div>'}
+        </div>`;
+    }
+
+    let draggedRaceGunNum = null;
+
+    function onRaceDragStart(ev, gunNum) {
+      draggedRaceGunNum = gunNum;
+      ev.dataTransfer.effectAllowed = 'move';
+      ev.dataTransfer.setData('text/plain', String(gunNum));
+      ev.currentTarget.classList.add('dragging');
+    }
+
+    function onRaceDragEnd() {
+      draggedRaceGunNum = null;
+      document.querySelectorAll('.team-group.drag-over').forEach((el) => el.classList.remove('drag-over'));
+      document.querySelectorAll('.gun-row.dragging').forEach((el) => el.classList.remove('dragging'));
+    }
+
+    function onRaceDragOver(ev) {
+      ev.preventDefault();
+      ev.dataTransfer.dropEffect = 'move';
+      const group = ev.currentTarget.closest('.team-group');
+      if (group) group.classList.add('drag-over');
+    }
+
+    function raceCurrentRoster() {
+      const roster = (appState && appState.race_roster) || { order: [], bench: [] };
+      return { order: [...(roster.order || [])], bench: [...(roster.bench || [])] };
+    }
+
+    function raceMovePlayer(gunNum, targetGunNum, toBench) {
+      const { order, bench } = raceCurrentRoster();
+      const fromOrder = order.indexOf(gunNum);
+      const fromBench = bench.indexOf(gunNum);
+      if (fromOrder >= 0) order.splice(fromOrder, 1);
+      if (fromBench >= 0) bench.splice(fromBench, 1);
+      if (toBench) {
+        bench.push(gunNum);
+      } else if (targetGunNum != null && order.includes(targetGunNum)) {
+        order.splice(order.indexOf(targetGunNum), 0, gunNum);
+      } else {
+        order.push(gunNum);
+      }
+      saveRaceRoster(order, bench);
+    }
+
+    function onRaceDropOn(ev, targetGunNum) {
+      ev.preventDefault();
+      ev.stopPropagation();
+      const gunNum = draggedRaceGunNum || parseInt(ev.dataTransfer.getData('text/plain'), 10);
+      draggedRaceGunNum = null;
+      document.querySelectorAll('.team-group.drag-over').forEach((el) => el.classList.remove('drag-over'));
+      if (!gunNum || gunNum === targetGunNum) return;
+      raceMovePlayer(gunNum, targetGunNum, false);
+    }
+
+    function onRaceDropGroup(ev, toRacing) {
+      ev.preventDefault();
+      ev.currentTarget.classList.remove('drag-over');
+      const gunNum = draggedRaceGunNum || parseInt(ev.dataTransfer.getData('text/plain'), 10);
+      draggedRaceGunNum = null;
+      if (!gunNum) return;
+      raceMovePlayer(gunNum, null, !toRacing);
+    }
+
+    function raceBenchPlayer(gunNum) {
+      raceMovePlayer(gunNum, null, true);
+    }
+
+    function raceAddPlayer(gunNum) {
+      raceMovePlayer(gunNum, null, false);
+    }
+
+    async function saveRaceRoster(order, bench) {
+      try {
+        const res = await fetch('/api/race/roster', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ order, bench }),
+        });
+        if (!res.ok) {
+          const err = await res.json().catch(() => ({}));
+          await showAppAlert(err.detail || 'Could not update the race order right now.', { title: 'Race Order' });
+        }
+      } catch (err) {
+        console.error(err);
+      }
+    }
+
+    async function skipRaceRun() {
+      try {
+        const res = await fetch('/api/race/skip-run', { method: 'POST' });
+        if (!res.ok) {
+          const err = await res.json().catch(() => ({}));
+          await showAppAlert(err.detail || 'Could not skip this run right now.', { title: 'Skip Run' });
+        }
+      } catch (err) {
+        console.error(err);
+      }
+    }
+
     function formatEventText(text, players) {
       if (!text) return '';
       let out = text;
@@ -5318,6 +5667,39 @@
         clockDigits.textContent = '00:00';
         clockSub.textContent = 'Match Complete!';
         clockDigits.classList.remove('urgent');
+      } else if (state.mode && state.mode.id === 'TagThenShoot' && state.phase === 'PLAYING' && state.race_state) {
+        // Race clock counts UP with tenths during a run, shows the
+        // countdown number during COUNTDOWN, and never shows the
+        // cap-remaining counting down. The cap remainder still drives
+        // urgency styling (colour only — the digits never dim).
+        const rs = state.race_state;
+        const fmtElapsed = (s) => {
+          const t = Math.max(0, s || 0);
+          const m = Math.floor(t / 60);
+          const sec = Math.floor(t % 60);
+          const tenth = Math.floor((t * 10) % 10);
+          return `${m}:${String(sec).padStart(2, '0')}.${tenth}`;
+        };
+        const roundLabel = `Round ${Math.max(1, rs.round_index || 1)} of ${Math.max(1, rs.max_rounds || 1)}`;
+        const activeP = (state.players || []).find((p) => p.gun_id === rs.active_gun_id);
+        if (rs.turn_phase === 'RUNNING') {
+          clockDigits.textContent = fmtElapsed(rs.elapsed);
+          clockSub.textContent = `${roundLabel} · Run time`;
+        } else if (rs.turn_phase === 'COUNTDOWN') {
+          clockDigits.textContent = String(rs.countdown_remaining);
+          clockSub.textContent = 'Get ready!';
+        } else if (rs.turn_phase === 'WAIT_TRIGGER') {
+          clockDigits.textContent = '0:00.0';
+          clockSub.textContent = 'Pull the trigger to start your run';
+        } else if (rs.turn_phase === 'TURN_END') {
+          const entry = activeP && Array.isArray(activeP.run_history) ? activeP.run_history[activeP.run_history.length - 1] : null;
+          clockDigits.textContent = entry && entry.completed && entry.time != null ? fmtElapsed(entry.time) : 'TIME UP';
+          clockSub.textContent = entry && entry.completed ? `${roundLabel} · Run finished` : `${roundLabel} · Cap reached`;
+        } else {
+          clockDigits.textContent = '0:00.0';
+          clockSub.textContent = roundLabel;
+        }
+        clockDigits.classList.toggle('urgent', rs.turn_phase === 'RUNNING' && state.remaining_seconds != null && state.remaining_seconds <= 15);
       } else {
         clockDigits.textContent = state.clock;
         // Timerless modes (duel, LMS) count up: remaining_seconds is
@@ -5387,8 +5769,9 @@
       }
 
       // TagThenShoot timed-turn strip: who's up, the live run clock,
-      // and the fastest finished run. Renders every broadcast so the
-      // elapsed clock ticks live.
+      // the round/run counters, and the fastest finished run. Renders
+      // every broadcast so the elapsed clock ticks live. The wait text
+      // branches on the launch mode: Auto never mentions a trigger.
       const raceStrip = document.getElementById('raceStrip');
       if (raceStrip) {
         const rs = state.race_state;
@@ -5396,18 +5779,30 @@
         if (showRace) {
           const players = state.players || [];
           const active = players.find((p) => p.gun_id === rs.active_gun_id);
-          const finished = players.filter((p) => p.run_completed && p.run_time != null);
-          const fastest = finished.length ? finished.reduce((a, b) => (a.run_time <= b.run_time ? a : b)) : null;
-          const turnLabel = rs.turn_order && rs.turn_order.length
-            ? `TURN ${Math.min(rs.turn_index + 1, rs.turn_order.length)} OF ${rs.turn_order.length}` : '';
-          const fastestLabel = fastest ? `FASTEST: ${esc((fastest.name || '').toUpperCase())} ${fastest.run_time.toFixed(1)}s` : 'NO FINISHES YET';
+          const racers = Array.isArray(rs.turn_order) && rs.turn_order.length
+            ? players.filter((p) => rs.turn_order.includes(p.gun_id))
+            : players;
+          const finished = racers.filter((p) => p.best_run_time != null);
+          const fastest = finished.length ? finished.reduce((a, b) => (a.best_run_time <= b.best_run_time ? a : b)) : null;
+          const racerCount = Math.max(1, racers.length);
+          const roundNum = Math.max(1, rs.round_index || 1);
+          const maxRounds = Math.max(1, rs.max_rounds || 1);
+          const totalRuns = racerCount * maxRounds;
+          const runNum = rs.turn_phase === 'DONE' ? totalRuns : Math.min((roundNum - 1) * racerCount + (rs.turn_index || 0) + 1, totalRuns);
+          const fastestLabel = fastest ? `FASTEST: ${esc((fastest.name || '').toUpperCase())} ${fastest.best_run_time.toFixed(1)}s` : 'NO FINISHES YET';
           const activeName = active ? esc((active.name || '').toUpperCase()) : '';
           let head = '';
-          let sub = `${turnLabel} · ${fastestLabel}`;
+          let sub = `ROUND ${roundNum} OF ${maxRounds} · RUN ${runNum} OF ${totalRuns} · ${fastestLabel}`;
           let btn = '';
-          if (state.phase === 'GAME_OVER') {
-            head = fastest ? `🏁 FASTEST RUN: ${esc((fastest.name || '').toUpperCase())} — ${fastest.run_time.toFixed(1)}s` : '🏁 RACE OVER — NO FINISHES';
+          const activeEntry = active && Array.isArray(active.run_history) && active.run_history.length
+            ? active.run_history[active.run_history.length - 1] : null;
+          if (state.phase === 'GAME_OVER' || rs.turn_phase === 'DONE') {
+            head = fastest ? `🏁 FASTEST RUN: ${esc((fastest.name || '').toUpperCase())} — ${fastest.best_run_time.toFixed(1)}s` : '🏁 RACE OVER — NO FINISHES';
             sub = fastestLabel;
+          } else if (rs.turn_phase === 'ROUND_INTRO') {
+            head = `ROUND ${roundNum} OF ${maxRounds} — GET READY`;
+          } else if (rs.turn_phase === 'PLAYER_INTRO') {
+            head = `${activeName} IS UP — GET READY`;
           } else if (rs.turn_phase === 'WAIT_TRIGGER') {
             head = `${activeName} — PULL THE TRIGGER TO START`;
             if (state.use_simulator) {
@@ -5418,11 +5813,15 @@
           } else if (rs.turn_phase === 'RUNNING') {
             head = `${activeName} — ${(rs.elapsed || 0).toFixed(1)}s`;
           } else if (rs.turn_phase === 'TURN_END') {
-            head = active && active.run_completed && active.run_time != null
-              ? `${activeName} — FINISHED ${active.run_time.toFixed(1)}s`
-              : `${activeName} — TIME UP · ${active ? active.score : 0} PTS`;
+            head = activeEntry && activeEntry.completed && activeEntry.time != null
+              ? `${activeName} — FINISHED ${activeEntry.time.toFixed(1)}s`
+              : `${activeName} — TIME UP · ${activeEntry ? activeEntry.points : 0} PTS`;
           } else {
             head = '🏁 RACE COMPLETE';
+          }
+          // Host-only skip: forfeits the current run (or skips the beat).
+          if (state.phase === 'PLAYING' && ['WAIT_TRIGGER', 'COUNTDOWN', 'RUNNING', 'TURN_END'].includes(rs.turn_phase)) {
+            btn += `<button class="tv-race-skip-btn" onclick="skipRaceRun()" title="Forfeit this run and move on">Skip run</button>`;
           }
           raceStrip.innerHTML = `<div class="tv-race-head">${head}</div><div class="tv-race-sub">${sub}</div>${btn}`;
           raceStrip.style.display = '';
@@ -5450,7 +5849,7 @@
       // leader: state.players arrives in the server's race ranking,
       // so the first finisher in it is the fastest so far.
       const leaderGunId = state.mode.id === 'TagThenShoot'
-        ? (((state.players || []).find((p) => p.run_completed && p.run_time != null) || {}).gun_id ?? null)
+        ? (((state.players || []).find((p) => p.best_run_time != null) || {}).gun_id ?? null)
         : (sortedByScore.length > 0 && sortedByScore[0].score > 0 ? sortedByScore[0].gun_id : null);
 
       const renderPills = (cur, max, onClass) => {
@@ -5469,15 +5868,30 @@
         return `<span class="tv-clips-strip" title="${clips} clip${clips === 1 ? '' : 's'} left">${pips}</span>`;
       };
 
+      // Game-mode grid players: in the race, sitters are hidden
+      // entirely — the grid shows racers only and reflows for their
+      // count. The frozen turn_order is the truth during a match;
+      // the setup bench is the fallback before it exists.
+      const gridPlayers = state.mode.id === 'TagThenShoot' && state.race_state && Array.isArray(state.race_state.turn_order) && state.race_state.turn_order.length
+        ? (state.players || []).filter((p) => state.race_state.turn_order.includes(p.gun_id))
+        : state.mode.id === 'TagThenShoot' && state.race_roster && Array.isArray(state.race_roster.bench)
+        ? (state.players || []).filter((p) => !state.race_roster.bench.includes(p.gun_num))
+        : (state.players || []);
+
       const tvCardHtml = (p, soloIdx = null) => {
         const isDuel = state.mode.id === 'OldFashionDuel';
         const isLMS = state.mode.id === 'LastManStanding';
         const isRace = state.mode.id === 'TagThenShoot';
         // The big number is mode-specific: rounds won in Duel (score
         // already counts those), eliminations in LMS (score there is a
-        // sort-order artifact, not points), points everywhere else.
-        const displayScore = isLMS ? p.frags : p.score;
-        const scoreLabel = isDuel ? 'Rounds' : (isLMS ? 'Elims' : 'Points');
+        // sort-order artifact, not points), the best finished time in
+        // the race (total points until a finish), points elsewhere.
+        const displayScore = isRace
+          ? (p.best_run_time != null ? `${p.best_run_time.toFixed(1)}s` : p.score)
+          : (isLMS ? p.frags : p.score);
+        const scoreLabel = isRace
+          ? (p.best_run_time != null ? 'Best Time' : 'Points')
+          : (isDuel ? 'Rounds' : (isLMS ? 'Elims' : 'Points'));
         const isLeader = p.gun_id === leaderGunId;
         const scoreColor = state.mode.teams ? p.team_color : (isLeader ? 'var(--bt-gold)' : 'var(--bt-orange)');
         // Diff-driven feedback: a score pop when the score rose, a red
@@ -5502,7 +5916,7 @@
         const hpClass = p.life_points <= 1 ? 'hp-low' : 'hp-on';
         const showClips = showAmmo && state.mode.id !== 'OldFashionDuel';
 
-        const playerCount = (state.players || []).length;
+        const playerCount = gridPlayers.length;
         const stairStep = playerCount <= 4 ? 52 : (playerCount <= 6 ? 38 : 26);
         const stairOffset = soloIdx !== null ? Math.min(soloIdx * stairStep, 208) : 0;
         const stairStyle = soloIdx !== null
@@ -5512,24 +5926,42 @@
         const iconHeart = `<svg class="ui-icon" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 21s-6.8-4.35-9.4-8.36C.7 9.7 1.85 5.4 5.5 4.25c2.1-.66 4.4.12 5.75 1.8L12 7l.75-.95c1.35-1.68 3.65-2.46 5.75-1.8 3.65 1.15 4.8 5.45 2.9 8.39C18.8 16.65 12 21 12 21z"/></svg>`;
         const iconBlaster = `<svg class="ui-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 10h14l2-2h3v4h-3l-1 2H11l-2 6H6l1.5-6H4l-2-2v-2z" fill="currentColor" fill-opacity="0.18"/><path d="M2 10h14l2-2h3v4h-3l-1 2H11l-2 6H6l1.5-6H4l-2-2v-2z"/><path d="M13 14v2.5"/></svg>`;
 
-        // TagThenShoot timed turns: the card shows the run state — the
-        // next action for the runner, the finished time for a
-        // completed run, the points for a timed-out run, a waiting
-        // line for everyone else. The gun alternates scan/shoot
-        // states, so tower_hits < tags means the next action is the
-        // tower shot, not the next base.
+        // TagThenShoot timed turns: the card shows the best time
+        // (headline number, above), compact per-round chips, the total,
+        // and — for the runner — the next action and course pips. The
+        // gun alternates scan/shoot states, so tower_hits < tags means
+        // the next action is the tower shot, not the next base.
+        // Cards never fade in this mode.
         const rs = state.race_state;
         const raceBases = Math.max(1, parseInt(state.settings?.numberOfBase ?? 4, 10) || 4);
-        const isUpNow = isRace && rs && rs.active_gun_id === p.gun_id && ['WAIT_TRIGGER', 'COUNTDOWN', 'RUNNING'].includes(rs.turn_phase);
-        const isFinishedRun = isRace && p.run_completed && p.run_time != null;
-        const isTurnEndCap = isRace && rs && rs.active_gun_id === p.gun_id && rs.turn_phase === 'TURN_END' && !isFinishedRun;
-        const alreadyRan = isRace && rs && Array.isArray(rs.turn_order) && rs.turn_order.indexOf(p.gun_id) >= 0 && rs.turn_order.indexOf(p.gun_id) < rs.turn_index;
+        const raceMaxRounds = Math.max(1, (rs && rs.max_rounds) || 1);
+        const raceRound = Math.max(1, (rs && rs.round_index) || 1);
+        const isUpNow = isRace && rs && rs.active_gun_id === p.gun_id && ['PLAYER_INTRO', 'WAIT_TRIGGER', 'COUNTDOWN', 'RUNNING'].includes(rs.turn_phase);
+        // UP NEXT comes from the server's single derivation
+        // (race_state.next_gun_id): the following racer in frozen
+        // order, wrapping across rounds; absent on the final run and
+        // in solo races, so the two pills can never share a card.
+        const isUpNext = isRace && rs && rs.next_gun_id === p.gun_id;
+        const history = Array.isArray(p.run_history) ? p.run_history : [];
+        const entryForRound = (r) => history.find((e) => e.round === r);
+        const raceChipsHtml = () => {
+          const chips = [];
+          for (let r = 1; r <= raceMaxRounds; r += 1) {
+            const entry = entryForRound(r);
+            if (entry) {
+              chips.push(entry.completed && entry.time != null
+                ? `<span class="tv-round-chip">R${r} ${entry.time.toFixed(1)}s ${entry.points}p</span>`
+                : `<span class="tv-round-chip dnf">R${r} DNF ${entry.points}p</span>`);
+            } else if (isUpNow && r === raceRound && rs.turn_phase === 'RUNNING') {
+              chips.push(`<span class="tv-round-chip live">R${r} ${(rs.elapsed || 0).toFixed(1)}s ${p.tags + p.tower_hits}p</span>`);
+            } else {
+              chips.push(`<span class="tv-round-chip">R${r} --</span>`);
+            }
+          }
+          return `<div class="tv-round-chips">${chips.join('')}</div>`;
+        };
         let raceVitalsHtml = '';
-        if (isFinishedRun) {
-          raceVitalsHtml = `<div class="tv-run-time">🏁 ${p.run_time.toFixed(1)}s${isLeader ? ' ★ FASTEST' : ''}</div>`;
-        } else if (isTurnEndCap || alreadyRan) {
-          raceVitalsHtml = `<div class="tv-wait-line">TIME UP — ${p.score} PTS</div>`;
-        } else if (isUpNow) {
+        if (isUpNow) {
           const awaitingShot = p.tower_hits < p.tags;
           const tagged = Math.min(p.tags, raceBases);
           const nextLabel = awaitingShot ? 'SHOOT THE TOWER' : (p.tags < raceBases ? `NEXT: T-BASE ${p.tags + 1}` : 'FINISH!');
@@ -5540,9 +5972,14 @@
           raceVitalsHtml = `<div class="tv-course-row" title="${esc(nextLabel)}">
                <span class="tv-course-label">${esc(nextLabel)}</span>
                <div class="tv-base-pips">${racePips}</div>
-             </div>`;
+             </div>${raceChipsHtml()}<div class="tv-total-line">${p.score} pts total</div>`;
         } else if (isRace) {
-          raceVitalsHtml = `<div class="tv-wait-line">WAITING FOR TURN</div>`;
+          const doneAll = history.length >= raceMaxRounds;
+          const waitLine = doneAll ? 'ALL ROUNDS DONE' : `WAITING · ROUND ${raceRound}`;
+          raceVitalsHtml = `${raceChipsHtml()}<div class="tv-total-line">${p.score} pts total</div><div class="tv-wait-line">${waitLine}</div>`;
+          if (p.best_run_time != null && isLeader) {
+            raceVitalsHtml = `<div class="tv-run-time">🏁 ★ FASTEST</div>` + raceVitalsHtml;
+          }
         }
 
         const vitalsHtml = isRace ? raceVitalsHtml : ((!showLife && !showAmmo)
@@ -5578,12 +6015,13 @@
               <div class="tv-player-name" style="display: flex; align-items: center; gap: 6px;">
                 ${isLeader ? '<span class="tv-leader-crown">👑</span>' : ''}<span style="overflow: hidden; text-overflow: ellipsis;">${esc((p.name || '').toUpperCase())}</span>
               </div>
-              ${p.gun_online === false ? `<div><span class="tv-vest-warn">T-BLASTER OFFLINE — RECONNECTING</span></div>` : !p.vest_ok ? `<div><span class="tv-vest-warn">NO VEST — HITS WON'T REGISTER</span></div>` : ''}
+              ${p.gun_online === false ? `<div><span class="tv-vest-warn">T-BLASTER OFFLINE — RECONNECTING</span></div>` : !p.vest_ok ? `<div><span class="tv-vest-warn">${isRace ? 'NO VEST — VEST REQUIRED' : "NO VEST — HITS WON'T REGISTER"}</span></div>` : ''}
               ${state.phase === 'PLAYING' && p.signal_lost ? `<div><span class="tv-signal-warn">NO SIGNAL — CHECK THE BLASTER</span></div>` : ''}
               ${isLMS && p.life_points === 0 ? `<div><span class="tv-elim-badge">ELIMINATED</span></div>` : ''}
               ${isUpNow ? `<div><span class="tv-up-badge">UP NOW</span></div>` : ''}
+              ${isUpNext ? `<div><span class="tv-next-badge">UP NEXT</span></div>` : ''}
               ${vitalsHtml}
-              ${state.mode.id === 'TagThenShoot' ? `<div class="tv-tag-line">Tags ${p.tags} · Tower ${p.tower_hits}</div>` : ''}
+              ${isRace && isUpNow ? `<div class="tv-tag-line">Tags ${p.tags} · Tower ${p.tower_hits}</div>` : ''}
             </div>
 
             <div class="tv-score-box">
@@ -5602,8 +6040,9 @@
       const gridSignature = JSON.stringify([
         state.mode.id,
         state.phase,
-        state.race_state ? [state.race_state.turn_phase, state.race_state.active_gun_id, state.race_state.turn_index] : null,
-        state.players.map((p) => [p.gun_id, p.name, p.avatar, p.score, p.frags, p.life_points, p.max_life, p.ammo, p.max_ammo, p.clips, p.vest_ok, p.signal_lost, p.team_id, p.team_color, p.tags, p.tower_hits, p.run_time, p.run_completed]),
+        state.race_state ? [state.race_state.turn_phase, state.race_state.active_gun_id, state.race_state.next_gun_id, state.race_state.turn_index, state.race_state.round_index, state.race_state.max_rounds, state.race_state.launch_mode] : null,
+        state.race_roster || null,
+        gridPlayers.map((p) => [p.gun_id, p.name, p.avatar, p.score, p.frags, p.life_points, p.max_life, p.ammo, p.max_ammo, p.clips, p.vest_ok, p.signal_lost, p.team_id, p.team_color, p.tags, p.tower_hits, p.run_history, p.best_run_time]),
       ]);
       if (gridSignature !== lastGridSignature) {
         lastGridSignature = gridSignature;
@@ -5615,7 +6054,7 @@
           });
         }
 
-        const nPlayers = (state.players || []).length;
+        const nPlayers = gridPlayers.length;
         const tvGap = nPlayers <= 3 ? 26 : (nPlayers === 4 ? 20 : (nPlayers <= 6 ? 13 : 8));
         const teamCardGap = nPlayers <= 3 ? 14 : (nPlayers === 4 ? 12 : (nPlayers <= 6 ? 8 : 5));
         tvGrid.style.setProperty('--tv-gap', `${tvGap}px`);
@@ -5647,7 +6086,7 @@
           </div>`;
           }).join('');
       } else {
-        tvGrid.innerHTML = state.players.map((p, idx) => tvCardHtml(p, idx)).join('');
+        tvGrid.innerHTML = gridPlayers.map((p, idx) => tvCardHtml(p, idx)).join('');
       }
 
       // Re-fit after the rebuild: content height changed, so the scale
@@ -5952,10 +6391,19 @@
         ? [...(state.players || [])]
         : [...(state.players || [])].sort((a, b) => (b.score - a.score) || (a.gun_num - b.gun_num));
       const topWinner = sorted[0];
+      // Race-only helpers: the benched set (sitters never rank or
+      // win), the best single-round points (the non-finisher
+      // tiebreak), and the round count for per-round lines.
+      const benchedGunNums = new Set(
+        isRace && state.race_roster && Array.isArray(state.race_roster.bench) ? state.race_roster.bench : []
+      );
+      const raceBestSingle = (p) => Math.max(0, ...(Array.isArray(p.run_history) ? p.run_history.map((e) => e.points || 0) : []));
+      const raceMaxRounds = isRace ? Math.max(1, (state.race_state && state.race_state.max_rounds) || 1) : 1;
 
       let hasOutrightWinner = false;
       let winningTeamId = null;
       let winningGunNum = null;
+      let winningGunNums = new Set();
 
       if (topWinner) {
         if (state.mode.teams) {
@@ -5980,26 +6428,38 @@
             document.getElementById('resultsHeadline').textContent = `Victory: Team ${topTeam.teamId} · ${topTeamName}!`;
             document.getElementById('resultsSub').textContent = `${state.mode.title} Match Complete · ${topTeam.score} Points`;
           }
-        } else {
-          // Timed turns: the fastest finished run wins; an exact time
-          // tie is a tie game. With no finishes, points decide, as in
-          // the other solo modes.
-          const finished = isRace ? sorted.filter((p) => p.run_completed && p.run_time != null) : [];
-          if (finished.length) {
-            const best = finished[0];
-            const tied = finished.filter((p) => p.run_time === best.run_time);
-            if (tied.length > 1) {
-              document.getElementById('resultsHeadline').textContent = `Tie Game — ${best.run_time.toFixed(1)}s!`;
-              document.getElementById('resultsSub').textContent = `${state.mode.title} Match Complete · No outright winner`;
+        } else if (isRace) {
+          // Rounds: the best finished time wins; an exact best-time
+          // tie is a SHARED win (all tied racers). With no finishes,
+          // top total points then best single round decide; an exact
+          // tie on both is a shared win. Sitters never win.
+          const racers = sorted.filter((p) => !benchedGunNums.has(p.gun_num));
+          if (racers.length) {
+            const finished = racers.filter((p) => p.best_run_time != null);
+            let raceWinners;
+            if (finished.length) {
+              const best = Math.min(...finished.map((p) => p.best_run_time));
+              raceWinners = finished.filter((p) => p.best_run_time === best);
             } else {
-              hasOutrightWinner = true;
-              winningGunNum = best.gun_num;
-              document.getElementById('resultsHeadline').textContent = `Victory: ${best.name.toUpperCase()}!`;
-              document.getElementById('resultsSub').textContent = `${state.mode.title} Match Complete · Fastest Run: ${best.run_time.toFixed(1)}s`;
+              const topScore = Math.max(...racers.map((p) => p.score));
+              const leaders = racers.filter((p) => p.score === topScore);
+              const bestSingle = Math.max(...leaders.map((p) => raceBestSingle(p)));
+              raceWinners = leaders.filter((p) => raceBestSingle(p) === bestSingle);
             }
-          } else {
-            // Solo modes: a tie at the top is a tie game, not a victory.
-            const runnerUp = sorted[1];
+            hasOutrightWinner = raceWinners.length > 0;
+            winningGunNums = new Set(raceWinners.map((p) => p.gun_num));
+            const names = raceWinners.map((p) => (p.name || '').toUpperCase()).join(', ');
+            const shared = raceWinners.length > 1 ? ' (shared)' : '';
+            document.getElementById('resultsHeadline').textContent = raceWinners.length > 1
+              ? `Shared Victory: ${names}!`
+              : `Victory: ${names}!`;
+            document.getElementById('resultsSub').textContent = finished.length
+              ? `${state.mode.title} Match Complete · Fastest Run: ${raceWinners[0].best_run_time.toFixed(1)}s${shared}`
+              : `${state.mode.title} Match Complete · Top Score: ${raceWinners[0].score} Points${shared}`;
+          }
+        } else {
+          // Solo modes: a tie at the top is a tie game, not a victory.
+          const runnerUp = sorted[1];
             const isTie = isLMS
               ? Boolean(
                   runnerUp
@@ -6019,7 +6479,6 @@
                 ? `${state.mode.title} Match Complete · Last Survivor (${topWinner.life_points} HP · ${topWinner.score} Pts)`
                 : `${state.mode.title} Match Complete · Top Score: ${topWinner.score} Points`;
             }
-          }
         }
       }
 
@@ -6036,19 +6495,23 @@
         '/static/assets/textures/Ui/Ranking_Medal_Bronze.png',
       ];
       const placeNames = ['1st Place', '2nd Place', '3rd Place'];
-      // Competition ranking: equal scores share a place, so a tie at the
-      // top shows two 1st places instead of 1st and 2nd. The race
-      // ranks finished runs by time (equal times share), then
-      // unfinished runs by points.
+      // Competition ranking: equal performances share a place. The
+      // race ranks finished runs by best time (equal times share),
+      // then unfinished runs by total points and best single round
+      // (equal on both share); sitters are excluded from places.
+      const raceAhead = (q, p) => {
+        const qFin = q.best_run_time != null;
+        const pFin = p.best_run_time != null;
+        if (qFin && pFin) return q.best_run_time < p.best_run_time;
+        if (qFin && !pFin) return true;
+        if (!qFin && !pFin) {
+          if (q.score !== p.score) return q.score > p.score;
+          return raceBestSingle(q) > raceBestSingle(p);
+        }
+        return false;
+      };
       const placeOf = isRace
-        ? (p) => sorted.filter((q) => {
-            const qFin = q.run_completed && q.run_time != null;
-            const pFin = p.run_completed && p.run_time != null;
-            if (qFin && pFin) return q.run_time < p.run_time;
-            if (qFin && !pFin) return true;
-            if (!qFin && !pFin) return q.score > p.score;
-            return false;
-          }).length + 1
+        ? (p) => sorted.filter((q) => !benchedGunNums.has(q.gun_num) && raceAhead(q, p)).length + 1
         : isLMS
         ? (p) => sorted.filter((q) => {
             const qAlive = q.life_points > 0;
@@ -6058,12 +6521,24 @@
             return q.score > p.score;
           }).length + 1
         : (p) => sorted.filter((q) => q.score > p.score).length + 1;
+      const raceRoundChips = (p) => {
+        const chips = [];
+        for (let r = 1; r <= raceMaxRounds; r += 1) {
+          const entry = (Array.isArray(p.run_history) ? p.run_history : []).find((e) => e.round === r);
+          chips.push(entry
+            ? (entry.completed && entry.time != null
+              ? `<span class="results-stat-chip" title="Round ${r}: finished in ${entry.time.toFixed(1)}s">R${r} ${entry.time.toFixed(1)}s ${entry.points}p</span>`
+              : `<span class="results-stat-chip" title="Round ${r}: cap expired">R${r} DNF ${entry.points}p</span>`)
+            : `<span class="results-stat-chip" title="Round ${r}: no run">R${r} --</span>`);
+        }
+        return chips.join('');
+      };
       const rankCardHtml = (p, delayMs) => {
         const place = placeOf(p);
         const placeCell = place <= 3
           ? `<div class="results-rank-place"><img src="${medalImgs[place - 1]}" alt="" />${placeNames[place - 1]}</div>`
           : `<div class="results-rank-place">#${place}</div>`;
-        const isWinCard = hasOutrightWinner && !state.mode.teams && p.gun_num === winningGunNum;
+        const isWinCard = hasOutrightWinner && !state.mode.teams && (isRace ? winningGunNums.has(p.gun_num) : p.gun_num === winningGunNum);
         return `
         <div class="results-rank-card clickable${animateReveal ? ' results-reveal' : ''}${isWinCard ? ' results-winner-card' : ''}"${isWinCard ? ' data-winner="true"' : ''}${animateReveal ? ` style="animation-delay: ${delayMs}ms;"` : ''} onclick="openPlayerStatsModal(${p.gun_num})" title="Click for detailed matchup stats">
           ${placeCell}
@@ -6074,9 +6549,8 @@
           <div style="min-width: 0;">
             <div class="results-rank-name" style="display: flex; align-items: center; gap: 6px;"><span>${esc((p.name || '').toUpperCase())}</span></div>
             ${isRace ? `<div class="results-rank-stats">
-              <span class="results-stat-chip" title="T-Base Tags">${p.tags} tags</span>
-              <span class="results-stat-chip" title="Tower Hits">${p.tower_hits} tower</span>
-              ${p.run_completed ? '' : '<span class="results-stat-chip" title="Run ended on the cap">TIME UP</span>'}
+              ${raceRoundChips(p)}
+              <span class="results-stat-chip" title="Total points across all runs">${p.score} pts total</span>
             </div>` : `<div class="results-rank-stats">
               <span class="results-stat-chip" title="Hits Landed">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3"/></svg>
@@ -6096,7 +6570,7 @@
               </span>
             </div>`}
           </div>
-          <div class="results-rank-score">${isRace && p.run_completed && p.run_time != null ? `${p.run_time.toFixed(1)}s` : `${p.score} pts`}</div>
+          <div class="results-rank-score">${isRace && p.best_run_time != null ? `${p.best_run_time.toFixed(1)}s` : `${p.score} pts`}</div>
         </div>`;
       };
 
@@ -6139,18 +6613,23 @@
         }).join('');
       } else {
         rankingsEl.className = 'results-rankings';
-        rankingsEl.innerHTML = sorted.map((p, i) => rankCardHtml(p, firstCardDelayMs + i * stepMs)).join('');
+        // Race results show racers only: sitters are hidden entirely.
+        const shown = isRace ? sorted.filter((p) => !benchedGunNums.has(p.gun_num)) : sorted;
+        rankingsEl.innerHTML = shown.map((p, i) => rankCardHtml(p, firstCardDelayMs + i * stepMs)).join('');
       }
 
       const chartCard = document.getElementById('resultsChartCard');
-      const totalCards = Math.max(1, sorted.length);
+      const totalCards = Math.max(1, (isRace ? sorted.filter((p) => !benchedGunNums.has(p.gun_num)) : sorted).length);
       const chartDelayMs = firstCardDelayMs + totalCards * stepMs + 140;
       if (chartCard) {
         chartCard.classList.remove('results-chart-reveal', 'results-chart-hidden');
         chartCard.style.animationDelay = '';
+        // No score-over-time chart for the race: runs are sequential
+        // turns, so a shared timeline chart reads wrong.
+        chartCard.style.display = isRace ? 'none' : '';
       }
 
-      if (animateReveal && !REDUCED_MOTION) {
+      if (animateReveal && !REDUCED_MOTION && !isRace) {
         if (chartCard) chartCard.classList.add('results-chart-hidden');
         drawResultsScoreChart(state, 0);
         resultsChartTimer = setTimeout(() => {
@@ -6179,7 +6658,7 @@
           };
           resultsChartAnimFrame = requestAnimationFrame(tick);
         }, chartDelayMs);
-      } else {
+      } else if (!isRace) {
         drawResultsScoreChart(state, 1);
       }
 
@@ -6502,6 +6981,61 @@
       const titleEl = document.getElementById('playerStatsTitle');
       const bodyEl = document.getElementById('playerStatsBody');
       if (!dlg || !bodyEl) return;
+
+      // Race branch: per-round table, best time, total points. No
+      // accuracy/shots/favorite-target/nemesis/streak/hits table —
+      // none of those exist for a solo timed course. Sitters are
+      // hidden from game mode entirely, so the modal never opens
+      // for a benched player.
+      if (appState.mode && appState.mode.id === 'TagThenShoot') {
+        const isSitter = appState.race_roster && Array.isArray(appState.race_roster.bench) && appState.race_roster.bench.includes(p.gun_num);
+        if (isSitter) return;
+        if (titleEl) titleEl.innerHTML = `<span style="display:inline-flex;align-items:center;gap:6px;">${playerNumIcon(p.gun_num, 20)}<span>${esc((p.name || '').toUpperCase())}</span></span>`;
+        const history = Array.isArray(p.run_history) ? p.run_history : [];
+        const maxRounds = Math.max(1, (appState.race_state && appState.race_state.max_rounds) || history.length || 1);
+        const finishedCount = history.filter((e) => e.completed).length;
+        const rows = [];
+        for (let r = 1; r <= maxRounds; r += 1) {
+          const entry = history.find((e) => e.round === r);
+          rows.push(entry
+            ? `<tr><td>Round ${r}</td><td>${entry.completed && entry.time != null ? `${entry.time.toFixed(1)}s` : 'DNF'}</td><td>${entry.points}</td><td>${entry.tags}</td><td>${entry.tower_hits}</td></tr>`
+            : `<tr><td>Round ${r}</td><td colspan="4" style="color: var(--text-muted);">No run</td></tr>`);
+        }
+        bodyEl.innerHTML = `
+          <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 12px;">
+            <div class="avatar-with-badge">
+              <img src="${p.avatar_url}" alt="" style="width: 48px; height: 48px; object-fit: contain;" />
+              ${playerNumBadge(p.gun_num, 25)}
+            </div>
+            <div style="flex: 1;">
+              <div style="font-family: var(--font-display); font-size: 1.1rem; color: var(--text-dark);">${esc((p.name || '').toUpperCase())}</div>
+              <div style="font-size: 0.8rem; font-weight: 700; color: var(--text-muted);">${p.best_run_time != null ? `Best ${p.best_run_time.toFixed(1)}s · ` : ''}${p.score} pts total</div>
+            </div>
+          </div>
+          <div class="pstats-highlights">
+            <div class="pstats-box">
+              <div class="pstats-box-label">Best Time</div>
+              <div class="pstats-box-val">${p.best_run_time != null ? `${p.best_run_time.toFixed(1)}s` : '—'}</div>
+            </div>
+            <div class="pstats-box">
+              <div class="pstats-box-label">Total Points</div>
+              <div class="pstats-box-val">${p.score}</div>
+            </div>
+            <div class="pstats-box">
+              <div class="pstats-box-label">Rounds Finished</div>
+              <div class="pstats-box-val">${finishedCount} of ${maxRounds}</div>
+            </div>
+          </div>
+          <table class="pstats-h2h-table">
+            <thead>
+              <tr><th>Round</th><th>Time</th><th>Points</th><th>Tags</th><th>Tower</th></tr>
+            </thead>
+            <tbody>${rows.join('')}</tbody>
+          </table>
+        `;
+        if (!dlg.open) dlg.showModal();
+        return;
+      }
 
       const others = [...appState.players]
         .filter((q) => q.gun_num !== p.gun_num)

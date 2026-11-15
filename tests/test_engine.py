@@ -218,6 +218,14 @@ def test_eight_player_support_and_duel_tagnshoot() -> None:
     eng.select_mode("TagThenShoot")
     eng.reset_stats_for_new_match()
     eng.phase = "PLAYING"
+    # ROUND_INTRO -> PLAYER_INTRO -> WAIT_TRIGGER -> COUNTDOWN -> RUNNING.
+    eng.tick_race_turns()
+    eng.race_state["intro_ends_at"] = time.time() - 1.0
+    eng.tick_race_turns()
+    eng.tick_race_turns()
+    eng.race_state["callout_ends_at"] = time.time() - 1.0
+    eng.tick_race_turns()
+    assert eng.race_state["turn_phase"] == "WAIT_TRIGGER"
     eng._turn_triggered = True
     eng.tick_race_turns()
     eng.race_state["countdown_ends_at"] = time.time() - 1.0

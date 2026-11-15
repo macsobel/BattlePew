@@ -389,8 +389,9 @@ ANNOUNCER_POOLS: dict[str, dict[str, Any]] = {
         "subtitle": "Finish line!",
     },
     "race_new_best": {
-        # Timed turns: the celebration when a finished run is the
-        # fastest of the match or a new session best.
+        # Timed turns: the celebration when a finished run is a new
+        # MATCH best. Session/personal bests show on screen only and
+        # are never announced.
         "files": _g(95),
         "priority": 1,
         "proba": 1.0,

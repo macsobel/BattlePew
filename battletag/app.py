@@ -224,6 +224,15 @@ class WizardStepRequest(BaseModel):
     step: int
 
 
+class RaceRosterRequest(BaseModel):
+    # Full roster (TV): order + bench partition the paired guns.
+    order: list[int] | None = None
+    bench: list[int] | None = None
+    # Single toggle (phone HUD): opt one player in or out.
+    gun_num: int | None = None
+    in_race: bool | None = None
+
+
 class SimActionRequest(BaseModel):
     action: str  # "shot" | "hit" | "rfid" | "set_guns" | "toggle_bots"
     shooter_gid: int | None = None
@@ -611,25 +620,79 @@ async def api_start_match() -> JSONResponse:
     min_required = int(mode_info.get("min_players", 2))
     max_allowed = int(mode_info.get("max_players", 8))
     mode_title = mode_info.get("title", engine.mode_name)
-    if len(engine.players) < min_required:
-        raise HTTPException(
-            status_code=400,
-            detail=f"Need at least {min_required} paired T-Blaster{'s' if min_required != 1 else ''} to start {mode_title}.",
-        )
-    if len(engine.players) > max_allowed:
-        raise HTTPException(
-            status_code=400,
-            detail=f"{mode_title} supports at most {max_allowed} players.",
-        )
-    if not all(p.vest_ok and p.gun_online for p in engine.players.values()):
-        raise HTTPException(
-            status_code=400,
-            detail="All paired players must have their T-Blasters online and vests connected before starting.",
-        )
+    if engine.mode_name == "TagThenShoot":
+        # The race gates on the ROSTER, not the pairing: benched
+        # players neither count toward the player limits nor block
+        # the start with a missing vest / offline blaster.
+        racers = engine.race_roster_players()
+        if len(racers) < min_required:
+            raise HTTPException(
+                status_code=400,
+                detail=f"Need at least {min_required} racer{'s' if min_required != 1 else ''} to start {mode_title}.",
+            )
+        if len(racers) > max_allowed:
+            raise HTTPException(
+                status_code=400,
+                detail=f"{mode_title} supports at most {max_allowed} racers.",
+            )
+        if not all(p.vest_ok and p.gun_online for p in racers):
+            raise HTTPException(
+                status_code=400,
+                detail="All racers must have their T-Blasters online and vests connected before starting.",
+            )
+    else:
+        if len(engine.players) < min_required:
+            raise HTTPException(
+                status_code=400,
+                detail=f"Need at least {min_required} paired T-Blaster{'s' if min_required != 1 else ''} to start {mode_title}.",
+            )
+        if len(engine.players) > max_allowed:
+            raise HTTPException(
+                status_code=400,
+                detail=f"{mode_title} supports at most {max_allowed} players.",
+            )
+        if not all(p.vest_ok and p.gun_online for p in engine.players.values()):
+            raise HTTPException(
+                status_code=400,
+                detail="All paired players must have their T-Blasters online and vests connected before starting.",
+            )
     if _match_task and not _match_task.done():
         _match_task.cancel()
     _match_task = asyncio.create_task(_run_match_lifecycle())
     return JSONResponse({"ok": True, "phase": engine.phase})
+
+
+@app.post("/api/race/roster")
+async def api_race_roster(req: RaceRosterRequest) -> JSONResponse:
+    """Set the Tag'n Shoot race roster/order (TV, full roster) or opt
+    one player in/out (phone HUD, single toggle). Setup only: the
+    engine rejects edits outside LOBBY or in another mode, so the
+    roster can never change mid-match. Benching never unpairs."""
+    if req.order is not None and req.bench is not None:
+        ok, reason = engine.set_race_roster(req.order, req.bench)
+    elif req.gun_num is not None and req.in_race is not None:
+        ok, reason = engine.toggle_race_roster(req.gun_num, req.in_race)
+    else:
+        raise HTTPException(
+            status_code=400,
+            detail="Send a full roster {order, bench} or a toggle {gun_num, in_race}.",
+        )
+    if not ok:
+        raise HTTPException(status_code=400, detail=reason)
+    await broadcast_state()
+    return JSONResponse({"ok": True, "race_roster": engine.race_roster_snapshot()})
+
+
+@app.post("/api/race/skip-run")
+async def api_race_skip_run() -> JSONResponse:
+    """Host skip-run (TV only): forfeit the current race run and move
+    on. The engine validates the turn phase; players have no skip
+    control on the HUD."""
+    ok, reason = engine.skip_race_run()
+    if not ok:
+        raise HTTPException(status_code=400, detail=reason)
+    await broadcast_state()
+    return JSONResponse({"ok": True, "race_state": engine.race_state})
 
 
 @app.post("/api/match/rematch")
@@ -715,19 +778,10 @@ def _trigger_winner_announcement() -> None:
         return
 
     if engine.mode_name == "TagThenShoot":
-        # Timed turns: the fastest finished run wins (shared winners
-        # on an exact time tie, as the original has no tie-breaks).
-        # When nobody finished, the most points wins.
-        completed = [
-            p for p in engine.players.values() if p.run_completed and p.run_time is not None
-        ]
-        if completed:
-            best = min(p.run_time for p in completed)
-            winners = [p for p in completed if p.run_time == best]
-        else:
-            ranked_players = sorted(engine.players.values(), key=lambda p: p.score, reverse=True)
-            top_score = ranked_players[0].score
-            winners = [p for p in ranked_players if p.score == top_score]
+        # Timed turns, shared win: every racer tied on the best
+        # finished time (or, with no finishes, on top total points).
+        # Benched players are excluded by race_winners().
+        winners = engine.race_winners()
     elif engine.mode_name == "LastManStanding":
         # Survival decides: any alive player beats all eliminated players,
         # and among alive players higher HP / score wins.
@@ -745,6 +799,8 @@ def _trigger_winner_announcement() -> None:
             return
         top_score = ranked_players[0].score
         winners = [p for p in ranked_players if p.score == top_score]
+    if not winners:
+        return
     if len(winners) > 1:
         # Shared winners: "And the winners are..." plus a Set B callout
         # for every tied winner. The original has no tie-breaks.
@@ -913,6 +969,7 @@ async def api_unpair_guns() -> JSONResponse:
     if not engine.use_simulator and engine.hw:
         engine.hw.unpair_all()
     engine.players.clear()
+    engine.sync_race_roster()
     engine.bytecode_ready = False
     engine.bytecode_uploaded = False
     engine.config_failed_guns = []
@@ -1305,6 +1362,21 @@ async def _execute_bytecode_upload_inner() -> bool:
     return True
 
 
+async def _send_race_countdown(gid: int | None, seconds: int) -> bool:
+    """Send one per-run 0x93 countdown to a single gun, retrying once
+    on echo failure. `start_countdown` already retries 3x per call;
+    this is one more full attempt. Returns False only when both
+    attempts fail — the caller NEVER aborts the match for this mode:
+    the engine countdown still runs and the run continues without
+    the gun-side countdown (toast + log only)."""
+    if gid is None or engine.hw is None:
+        return False
+    ok = await asyncio.to_thread(engine.hw.start_countdown, [gid], seconds)
+    if not ok:
+        ok = await asyncio.to_thread(engine.hw.start_countdown, [gid], seconds)
+    return ok
+
+
 async def _run_match_lifecycle() -> None:
     """Execute Pair (if needed) -> Upload (if needed) -> Countdown -> Active Match Poll -> Game Over."""
     try:
@@ -1375,8 +1447,9 @@ async def _run_match_lifecycle() -> None:
             cd_secs = max(1, cd_secs // 2)
 
         # Phase 2: Countdown. TagThenShoot skips the match-level
-        # countdown: each timed turn runs its own countdown after its
-        # player's trigger pull, driven by tick_race_turns.
+        # countdown: each timed turn runs its own countdown — after
+        # its player's trigger pull in Manual, straight away in
+        # Auto — driven by tick_race_turns.
         if engine.mode_name != "TagThenShoot":
             engine.phase = "COUNTDOWN"
             engine.countdown_remaining = cd_secs
@@ -1441,15 +1514,18 @@ async def _run_match_lifecycle() -> None:
                 elif rs.get("turn_phase") == "COUNTDOWN" and not rs.get("countdown_sent", True):
                     rs["countdown_sent"] = True
                     gid = rs.get("active_gun_id")
-                    ok = await asyncio.to_thread(
-                        engine.hw.start_countdown, [gid], int(rs.get("countdown_seconds", 1))
-                    )
+                    ok = await _send_race_countdown(gid, int(rs.get("countdown_seconds", 5)))
                     if not ok:
-                        await _broadcast_toast("Countdown echo failed on hardware.", kind="countdown_echo_failed")
-                        engine.phase = "LOBBY"
-                        await broadcast_state()
-                        return
-                    await asyncio.to_thread(engine.hw.drain_stale_echoes, 0.4)
+                        # Never abort a race mid-match for a failed
+                        # countdown echo: retry once (done above),
+                        # toast, and let the engine countdown carry
+                        # the run. Other modes keep their abort.
+                        await _broadcast_toast(
+                            "Countdown echo failed — continuing without the gun countdown.",
+                            kind="countdown_echo_failed",
+                        )
+                    else:
+                        await asyncio.to_thread(engine.hw.drain_stale_echoes, 0.4)
             for gid in sorted(engine.players.keys()):
                 player = engine.players[gid]
                 downlink = None
@@ -1561,6 +1637,9 @@ def _run_simulator_bot_step() -> None:
 async def _finish_match(reason: str = "Match Over") -> None:
     if engine.phase == "GAME_OVER":
         return
+    # A race stopped mid-run keeps the partial run's points: snapshot
+    # it into the history before outcomes/standings are computed.
+    engine.finalize_race_on_stop()
     engine.record_score_snapshot(force=True)
     engine.phase = "GAME_OVER"
     engine.match_end_ts = time.time()

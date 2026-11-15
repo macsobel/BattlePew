@@ -2,11 +2,11 @@
 active-runner scoring gate, fastest-run ranking, and winner outcomes.
 
 The mode runs sequential solo turns: each player pulls the trigger to
-start their run (mandatory, one pull per turn), runs one course (all
-T-Bases in order, tower shot after each), and the fastest finished run
-wins. Points still count for unfinished runs. Audio-file assertions are
-skipped when the handoff game tree is absent; the engine/sim logic
-tests always run.
+start their run (mandatory, one pull per turn in Manual mode), runs
+one course (all T-Bases in order, tower shot after each), and the
+fastest finished run wins. Points still count for unfinished runs.
+Audio-file assertions are skipped when the handoff game tree is
+absent; the engine/sim logic tests always run.
 """
 
 from __future__ import annotations
@@ -44,8 +44,32 @@ def _ingest_tower(eng: ArenaEngine) -> None:
     eng.ingest_ubiconnect_hits(eng.sim.ubiconnect_hits)
 
 
+def _pass_callout(eng: ArenaEngine) -> None:
+    """Advance a PLAYER_INTRO to the run's start phase (wait/countdown)."""
+    assert eng.race_state["turn_phase"] == "PLAYER_INTRO"
+    eng.tick_race_turns()
+    assert eng.race_state["callout_played"] is True
+    eng.race_state["callout_ends_at"] = time.time() - 1.0
+    eng.tick_race_turns()
+
+
+def _pass_intro(eng: ArenaEngine) -> None:
+    """Advance a ROUND_INTRO through the Player callout to the run's
+    start phase (wait/countdown)."""
+    assert eng.race_state["turn_phase"] == "ROUND_INTRO"
+    eng.tick_race_turns()
+    assert eng.race_state["intro_played"] is True
+    eng.race_state["intro_ends_at"] = time.time() - 1.0
+    eng.tick_race_turns()
+    _pass_callout(eng)
+
+
 def _start_run(eng: ArenaEngine) -> None:
     """Drive the waiting turn through its trigger + countdown to RUNNING."""
+    if eng.race_state["turn_phase"] == "ROUND_INTRO":
+        _pass_intro(eng)
+    if eng.race_state["turn_phase"] == "PLAYER_INTRO":
+        _pass_callout(eng)
     assert eng.race_state["turn_phase"] == "WAIT_TRIGGER"
     eng._turn_triggered = True
     eng.tick_race_turns()
@@ -65,7 +89,7 @@ def _run_course(eng: ArenaEngine, gid: int, bases: int = 4) -> None:
 
 
 def _finish_turn(eng: ArenaEngine) -> None:
-    """Advance the TURN_END beat to the next wait (or DONE)."""
+    """Advance the TURN_END beat to the next run (or DONE)."""
     assert eng.race_state["turn_phase"] == "TURN_END"
     eng.race_state["beat_ends_at"] = time.time() - 1.0
     eng.tick_race_turns()
@@ -77,22 +101,28 @@ def test_turn_machine_waits_for_each_players_trigger() -> None:
     rs = eng.race_state
     assert rs["turn_order"] == [2, 3]
     assert rs["turn_index"] == 0
-    assert rs["turn_phase"] == "WAIT_TRIGGER"
+    assert rs["round_index"] == 1
+    assert rs["max_rounds"] == 1
+    assert rs["launch_mode"] == "manual"
+    # The match opens on the round announcement, then the wait.
+    assert rs["turn_phase"] == "ROUND_INTRO"
     assert rs["active_gun_id"] == 2
     assert rs["bases"] == 4
     assert rs["turn_cap_s"] == 60
+
+    _pass_intro(eng)
+    assert rs["turn_phase"] == "WAIT_TRIGGER"
 
     # No trigger, no countdown: the wait holds across ticks.
     eng.tick_race_turns()
     assert rs["turn_phase"] == "WAIT_TRIGGER"
 
-    # The pull releases the countdown, halved to 1 s as the
-    # match-level manual launch halves it.
+    # The pull releases a 5 s countdown (Manual launch semantics).
     eng._turn_triggered = True
     eng.tick_race_turns()
     assert rs["turn_phase"] == "COUNTDOWN"
-    assert rs["countdown_seconds"] == 1
-    assert eng.countdown_remaining == 1
+    assert rs["countdown_seconds"] == 5
+    assert eng.countdown_remaining == 5
 
 
 def test_only_the_active_runner_scores() -> None:
@@ -129,14 +159,19 @@ def test_course_completion_records_time_and_advances() -> None:
     rs = eng.race_state
     assert rs["turn_phase"] == "TURN_END"
     p = eng.players[2]
-    assert p.run_completed is True
-    assert p.run_time == pytest.approx(23.4, abs=0.5)
+    assert len(p.run_history) == 1
+    entry = p.run_history[0]
+    assert entry["completed"] is True
+    assert entry["time"] == pytest.approx(23.4, abs=0.5)
+    assert entry["points"] == 8
+    assert entry["round"] == 1
+    assert p.best_run_time == pytest.approx(23.4, abs=0.5)
     assert (p.tags, p.tower_hits, p.score) == (4, 4, 8)
-    assert eng.race_session_best[2]["time"] == pytest.approx(23.4, abs=0.5)
+    assert eng.race_session_best[(2, 4)]["time"] == pytest.approx(23.4, abs=0.5)
 
-    # The beat advances to the next player's wait.
+    # The beat advances to the next player's callout.
     _finish_turn(eng)
-    assert rs["turn_phase"] == "WAIT_TRIGGER"
+    assert rs["turn_phase"] == "PLAYER_INTRO"
     assert rs["turn_index"] == 1
     assert rs["active_gun_id"] == 3
 
@@ -155,8 +190,11 @@ def test_cap_expiry_ends_the_run_unfinished() -> None:
     eng.tick_race_turns()
     assert eng.race_state["turn_phase"] == "TURN_END"
     p = eng.players[2]
-    assert p.run_completed is False
-    assert p.run_time is None
+    assert len(p.run_history) == 1
+    assert p.run_history[0]["completed"] is False
+    assert p.run_history[0]["time"] is None
+    assert p.run_history[0]["points"] == 2
+    assert p.best_run_time is None
     assert p.score == 2
 
     # A late tower report cannot re-complete the finished turn: the
@@ -164,7 +202,7 @@ def test_cap_expiry_ends_the_run_unfinished() -> None:
     # stands.
     eng.ingest_ubiconnect_hits({2: 99})
     assert eng.race_state["turn_phase"] == "TURN_END"
-    assert p.run_completed is False
+    assert len(p.run_history) == 1
     assert p.tower_hits == 1
     assert p.score == 2
     assert p.frags == 99
@@ -248,18 +286,20 @@ def test_snapshot_exposes_race_state_and_run_times() -> None:
     eng = ArenaEngine()
     _start(eng)
     snap = eng.get_snapshot()
-    assert snap["race_state"]["turn_phase"] == "WAIT_TRIGGER"
+    assert snap["race_state"]["turn_phase"] == "ROUND_INTRO"
     assert snap["race_state"]["active_gun_id"] == 2
     assert snap["duel_state"] is None
-    assert snap["players"][0]["run_time"] is None
-    assert snap["players"][0]["run_completed"] is False
+    assert snap["players"][0]["run_history"] == []
+    assert snap["players"][0]["best_run_time"] is None
+    assert snap["race_roster"] == {"order": [1, 2], "bench": []}
 
     _start_run(eng)
     _run_course(eng, 2)
     snap = eng.get_snapshot()
     by_gid = {p["gun_id"]: p for p in snap["players"]}
-    assert by_gid[2]["run_completed"] is True
-    assert by_gid[2]["run_time"] is not None
+    assert len(by_gid[2]["run_history"]) == 1
+    assert by_gid[2]["run_history"][0]["completed"] is True
+    assert by_gid[2]["best_run_time"] is not None
     assert snap["race_state"]["turn_phase"] == "TURN_END"
 
 

@@ -276,7 +276,7 @@ MODE_CATALOG: dict[str, dict[str, Any]] = {
     "TagThenShoot": {
         "id": "TagThenShoot",
         "title": "Tag'n Shoot",
-        "subtitle": "Timed turns: pull the trigger, run the course, beat the clock",
+        "subtitle": "Timed turns: run the course, beat the clock",
         "tier": 1,
         "badge": "Solo Course",
         "timed": True,
@@ -288,24 +288,27 @@ MODE_CATALOG: dict[str, dict[str, Any]] = {
         "icon": "/static/assets/textures/Ui/Pictograms/96x/TagNShoot.png",
         "banner": "/static/assets/textures/Packages/TagThenShoot/Ui/Loading_TagNShoot.png",
         "ranking_bg": "/static/assets/textures/Ui/Ranking_Bg_TagNShoot.png",
-        "description": "Solo timed turns! Each player pulls the trigger to start their run, scans the T-Bases in order, and shoots the UbiConnect tower after each one. Fastest finished course wins — points still count if the 60-second cap runs out!",
+        "description": "Solo timed turns! Each player runs the course in turn — pull the trigger to start (Manual) or wait for the countdown (Auto) — scans the T-Bases in order, and shoots the UbiConnect tower after each one. Best finished time wins across the rounds; points still count if the 60-second cap runs out!",
         "bullets": [
             "Each player runs the course solo, in turn",
-            "Pull the trigger to start your run",
-            "Fastest finished course wins (60 s cap)",
+            "Best finished time wins (60 s cap per run)",
+            "Every racer runs each round, in race order",
         ],
         "defaults": {
             "durationSeconds": 60,
             "countdownSeconds": 3,
             "gameLaunch": 1,
             "numberOfBase": 4,
+            "rounds": 1,
             "assist": 1,
         },
         "options": [
             # Fixed 60 s in the original: no duration option. Bases are
-            # 2, or 4 with the medkit pack.
+            # 2, or 4 with the medkit pack. Rounds are full cycles: every
+            # racer runs once per round; best finished time wins.
             {"key": "gameLaunch", "label": "Game Launch", "choices": [0, 1]},
             {"key": "numberOfBase", "label": "T-Bases Required", "choices": [2, 4]},
+            {"key": "rounds", "label": "Number of Rounds", "choices": [1, 2, 3]},
         ],
     },
 }
@@ -348,12 +351,14 @@ class PlayerState:
     # poll downlink sends the running tower-hit count from it.
     tags: int = 0
     tower_hits: int = 0
-    # Timed TagThenShoot turns: the finished run's elapsed seconds, or
-    # None when the run never completed (cap expiry). Set at turn end;
-    # reset every match. Ranking, winner LEDs, and the results screen
-    # all read these, so they ride in to_dict with the other stats.
-    run_time: float | None = None
-    run_completed: bool = False
+    # Timed TagThenShoot turns, one entry per completed-or-forfeited
+    # run: {"round": 1-based round, "time": seconds | None,
+    # "completed": bool, "points": int, "tags": int, "tower_hits": int}.
+    # `tags`/`tower_hits` above are the CURRENT run's live counters
+    # (reset at each run start); `score` is the TOTAL across runs.
+    # Ranking, winner LEDs, and every display derive best time and
+    # totals from this history — never from a single-run field.
+    run_history: list[dict[str, Any]] = field(default_factory=list)
     shots_fired: int = 0
     streak: int = 0
     best_streak: int = 0
@@ -404,6 +409,31 @@ class PlayerState:
             return 0.0
         return round(min(100.0, (self.hits_landed / self.shots_fired) * 100.0), 1)
 
+    @property
+    def best_run(self) -> dict[str, Any] | None:
+        """The fastest finished run in run_history, or None (no finish)."""
+        finished = [r for r in self.run_history if r.get("completed") and r.get("time") is not None]
+        if not finished:
+            return None
+        return min(finished, key=lambda r: r["time"])
+
+    @property
+    def best_run_time(self) -> float | None:
+        best = self.best_run
+        return None if best is None else float(best["time"])
+
+    @property
+    def best_single_run_points(self) -> int:
+        """Most points scored in any single recorded run (0 if none)."""
+        return max((int(r.get("points", 0)) for r in self.run_history), default=0)
+
+    def run_for_round(self, round_index: int) -> dict[str, Any] | None:
+        """The recorded run for 1-based `round_index`, or None."""
+        for r in self.run_history:
+            if int(r.get("round", 0)) == round_index:
+                return r
+        return None
+
     def to_dict(self) -> dict[str, Any]:
         team = TEAM_INFO.get(self.team_id, TEAM_INFO[1])
         return {
@@ -431,8 +461,9 @@ class PlayerState:
             "deaths": self.deaths,
             "tags": self.tags,
             "tower_hits": self.tower_hits,
-            "run_time": self.run_time,
-            "run_completed": self.run_completed,
+            "run_history": [dict(r) for r in self.run_history],
+            "best_run_time": self.best_run_time,
+            "best_run": dict(self.best_run) if self.best_run is not None else None,
             "shots_fired": self.shots_fired,
             "accuracy": self.accuracy,
             "streak": self.streak,
@@ -682,13 +713,22 @@ class ArenaEngine:
         self._turn_triggered: bool = False
         # Timed-turn machine state (TagThenShoot only; {} otherwise).
         # Shape is built by reset_stats_for_new_match; see
-        # tick_race_turns for the WAIT_TRIGGER -> COUNTDOWN -> RUNNING
-        # -> TURN_END -> DONE machine.
+        # tick_race_turns for the ROUND_INTRO -> WAIT_TRIGGER/COUNTDOWN
+        # -> RUNNING -> TURN_END -> DONE machine, looped per round.
         self.race_state: dict[str, Any] = {}
-        # Best finished run per gun id across matches in this server
-        # run: {gun_id: {"time": seconds, "name": display name}}.
-        # In-memory only; no persistent personal-best storage yet.
-        self.race_session_best: dict[int, dict[str, Any]] = {}
+        # Race roster/order, editable only in setup (LOBBY) for
+        # TagThenShoot: gun numbers in race order + benched gun
+        # numbers. Default: every paired gun, gun-number order, all
+        # in. New guns append to the end of the order; removed guns
+        # drop out of both lists (sync_race_roster). Frozen into
+        # race_state.turn_order at match start; benching never
+        # unpairs a gun.
+        self.race_roster: dict[str, list[int]] = {"order": [], "bench": []}
+        # Best finished run per (gun id, base count) across matches in
+        # this server run: {(gun_id, bases): {"time": seconds,
+        # "name": display name}}. Keyed by bases so a 2-base time can
+        # never overwrite a 4-base best. In-memory only.
+        self.race_session_best: dict[tuple[int, int], dict[str, Any]] = {}
         self.results_revealed: bool = False
         self._impatient_timestamps: dict[int, list[float]] = {}
         self._impatient_last_global_ts: float = 0.0
@@ -726,7 +766,103 @@ class ArenaEngine:
         self.expected_hardware_guns = max(1, min(8, int(count)))
         self.sim.setup_number_of_guns(self.expected_hardware_guns)
         self._sync_players_from_sim()
+        self.sync_race_roster()
         self.audio.play_ui("GunDetect.wav", subtitle=f"{self.expected_hardware_guns} T-Blasters configured")
+
+    def sync_race_roster(self) -> dict[str, list[int]]:
+        """Reconcile the race roster with the currently paired guns.
+
+        Guns that left drop out of both lists; newly paired guns
+        append to the end of the race order (gun-number order among
+        themselves) so an existing order is never disturbed. Called
+        lazily from the snapshot too, so every roster mutation site
+        (pairing, quiet-drops, host Removes, unpair-all) stays
+        consistent without each one remembering to call it.
+        """
+        paired = sorted(p.gun_num for p in self.players.values())
+        paired_set = set(paired)
+        order = [n for n in self.race_roster.get("order", []) if n in paired_set]
+        bench = [n for n in self.race_roster.get("bench", []) if n in paired_set]
+        seen = set(order) | set(bench)
+        order.extend(n for n in paired if n not in seen)
+        self.race_roster = {"order": order, "bench": bench}
+        return {"order": list(order), "bench": list(bench)}
+
+    def race_roster_snapshot(self) -> dict[str, list[int]]:
+        """The roster as the UIs render it (always reconciled)."""
+        return self.sync_race_roster()
+
+    def _roster_edit_allowed(self) -> str | None:
+        """None when a roster edit is allowed, else the rejection reason."""
+        if self.mode_name != "TagThenShoot":
+            return "Race roster only applies to Tag'n Shoot."
+        if self.phase != "LOBBY":
+            return "Race roster can only change before the match starts."
+        return None
+
+    def set_race_roster(
+        self, order: list[int], bench: list[int]
+    ) -> tuple[bool, str]:
+        """Replace the full roster (TV drag-and-drop / X / re-add).
+
+        `order` + `bench` must partition the paired gun numbers with
+        no duplicates, and at least one racer must remain.
+        """
+        reason = self._roster_edit_allowed()
+        if reason is not None:
+            return False, reason
+        try:
+            order_nums = [int(n) for n in order]
+            bench_nums = [int(n) for n in bench]
+        except (TypeError, ValueError):
+            return False, "Roster entries must be player numbers."
+        paired = sorted(p.gun_num for p in self.players.values())
+        if sorted(order_nums + bench_nums) != paired:
+            return False, "Roster must list every paired player exactly once, in the race or on the bench."
+        if len(set(order_nums)) != len(order_nums) or len(set(bench_nums)) != len(bench_nums):
+            return False, "Roster must not repeat a player."
+        if not order_nums:
+            return False, "At least one player must race."
+        self.race_roster = {"order": order_nums, "bench": bench_nums}
+        return True, ""
+
+    def toggle_race_roster(self, gun_num: int, in_race: bool) -> tuple[bool, str]:
+        """Opt one player in or out (phone HUD). Opting in appends to
+        the END of the race order and never reorders anyone else;
+        opting out moves the player to the bench. Cannot bench the
+        last racer."""
+        reason = self._roster_edit_allowed()
+        if reason is not None:
+            return False, reason
+        self.sync_race_roster()
+        if not any(p.gun_num == gun_num for p in self.players.values()):
+            return False, f"Player {gun_num} is not paired."
+        order = list(self.race_roster["order"])
+        bench = list(self.race_roster["bench"])
+        if in_race:
+            if gun_num in order:
+                return True, ""
+            bench = [n for n in bench if n != gun_num]
+            order.append(gun_num)
+        else:
+            if gun_num in bench:
+                return True, ""
+            if len(order) <= 1:
+                return False, "At least one player must race."
+            order = [n for n in order if n != gun_num]
+            bench.append(gun_num)
+        self.race_roster = {"order": order, "bench": bench}
+        return True, ""
+
+    def race_roster_players(self) -> list[PlayerState]:
+        """Paired players in race order (rostered racers only)."""
+        self.sync_race_roster()
+        by_num = {p.gun_num: p for p in self.players.values()}
+        return [by_num[n] for n in self.race_roster["order"] if n in by_num]
+
+    def race_rosters_gun_ids(self) -> list[int]:
+        """Gun ids in race order (rostered racers only)."""
+        return [p.gun_id for p in self.race_roster_players()]
 
     def add_lobby_notice(self, text: str) -> None:
         """Note a pairing/liveness event for the pairing page.
@@ -1194,6 +1330,11 @@ class ArenaEngine:
         "file" (payload: filename, subtitle, priority, duration),
         "duel_can_shoot" (no payload). Delays are modeled line
         lengths — see _pending_audio.
+
+        Race followups may carry "race_run" (the race turn_index at
+        queue time): tick_pending_audio drops them unless that run
+        is still RUNNING, so a prompt queued for a run that capped
+        or was skipped never sounds into the next run.
         """
         entry: dict[str, Any] = {"fire_at": time.time() + max(0.0, delay_s), "kind": kind}
         entry.update(payload)
@@ -1212,6 +1353,8 @@ class ArenaEngine:
             return
         for entry in due:
             kind = entry["kind"]
+            if "race_run" in entry and not self._race_followup_still_live(entry):
+                continue
             if kind == "pool":
                 self.audio.trigger_pool(
                     entry["pool_key"],
@@ -1231,6 +1374,20 @@ class ArenaEngine:
                 # re-arm it.
                 if self.duel_state.get("subphase") == "DRAW":
                     self.duel_state["can_shoot"] = True
+
+    def _race_followup_still_live(self, entry: dict[str, Any]) -> bool:
+        """True when a run-guarded race followup may still fire.
+
+        Next-target prompts are queued during a run but fire ~1-2 s
+        later; if the run has since capped, been skipped, or ended,
+        the prompt belongs to a dead run and must not sound into the
+        next run's sequence. The guard keys on the run's turn_index,
+        which advances on every turn change, plus the RUNNING phase.
+        """
+        if self.mode_name != "TagThenShoot":
+            return False
+        rs = self.race_state
+        return bool(rs) and rs.get("turn_phase") == "RUNNING" and rs.get("turn_index") == entry.get("race_run")
 
     def _record_duel_round_result(self, winner: PlayerState | None) -> None:
         """Record one finished duel round for the round display.
@@ -1325,8 +1482,7 @@ class ArenaEngine:
             p.deaths = 0
             p.tags = 0
             p.tower_hits = 0
-            p.run_time = None
-            p.run_completed = False
+            p.run_history = []
             p.shots_fired = 0
             p.streak = 0
             p.best_streak = 0
@@ -1372,12 +1528,21 @@ class ArenaEngine:
             }
 
         if self.mode_name == "TagThenShoot":
-            order = sorted(self.players.keys(), key=lambda gid: self.players[gid].gun_num)
+            # The roster freezes at match start: turn_order is the
+            # snapshot, in race order, repeated once per round. Benched
+            # players never appear in it (they still poll and stay in
+            # state.players, but the game displays hide them entirely).
+            order = self.race_rosters_gun_ids()
             first = order[0] if order else None
+            max_rounds = max(1, min(3, int(self.settings.get("rounds", 1))))
+            launch_mode = "auto" if int(self.settings.get("gameLaunch", 1)) == 0 else "manual"
             self.race_state = {
                 "turn_order": order,
                 "turn_index": 0,
-                "turn_phase": "WAIT_TRIGGER" if order else "DONE",
+                "round_index": 1,
+                "max_rounds": max_rounds,
+                "launch_mode": launch_mode,
+                "turn_phase": "ROUND_INTRO" if order else "DONE",
                 "active_gun_id": first,
                 # False until a trigger poll observes the trigger
                 # released, so a trigger held over from the previous
@@ -1389,19 +1554,42 @@ class ArenaEngine:
                 "countdown_sent": True,
                 "next_number": 0,
                 "next_number_at": 0.0,
+                # ROUND_INTRO: the round announcement plays on the
+                # first tick, then the intro ends at intro_ends_at
+                # (modeled line length + 0.25 s) so the line never
+                # overlaps the countdown numbers.
+                "intro_played": False,
+                "intro_ends_at": 0.0,
+                # PLAYER_INTRO: the "Player N!" callout plays on the
+                # first tick, then the callout ends at callout_ends_at
+                # (modeled line length + 0.25 s) so it never overlaps
+                # the countdown numbers or the gun's 0x93 countdown.
+                "callout_played": False,
+                "callout_ends_at": 0.0,
                 "turn_started_at": 0.0,
                 "turn_ends_at": 0.0,
                 "beat_ends_at": 0.0,
                 "elapsed": 0.0,
                 "turn_cap_s": int(self.settings.get("durationSeconds", 60)),
                 "bases": max(1, int(self.settings.get("numberOfBase", 4))),
+                # The following racer (UP NEXT tag), derived by
+                # race_next_gun_id; None on the final run, in solo
+                # races, and once the race is DONE.
+                "next_gun_id": None,
             }
+            self._refresh_race_next_gun_id()
             if first is not None:
                 fp = self.players[first]
-                self.add_event(
-                    "system",
-                    f"{fp.display_name} is up first — pull the trigger to start the run!",
-                )
+                if launch_mode == "auto":
+                    self.add_event(
+                        "system",
+                        f"Round 1 of {max_rounds} — {fp.display_name} is up first, countdown starts in a moment!",
+                    )
+                else:
+                    self.add_event(
+                        "system",
+                        f"Round 1 of {max_rounds} — {fp.display_name} is up first — pull the trigger to start the run!",
+                    )
         else:
             self.race_state = {}
 
@@ -1498,18 +1686,168 @@ class ArenaEngine:
         rs = self.race_state
         return bool(rs) and rs.get("turn_phase") == "RUNNING" and rs.get("active_gun_id") == player.gun_id
 
-    def tick_race_turns(self, now: float | None = None) -> None:
-        """Advance the TagThenShoot timed-turn machine.
+    # Round announcement lines, shared with the duel (PR #15): the same
+    # GLOBAL_114/115/116 files, with the duel's modeled durations.
+    # GLOBAL_113 "NEXT GAME!" stays unwired everywhere.
+    _RACE_ROUND_LINES: dict[str, tuple[str, str, float]] = {
+        "first": ("DLG_GM_GLOBAL_115.wav", "First round!", 1.2),
+        "next": ("DLG_GM_GLOBAL_114.wav", "Next round!", 1.1),
+        "final": ("DLG_GM_GLOBAL_116.wav", "Final round", 1.4),
+    }
 
-        WAIT_TRIGGER (the active player pulls the trigger; mandatory,
-        one pull per turn) -> COUNTDOWN (halved, as the match-level
-        manual launch halves it) -> RUNNING (one course; the cap ends
-        an unfinished run) -> TURN_END (3 s beat) -> the next turn's
-        WAIT_TRIGGER, or DONE once every player has run. Called once
-        per match-loop cycle, next to tick_mode_timers; the hardware
-        trigger poll and the per-turn countdown command live in the
-        loop, because they need blocking HID calls this sync tick
-        cannot make.
+    # Player-number callout duration: the duel's GLOBAL_54+gun_num
+    # files ("Player 1!".."Player 16!"). Modeled duration covers the
+    # longest line in the set (GLOBAL_67 "Player 13", 1.83 s) so the
+    # callout window never overlaps the countdown numbers.
+    _RACE_PLAYER_CALLOUT_DURATION = 1.9
+
+    def _race_countdown_seconds(self) -> int:
+        """Per-run countdown from the launch setting: 10 s in Auto,
+        5 s in Manual (after the trigger pull). The old halved-3 s
+        countdown is gone; the gun's 0x93 packet takes any value."""
+        return 10 if self.race_state.get("launch_mode") == "auto" else 5
+
+    def _enter_race_countdown(self, now: float) -> None:
+        """Open COUNTDOWN for the active run. No countdown_intro pool
+        here: the intro line would overlap the first spoken number,
+        and delaying the numbers would desync them from the gun's
+        own 0x93 countdown. The round line and Player callout play
+        in their own intro phases before this opens, so the first
+        spoken number and the app loop's 0x93 send (countdown_sent)
+        start together. Numbers + round line + callout + go only."""
+        rs = self.race_state
+        cd = self._race_countdown_seconds()
+        rs["turn_phase"] = "COUNTDOWN"
+        rs["countdown_seconds"] = cd
+        rs["countdown_remaining"] = cd
+        rs["countdown_ends_at"] = now + cd
+        rs["countdown_sent"] = False
+        rs["next_number"] = cd
+        rs["next_number_at"] = now
+        self.countdown_remaining = cd
+
+    def _enter_run_start_phase(self, now: float) -> None:
+        """Move the active run to its start phase: a trigger wait in
+        Manual, straight into the countdown in Auto."""
+        if self.race_state.get("launch_mode") == "auto":
+            self._enter_race_countdown(now)
+        else:
+            rs = self.race_state
+            rs["turn_phase"] = "WAIT_TRIGGER"
+            rs["trigger_armed"] = False
+            self._turn_triggered = False
+
+    def _play_round_announcement(self, now: float) -> None:
+        """Play the round line for the current round cycle and set the
+        intro window. Round 1 always announces "First round!" (even
+        in a 1-round match, as in the duel); the last round of a
+        multi-round match announces "Final round"; the rest "Next
+        round!". The countdown cannot start until the window elapses,
+        so the line never overlaps the countdown numbers."""
+        rs = self.race_state
+        rnd = int(rs.get("round_index", 1))
+        max_rnd = int(rs.get("max_rounds", 1))
+        if rnd <= 1:
+            key = "first"
+        elif rnd >= max_rnd:
+            key = "final"
+        else:
+            key = "next"
+        wav, sub, dur = self._RACE_ROUND_LINES[key]
+        cue = self.audio.play_announcer_file(wav, sub, priority=-1, duration=dur)
+        delay = (max(0.1, self.audio.active_until - now) + 0.25) if cue is not None else 0.1
+        rs["intro_played"] = True
+        rs["intro_ends_at"] = now + delay
+
+    def _enter_player_intro(self) -> None:
+        """Open PLAYER_INTRO for the active run: the Player callout
+        plays on the first tick, then the run's start phase opens
+        once the callout window ends. Trigger pulls and the 0x93
+        countdown both wait: the app loop only polls/sends in
+        WAIT_TRIGGER/COUNTDOWN, so nothing can start early."""
+        rs = self.race_state
+        rs["turn_phase"] = "PLAYER_INTRO"
+        rs["callout_played"] = False
+        rs["callout_ends_at"] = 0.0
+
+    def _play_player_callout(self, now: float) -> None:
+        """Play the active runner's "Player N!" callout and set the
+        callout window. The spoken line says only the number (custom
+        names cannot be spoken from pre-recorded audio); the subtitle
+        carries the display name. Same file formula + guard as the
+        duel's round-win callout; out-of-range gun numbers proceed
+        silently (the roster caps at 8 guns in practice). The
+        countdown cannot start until the window elapses, so the
+        callout never overlaps the countdown numbers."""
+        rs = self.race_state
+        gid = rs.get("active_gun_id")
+        player = self.players.get(gid) if gid is not None else None
+        if player is not None and 1 <= player.gun_num <= 16:
+            wav = f"DLG_GM_GLOBAL_{54 + player.gun_num:02d}.wav"
+            sub = f"Player {player.gun_num} ({player.display_name}) is up!"
+            cue = self.audio.play_announcer_file(
+                wav, sub, priority=-1, duration=self._RACE_PLAYER_CALLOUT_DURATION
+            )
+            delay = (max(0.1, self.audio.active_until - now) + 0.25) if cue is not None else 0.1
+        else:
+            delay = 0.1
+        rs["callout_played"] = True
+        rs["callout_ends_at"] = now + delay
+
+    def _schedule_next_base_prompt(self, now: float, next_base: int, cue: Any) -> None:
+        """Queue a "Next: T-Base N!" prompt after the cue just played.
+
+        Direct file play (guaranteed, not a proba pool), sequenced
+        after the preceding line via the modeled active_until window
+        — the same pattern as the tag handler's confirmation. The
+        followup carries the run's turn_index: tick_pending_audio
+        drops it if the run has ended before it fires. A prompt is
+        also never due before a Next prompt already queued for the
+        same run, so prompts always sound in base order even at
+        sim speed (on hardware the earlier prompt has long since
+        fired, so that clamp is a no-op). No spoken shoot-the-tower
+        line exists in the catalog, so that step stays visual plus
+        the tower-hit confirmation.
+        """
+        if cue is not None:
+            delay = max(0.1, self.audio.active_until - now) + 0.25
+        else:
+            delay = 0.1
+        run = int(self.race_state.get("turn_index", 0))
+        queued = [
+            float(entry.get("fire_at", 0.0))
+            for entry in self._pending_audio
+            if entry.get("kind") == "file"
+            and entry.get("race_run") == run
+            and str(entry.get("subtitle", "")).startswith("Next:")
+        ]
+        if queued:
+            delay = max(delay, max(queued) + 0.05 - time.time())
+        self._schedule_audio_followup(
+            delay,
+            "file",
+            filename=f"DLG_GM_GLOBAL_{72 + next_base - 1:02d}.wav",
+            subtitle=f"Next: T-Base {next_base}!",
+            priority=2,
+            duration=1.5,
+            race_run=int(self.race_state.get("turn_index", 0)),
+        )
+
+    def tick_race_turns(self, now: float | None = None) -> None:
+        """Advance the TagThenShoot timed-turn machine, looped per round.
+
+        ROUND_INTRO (round announcement, no overlap with the
+        countdown) -> PLAYER_INTRO ("Player N!" callout, no overlap
+        with the countdown) -> WAIT_TRIGGER (Manual only: the active
+        player pulls the trigger; mandatory, one pull per run) or
+        straight to COUNTDOWN (Auto: 10 s before EVERY run; Manual:
+        5 s after the pull) -> RUNNING (one course; the cap ends an
+        unfinished run) -> TURN_END (3 s beat) -> the next run, or
+        the next round's ROUND_INTRO, or DONE once every racer has
+        run every round. Called once per match-loop cycle, next to
+        tick_mode_timers; the hardware trigger poll and the per-turn
+        countdown command live in the loop, because they need
+        blocking HID calls this sync tick cannot make.
         """
         if self.phase != "PLAYING" or self.mode_name != "TagThenShoot":
             return
@@ -1518,19 +1856,20 @@ class ArenaEngine:
             return
         now = time.time() if now is None else now
         phase = rs.get("turn_phase")
-        if phase == "WAIT_TRIGGER":
+        if phase == "ROUND_INTRO":
+            if not rs.get("intro_played"):
+                self._play_round_announcement(now)
+            elif now >= rs.get("intro_ends_at", 0.0):
+                self._enter_player_intro()
+        elif phase == "PLAYER_INTRO":
+            if not rs.get("callout_played"):
+                self._play_player_callout(now)
+            elif now >= rs.get("callout_ends_at", 0.0):
+                self._enter_run_start_phase(now)
+        elif phase == "WAIT_TRIGGER":
             if self._turn_triggered:
                 self._turn_triggered = False
-                cd = max(1, int(self.settings.get("countdownSeconds", 3)) // 2)
-                rs["turn_phase"] = "COUNTDOWN"
-                rs["countdown_seconds"] = cd
-                rs["countdown_remaining"] = cd
-                rs["countdown_ends_at"] = now + cd
-                rs["countdown_sent"] = False
-                rs["next_number"] = cd
-                rs["next_number_at"] = now
-                self.countdown_remaining = cd
-                self.audio.trigger_pool("countdown_intro", force=True)
+                self._enter_race_countdown(now)
         elif phase == "COUNTDOWN":
             if rs.get("next_number", 0) >= 1 and now >= rs.get("next_number_at", 0.0):
                 self.audio.play_countdown_number(rs["next_number"])
@@ -1549,7 +1888,9 @@ class ArenaEngine:
                 self._advance_race_turn(now)
 
     def _start_race_run(self, now: float) -> None:
-        """Enter RUNNING for the active player's turn: fresh run counters, a reset course, re-armed time warnings."""
+        """Enter RUNNING for the active player's run: fresh per-run
+        counters, a reset course, re-armed time warnings. `score`
+        is NOT reset: it is the total across all runs this match."""
         rs = self.race_state
         gid = rs.get("active_gun_id")
         player = self.players.get(gid) if gid is not None else None
@@ -1562,22 +1903,59 @@ class ArenaEngine:
         if player is not None:
             player.tags = 0
             player.tower_hits = 0
-            player.score = 0
-            player.run_time = None
-            player.run_completed = False
+            player.miss_streak = 0
         if self.use_simulator and gid is not None:
             self.sim.reset_race_course(gid)
         self.audio.reset_match_timers()
-        self.audio.trigger_pool("game_start", force=True)
+        # The go signal is the single clear "Go!" (GLOBAL_13, 0.56 s).
+        # The game_start pool's other variants do not say go clearly
+        # ("GO! If, like, you want to!", "Go stop. No, I was kidding
+        # go") — a joke line is the wrong start signal for a timed
+        # run. Other modes keep the pool.
+        cue = self.audio.play_announcer_file("DLG_GM_GLOBAL_13.wav", "Go!", priority=0, duration=0.6)
+        # First-target prompt: "T-Base 1" sequenced after Go, so the
+        # runner hears their first target instead of only the screens
+        # showing it. Run-guarded: a skip/cap before it fires drops it.
+        self._schedule_next_base_prompt(now, 1, cue)
         if player is not None:
             self.add_event("system", f"{player.display_name} started the run — go!")
 
-    def _complete_race_turn(self, completed: bool, now: float | None = None) -> None:
+    def _record_run_result(
+        self,
+        player: PlayerState,
+        completed: bool,
+        elapsed: float | None,
+        points: int | None = None,
+        tags: int | None = None,
+        tower_hits: int | None = None,
+    ) -> dict[str, Any]:
+        """Append one run to the player's history for the current round.
+
+        Defaults take the live counters (points = tags + tower hits),
+        which is exactly the run's score since both counters reset at
+        run start. Skip-before-start passes explicit zeros so stale
+        counters from a previous run never leak into a forfeit.
+        """
+        entry: dict[str, Any] = {
+            "round": int(self.race_state.get("round_index", 1)),
+            "time": elapsed if completed else None,
+            "completed": completed,
+            "points": (player.tags + player.tower_hits) if points is None else points,
+            "tags": player.tags if tags is None else tags,
+            "tower_hits": player.tower_hits if tower_hits is None else tower_hits,
+        }
+        player.run_history.append(entry)
+        return entry
+
+    def _complete_race_turn(
+        self, completed: bool, now: float | None = None, reason: str = "cap"
+    ) -> None:
         """Record the active run's result and open the TURN_END beat.
 
         Called from the ingest paths when the runner finishes the
-        course, and from the tick when the cap expires. No-op unless a
-        run is live, so a late tower report cannot re-complete a turn.
+        course, from the tick when the cap expires, and from skip-run
+        (`reason="skip"`). No-op unless a run is live, so a late
+        tower report cannot re-complete a turn.
         """
         rs = self.race_state
         if not rs or rs.get("turn_phase") != "RUNNING":
@@ -1591,25 +1969,33 @@ class ArenaEngine:
         rs["elapsed"] = elapsed
         if player is None:
             return
-        player.run_completed = completed
+        # Match-best compares against every finish recorded BEFORE
+        # this run (all players, all earlier rounds), so compute it
+        # before appending this run to the history.
+        prev_best: float | None = None
+        for p in self.players.values():
+            best = p.best_run_time
+            if best is not None and (prev_best is None or best < prev_best):
+                prev_best = best
+        self._record_run_result(player, completed, elapsed if completed else None)
         if not completed:
-            player.run_time = None
-            self.add_event(
-                "system",
-                f"{player.display_name} ran out of time — {player.score} points.",
-            )
+            if reason == "skip":
+                self.add_event(
+                    "system",
+                    f"{player.display_name}'s run was skipped — {player.tags + player.tower_hits} points kept.",
+                )
+            else:
+                self.add_event(
+                    "system",
+                    f"{player.display_name} ran out of time — {player.tags + player.tower_hits} points.",
+                )
             return
-        player.run_time = elapsed
-        others = [
-            p.run_time
-            for p in self.players.values()
-            if p.gun_id != gid and p.run_completed and p.run_time is not None
-        ]
-        is_match_best = not others or elapsed < min(others)
-        prev_session = self.race_session_best.get(gid)
+        is_match_best = prev_best is None or elapsed < prev_best
+        bases = int(rs.get("bases", self.settings.get("numberOfBase", 4)))
+        prev_session = self.race_session_best.get((gid, bases))
         is_session_best = prev_session is None or elapsed < prev_session["time"]
         if is_session_best:
-            self.race_session_best[gid] = {"time": elapsed, "name": player.display_name}
+            self.race_session_best[(gid, bases)] = {"time": elapsed, "name": player.display_name}
         if is_match_best and is_session_best:
             tail = " — fastest so far, and a new session best!"
         elif is_match_best:
@@ -1627,7 +2013,9 @@ class ArenaEngine:
             custom_subtitle=f"{player.display_name} finished in {elapsed:.1f}s!",
             force=True,
         )
-        if is_match_best or is_session_best:
+        # Vocal new-best only for a new MATCH best; personal/session
+        # bests show on screen, they are not announced.
+        if is_match_best:
             if cue is not None:
                 delay = max(0.1, self.audio.active_until - now) + 0.25
             else:
@@ -1641,26 +2029,206 @@ class ArenaEngine:
             )
 
     def _advance_race_turn(self, now: float) -> None:
-        """Move to the next player's WAIT_TRIGGER, or DONE after the last turn."""
+        """Move to the next run: same round's next racer, the next
+        round's ROUND_INTRO, or DONE after the last run of the last
+        round. Round-major, same roster order every round."""
         rs = self.race_state
-        rs["turn_index"] = int(rs.get("turn_index", 0)) + 1
         order = rs.get("turn_order", [])
-        if rs["turn_index"] >= len(order):
+        max_rounds = int(rs.get("max_rounds", 1))
+        rs["turn_index"] = int(rs.get("turn_index", 0)) + 1
+        if not order or rs["turn_index"] >= len(order) * max_rounds:
             rs["turn_phase"] = "DONE"
             rs["active_gun_id"] = None
+            self._refresh_race_next_gun_id()
             return
-        gid = order[rs["turn_index"]]
+        gid = order[rs["turn_index"] % len(order)]
+        rs["round_index"] = rs["turn_index"] // len(order) + 1
         rs["active_gun_id"] = gid
-        rs["turn_phase"] = "WAIT_TRIGGER"
-        rs["trigger_armed"] = False
         rs["elapsed"] = 0.0
         self._turn_triggered = False
         player = self.players.get(gid)
+        new_round = rs["turn_index"] % len(order) == 0
+        if new_round:
+            rs["turn_phase"] = "ROUND_INTRO"
+            rs["intro_played"] = False
+            rs["intro_ends_at"] = 0.0
+            if player is not None:
+                self.add_event(
+                    "system",
+                    f"Round {rs['round_index']} of {max_rounds} — {player.display_name} is up first!",
+                )
+            self._refresh_race_next_gun_id()
+            return
+        self._enter_player_intro()
         if player is not None:
-            self.add_event(
-                "system",
-                f"{player.display_name} is up — pull the trigger to start the run!",
-            )
+            if rs.get("launch_mode") == "auto":
+                self.add_event(
+                    "system",
+                    f"{player.display_name} is up — countdown starting!",
+                )
+            else:
+                self.add_event(
+                    "system",
+                    f"{player.display_name} is up — pull the trigger to start the run!",
+                )
+        self._refresh_race_next_gun_id()
+
+    def skip_race_run(self, now: float | None = None) -> tuple[bool, str]:
+        """Host skip: forfeit the current run and move on.
+
+        RUNNING: the partial run is recorded unfinished with the
+        points scored so far, then the beat is skipped. PLAYER_INTRO
+        / WAIT_TRIGGER / COUNTDOWN: the unstarted run is recorded as
+        an unfinished 0-point run and the machine advances (the next
+        run gets its own Player callout; callouts are played
+        synchronously, never queued, so a skipped run's callout
+        cannot bleed into the next run). TURN_END: the beat is
+        skipped. ROUND_INTRO: the announcement wait is skipped and
+        the Player callout still plays. Any other state: rejected.
+        """
+        if self.phase != "PLAYING" or self.mode_name != "TagThenShoot":
+            return False, "No race is running."
+        rs = self.race_state
+        if not rs:
+            return False, "No race is running."
+        now = time.time() if now is None else now
+        phase = rs.get("turn_phase")
+        if phase == "RUNNING":
+            self._complete_race_turn(completed=False, now=now, reason="skip")
+            rs["beat_ends_at"] = now
+            return True, ""
+        if phase in ("PLAYER_INTRO", "WAIT_TRIGGER", "COUNTDOWN"):
+            gid = rs.get("active_gun_id")
+            player = self.players.get(gid) if gid is not None else None
+            if player is not None:
+                self._record_run_result(player, False, None, points=0, tags=0, tower_hits=0)
+                self.add_event("system", f"{player.display_name}'s run was skipped before it started.")
+            self._advance_race_turn(now)
+            return True, ""
+        if phase == "TURN_END":
+            self._advance_race_turn(now)
+            return True, ""
+        if phase == "ROUND_INTRO":
+            rs["intro_played"] = True
+            self._enter_player_intro()
+            return True, ""
+        return False, "Nothing to skip right now."
+
+    def finalize_race_on_stop(self, now: float | None = None) -> bool:
+        """Snapshot a live run when the match is stopped mid-run, so
+        its points are not lost from the history/totals. Returns True
+        when a partial run was recorded. Unstarted runs are NOT
+        fabricated: they simply never ran."""
+        if self.mode_name != "TagThenShoot":
+            return False
+        rs = self.race_state
+        if not rs:
+            return False
+        now = time.time() if now is None else now
+        recorded = False
+        if rs.get("turn_phase") == "RUNNING":
+            gid = rs.get("active_gun_id")
+            player = self.players.get(gid) if gid is not None else None
+            if player is not None:
+                elapsed = max(0.0, now - rs.get("turn_started_at", now))
+                rs["elapsed"] = elapsed
+                self._record_run_result(player, False, None)
+                recorded = True
+        rs["turn_phase"] = "DONE"
+        rs["active_gun_id"] = None
+        self._refresh_race_next_gun_id()
+        return recorded
+
+    def race_next_gun_id(self) -> int | None:
+        """The following racer's gun id (UP NEXT tag), or None.
+
+        One derivation, shared by both displays via the
+        ``race_state.next_gun_id`` snapshot field: the next run in the
+        frozen order, wrapping to the first racer of the next round.
+        None when the race is DONE, when the current run is the final
+        run of the final round, and when the next run would be the
+        same player (a solo race: the card must never carry both UP
+        NOW and UP NEXT). Phase-independent on purpose: the tag shows
+        consistently across ROUND_INTRO / WAIT_TRIGGER / COUNTDOWN /
+        RUNNING / TURN_END, and skip-run advances it through
+        _advance_race_turn like any other turn change.
+        """
+        rs = self.race_state
+        if not rs or rs.get("turn_phase") == "DONE":
+            return None
+        order = rs.get("turn_order", [])
+        if len(order) < 1:
+            return None
+        nxt_index = int(rs.get("turn_index", 0)) + 1
+        if nxt_index >= len(order) * int(rs.get("max_rounds", 1)):
+            return None
+        nxt = order[nxt_index % len(order)]
+        if nxt == rs.get("active_gun_id"):
+            return None
+        return nxt
+
+    def _refresh_race_next_gun_id(self) -> None:
+        """Store the derived next racer in race_state (snapshot field)."""
+        if self.race_state:
+            self.race_state["next_gun_id"] = self.race_next_gun_id()
+
+    def race_racers(self) -> list[PlayerState]:
+        """Rostered racers in frozen race order: the match snapshot
+        turn_order while a match exists, else the setup roster."""
+        rs = self.race_state
+        order = rs.get("turn_order") if rs else None
+        if order:
+            return [self.players[gid] for gid in order if gid in self.players]
+        return self.race_roster_players()
+
+    def _race_best_single_points(self, player: PlayerState) -> int:
+        """Best single-run points, including the live run if this
+        player is running right now (its points are not in history
+        yet)."""
+        best = player.best_single_run_points
+        rs = self.race_state
+        if (
+            rs
+            and rs.get("turn_phase") == "RUNNING"
+            and rs.get("active_gun_id") == player.gun_id
+        ):
+            best = max(best, player.tags + player.tower_hits)
+        return best
+
+    def race_rank_key(self, player: PlayerState) -> tuple[int, float, int, int, int]:
+        """The ONE race ranking key, shared by sorting, LEDs, winner
+        announcement, and both displays' mirrors: finishers by best
+        time ascending; any finisher above any non-finisher;
+        non-finishers by total points, then best single-run points,
+        then gun number. Exact best-time ties share the win — there
+        is no tiebreak chain."""
+        best = player.best_run_time
+        if best is not None:
+            return (0, best, 0, 0, player.gun_num)
+        return (1, 0.0, -player.score, -self._race_best_single_points(player), player.gun_num)
+
+    def race_ranked_players(self) -> list[PlayerState]:
+        """Rostered racers in race rank order (benched excluded)."""
+        return sorted(self.race_racers(), key=self.race_rank_key)
+
+    def race_winners(self) -> list[PlayerState]:
+        """Shared-win winners: every racer tied on the best finished
+        time, or (no finishes) every racer tied on top total points
+        AND best single-round points — i.e. the players at place 1
+        under race_rank_key, ignoring the gun-number ordering
+        tiebreak. Benched players can never win."""
+        racers = self.race_racers()
+        if not racers:
+            return []
+        finished = [p for p in racers if p.best_run_time is not None]
+        if finished:
+            best = min(p.best_run_time for p in finished)
+            return [p for p in finished if p.best_run_time == best]
+        top = max(p.score for p in racers)
+        leaders = [p for p in racers if p.score == top]
+        best_single = max(p.best_single_run_points for p in leaders)
+        return [p for p in leaders if p.best_single_run_points == best_single]
+
 
     def ingest_ubiconnect_hits(self, hits_by_gid: dict[int, int]) -> None:
         """Process 0xC3 IR shots received directly by the UbiConnect tower in TagThenShoot.
@@ -1696,13 +2264,18 @@ class ArenaEngine:
                     actor=player,
                     icon_url="/static/assets/textures/Ui/Pictograms/64x/RF08.png",
                 )
-                self.audio.trigger_pool("tower_hit", custom_subtitle=f"{player.display_name} hit the UbiConnect tower!")
+                cue = self.audio.trigger_pool("tower_hit", custom_subtitle=f"{player.display_name} hit the UbiConnect tower!")
                 self._check_lead_change()
                 # The final tower shot finishes the run: all bases
-                # tagged and every tower shot landed.
+                # tagged and every tower shot landed. Otherwise the
+                # next base name plays as an advance prompt once the
+                # tower-hit confirmation finishes (never on the final
+                # hit: the finish line plays instead).
                 bases = max(1, int(self.settings.get("numberOfBase", 4)))
                 if player.tags >= bases and player.tower_hits >= bases:
                     self._complete_race_turn(completed=True)
+                elif player.tags < bases:
+                    self._schedule_next_base_prompt(time.time(), player.tags + 1, cue)
 
     def ingest_status_report(self, status: DecodedStatus) -> None:
         """Process a single gun's 0x95 status report and update scores, streaks, and kill-feed."""
@@ -1744,7 +2317,14 @@ class ArenaEngine:
             player.miss_streak += shots_delta
             # The original's blind/aim taunt fires after repeated
             # misses; the threshold is 5, matching its blind rule.
-            if player.miss_streak >= 5 and now - self._last_miss_taunt_ts >= 9.0:
+            # Gated off in TagThenShoot: tower shots are not misses,
+            # and tower hits never reset the streak, so the taunt
+            # would fire mid-run (worse across multiple rounds).
+            if (
+                self.mode_name != "TagThenShoot"
+                and player.miss_streak >= 5
+                and now - self._last_miss_taunt_ts >= 9.0
+            ):
                 player.miss_streak = 0
                 self._last_miss_taunt_ts = now
                 self.audio.trigger_pool(
@@ -2254,15 +2834,20 @@ class ArenaEngine:
                 reverse=True,
             )
         if self.mode_name == "TagThenShoot":
-            # Timed turns: finished runs rank by elapsed time, fastest
-            # first; unfinished runs (cap expiry, or not yet run) rank
-            # after them by points, then tags, then gun number.
-            def race_key(p: PlayerState) -> tuple[int, float, int, int, int]:
-                if p.run_completed and p.run_time is not None:
-                    return (0, p.run_time, 0, 0, p.gun_num)
-                return (1, 0.0, -p.score, -p.tags, p.gun_num)
-
-            return sorted(self.players.values(), key=race_key)
+            # Timed turns: rostered racers by race_rank_key (best
+            # time, then points), with benched players appended in
+            # gun-number order. Benched players stay in state.players
+            # (setup screens and the roster API still need them); the
+            # game displays hide them entirely, and they are excluded
+            # from ranking/winners by race_ranked_players and
+            # race_winners, not by disappearing here.
+            racers = self.race_ranked_players()
+            racer_ids = {p.gun_id for p in racers}
+            benched = sorted(
+                (p for p in self.players.values() if p.gun_id not in racer_ids),
+                key=lambda p: p.gun_num,
+            )
+            return racers + benched
         return sorted(
             self.players.values(),
             key=lambda p: (p.score, p.hits_landed, -p.hits_received, p.accuracy),
@@ -2329,19 +2914,13 @@ class ArenaEngine:
             }
 
         if self.mode_name == "TagThenShoot":
-            # Timed turns: the fastest finished run wins. An exact time
-            # tie wins nobody (same rule as the solo score tie below).
-            # When nobody finished, fall through to the score rule.
-            completed = [
-                p for p in self.players.values() if p.run_completed and p.run_time is not None
-            ]
-            if completed:
-                best = min(p.run_time for p in completed)
-                winners = [p.gun_id for p in completed if p.run_time == best]
-                is_tie = len(winners) > 1
-                return {
-                    gid: (not is_tie and gid == winners[0]) for gid in self.players
-                }
+            # Timed turns, shared win: every racer tied on the best
+            # finished time gets a winner LED; with no finishes,
+            # every racer tied on top total points does. Benched
+            # players get NO outcome entry at all — no win/loss
+            # packet is sent to their guns.
+            winners = {p.gun_id for p in self.race_winners()}
+            return {p.gun_id: p.gun_id in winners for p in self.race_racers()}
 
         ranked = self.get_sorted_players()
         top_score = ranked[0].score
@@ -2354,7 +2933,10 @@ class ArenaEngine:
 
     def check_idle_announcer(self) -> None:
         """Fire idle banter when no shots/hits happen for a stretch during PLAYING."""
-        if self.phase != "PLAYING" or self.mode_name == "OldFashionDuel":
+        # Duel is excluded (its standoff silence is the game), and so
+        # is the race: tags do not count as action, so banter would
+        # fire during trigger waits and slow walks between bases.
+        if self.phase != "PLAYING" or self.mode_name in ("OldFashionDuel", "TagThenShoot"):
             return
         now = time.time()
         remaining = self.get_remaining_seconds()
@@ -2392,7 +2974,21 @@ class ArenaEngine:
                 return (now - player.last_status_ts) > threshold
             return match_age > threshold
 
-        if self.mode_name in ("OldFashionDuel", "TagThenShoot"):
+        if self.mode_name == "TagThenShoot":
+            # Mode-critical, but only for rostered racers: a benched
+            # gun going silent must never prompt (it is not racing).
+            racers = self.race_racers()
+            silent = [p for p in racers if silent_for(p, SIGNAL_LOST_TIMEOUT_S)]
+            if silent:
+                return {
+                    "reason": "mode_critical",
+                    "silent_gun_nums": [p.gun_num for p in silent],
+                    "silent_names": [p.display_name for p in silent],
+                    "answering_count": len(racers) - len(silent),
+                    "total_count": len(racers),
+                }
+            return None
+        if self.mode_name == "OldFashionDuel":
             silent = [p for p in self.players.values() if silent_for(p, SIGNAL_LOST_TIMEOUT_S)]
             if silent:
                 return {
@@ -2496,8 +3092,12 @@ class ArenaEngine:
             "impatient_status": self.get_impatient_status(now),
             "duel_state": self.duel_state if self.mode_name == "OldFashionDuel" else None,
             "race_state": self.race_state if self.mode_name == "TagThenShoot" else None,
+            "race_roster": self.race_roster_snapshot(),
             "race_session_best": (
-                {str(k): dict(v) for k, v in self.race_session_best.items()}
+                [
+                    {"gun_id": gid, "bases": bases, **dict(v)}
+                    for (gid, bases), v in sorted(self.race_session_best.items())
+                ]
                 if self.mode_name == "TagThenShoot"
                 else None
             ),
