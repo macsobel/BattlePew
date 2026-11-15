@@ -410,6 +410,181 @@
       box-shadow: 0 0 8px rgba(242, 99, 20, 0.6);
     }
 
+    /* Race position line + per-round chips inside the race block. */
+    .race-position {
+      font-size: 0.78rem;
+      font-weight: 700;
+      letter-spacing: 0.06em;
+      color: #9BA3B5;
+      text-transform: uppercase;
+      text-align: center;
+    }
+
+    .race-chips {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 5px;
+      justify-content: center;
+    }
+
+    .race-chip {
+      font-size: 0.72rem;
+      font-weight: 800;
+      letter-spacing: 0.02em;
+      color: #E6E9F2;
+      background: #11151E;
+      border: 1px solid var(--hud-border);
+      border-radius: 999px;
+      padding: 3px 9px;
+      font-variant-numeric: tabular-nums;
+      white-space: nowrap;
+    }
+
+    .race-chip.live {
+      border-color: var(--bt-orange-bright);
+      color: var(--bt-orange-bright);
+    }
+
+    .race-chip.dnf {
+      color: #9BA3B5;
+    }
+
+    /* Race opt in/out toggle (game selection only, Tag'n Shoot). */
+    .hud-race-toggle {
+      background: var(--hud-card);
+      border: 1.5px solid var(--hud-border);
+      border-radius: 12px;
+      padding: 12px 14px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .hud-race-toggle-head {
+      font-family: var(--font-display);
+      font-size: 0.8rem;
+      letter-spacing: 0.08em;
+      color: #9BA3B5;
+    }
+
+    .hud-race-toggle-btn {
+      font-family: var(--font-display);
+      font-size: 0.95rem;
+      letter-spacing: 0.03em;
+      border-radius: 999px;
+      padding: 9px 14px;
+      cursor: pointer;
+      border: 2px solid var(--team-green);
+      background: var(--team-green);
+      color: #FFFFFF;
+    }
+
+    .hud-race-toggle-btn.sitting {
+      border-color: #9BA3B5;
+      background: transparent;
+      color: #E6E9F2;
+    }
+
+    /* Gameplay standings table (Tag'n Shoot): frozen race order,
+       current-round + best columns. Compact, scrollable, never
+       faded: it sits outside every hud-fade-hidden path. */
+    .hud-race-table-card {
+      background: var(--hud-card);
+      border: 1.5px solid var(--hud-border);
+      border-radius: 12px;
+      padding: 12px 14px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .hud-race-table-head {
+      font-family: var(--font-display);
+      font-size: 0.8rem;
+      letter-spacing: 0.08em;
+      color: #9BA3B5;
+      text-transform: uppercase;
+    }
+
+    .hud-race-table-scroll {
+      max-height: 260px;
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    .hud-race-table-row {
+      display: grid;
+      grid-template-columns: 22px 1fr auto auto;
+      gap: 8px;
+      align-items: center;
+      padding: 6px 8px;
+      border-radius: 8px;
+      background: #11151E;
+      font-size: 0.82rem;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .hud-race-table-row.current {
+      outline: 2px solid var(--bt-orange-bright);
+    }
+
+    .hud-race-table-row.me {
+      background: #1B2334;
+    }
+
+    .hud-race-table-pos {
+      font-family: var(--font-display);
+      color: #9BA3B5;
+      text-align: center;
+    }
+
+    .hud-race-table-name {
+      font-weight: 800;
+      color: #FFFFFF;
+      text-transform: uppercase;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .hud-race-table-cell {
+      font-weight: 700;
+      color: #E6E9F2;
+      text-align: right;
+      white-space: nowrap;
+    }
+
+    .hud-race-table-cell.dim {
+      color: #9BA3B5;
+    }
+
+    /* NEXT badge: the HUD mirror of the TV's UP NEXT pill — small,
+       outline/muted, clearly subordinate to the current-runner row. */
+    .hud-race-next-badge {
+      display: inline-block;
+      font-size: 0.6rem;
+      font-weight: 800;
+      letter-spacing: 0.06em;
+      color: #9BA3B5;
+      border: 1.5px solid #9BA3B5;
+      border-radius: 999px;
+      padding: 0 6px;
+      margin-left: 6px;
+      vertical-align: 1px;
+    }
+
+    /* A benched viewer's race block collapses to the one-line
+       sitting-out status: position, chips, totals, and course row
+       are hidden for the sitter only. */
+    #hudRaceBlock.sitting .race-position,
+    #hudRaceBlock.sitting .race-chips,
+    #hudRaceBlock.sitting .race-stats,
+    #hudRaceBlock.sitting .race-course-row {
+      display: none;
+    }
+
     /* Secondary Stats: Streak, Accuracy, Hits, Frags */
     .stats-4grid {
       display: grid;
@@ -1202,6 +1377,15 @@
     <div id="hudTeamIcons" class="hud-team-icons"></div>
   </section>
 
+  <!-- Race opt in/out (Game Selection screen + Tag'n Shoot only).
+       Never visible mid-match: the toggle disappears once gameplay
+       starts, and the backend rejects roster changes outside setup. -->
+  <section id="hudRaceToggle" class="hud-race-toggle" aria-label="Race lineup" style="display: none;">
+    <div class="hud-race-toggle-head">RACE LINEUP</div>
+    <button type="button" class="hud-race-toggle-btn" id="hudRaceToggleBtn" onclick="toggleRaceOpt()"></button>
+    <div style="font-size: 0.75rem; color: #9BA3B5;">Opting back in puts you last in the running order.</div>
+  </section>
+
   <!-- Alert Banner (Out of HP / Tagged By) -->
   <div id="hudAlert" class="alert-banner"></div>
 
@@ -1245,6 +1429,8 @@
   <!-- Race progress (Tag'n Shoot only) -->
   <section class="race-card" id="hudRaceBlock" style="display: none;">
     <div class="race-status" id="hudRaceStatus"></div>
+    <div class="race-position" id="hudRacePosition"></div>
+    <div class="race-chips" id="hudRaceChips"></div>
     <div class="race-stats">
       <div class="race-stat"><span class="race-num" id="hudRaceTags">0</span><span class="race-label">T-BASE TAGS</span></div>
       <div class="race-stat"><span class="race-num" id="hudRaceTower">0</span><span class="race-label">TOWER HITS</span></div>
@@ -1253,6 +1439,14 @@
       <span class="race-course-label" id="hudRaceCourse">NEXT: T-BASE 1</span>
       <div class="race-pips" id="hudRacePips"></div>
     </div>
+  </section>
+
+  <!-- Race standings table (Tag'n Shoot gameplay only): racers in
+       frozen race order with current-round and best times. Sitters
+       never appear here. -->
+  <section class="hud-race-table-card" id="hudRaceTable" style="display: none;">
+    <div class="hud-race-table-head" id="hudRaceTableHead">Race Standings</div>
+    <div class="hud-race-table-scroll" id="hudRaceTableRows"></div>
   </section>
 
   <!-- Health & Ammo Vitals -->
@@ -1336,7 +1530,7 @@
     <div class="gameover-head" id="gameOverHead">MATCH OVER</div>
     <div class="gameover-rank" id="gameOverRank"></div>
     <div class="gameover-stats" id="gameOverStats"></div>
-    <div class="hud-chart-box">
+    <div class="hud-chart-box" id="hudChartBox">
       <div class="hud-chart-wrap"><canvas id="hudScoreChart"></canvas></div>
       <div id="hudChartLegend" class="hud-chart-legend"></div>
     </div>
@@ -1566,6 +1760,23 @@
       }
     }
 
+    // Race opt in/out (game selection only): flips my roster state.
+    // Opting in appends me last; the order never changes otherwise.
+    async function toggleRaceOpt() {
+      if (!latestState || !latestState.race_roster) return;
+      const benched = Array.isArray(latestState.race_roster.bench)
+        && latestState.race_roster.bench.includes(selectedGunNum);
+      const res = await fetch('/api/race/roster', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ gun_num: selectedGunNum, in_race: benched }),
+      });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        alert(err.detail || 'Cannot change the race lineup right now.');
+      }
+    }
+
     async function triggerSim(action, payload) {
       await fetch('/api/sim/action', {
         method: 'POST',
@@ -1644,6 +1855,21 @@
       } else {
         teamPicker.style.display = 'none';
       }
+
+      // Race opt in/out: game selection ONLY (LOBBY + wizard step 2 +
+      // Tag'n Shoot). It disappears on every gameplay screen; the
+      // backend enforces the same rule, so this is display + API.
+      const raceToggle = document.getElementById('hudRaceToggle');
+      const raceToggleBtn = document.getElementById('hudRaceToggleBtn');
+      if (isGameSelection && isRace) {
+        const benched = state.race_roster && Array.isArray(state.race_roster.bench)
+          && state.race_roster.bench.includes(me.gun_num);
+        raceToggle.style.display = 'flex';
+        raceToggleBtn.textContent = benched ? 'SITTING OUT — TAP TO RACE' : 'RACING ✓ — TAP TO SIT OUT';
+        raceToggleBtn.classList.toggle('sitting', !!benched);
+      } else {
+        raceToggle.style.display = 'none';
+      }
       const vestEl = document.getElementById('hudVest');
       vestEl.textContent = me.vest_ok ? 'Vest connected' : 'Vest not detected';
       vestEl.style.color = me.vest_ok ? '#7BD88A' : '#FF8575';
@@ -1701,26 +1927,72 @@
       const rankMe = finalStandings
         ? (finalStandings.find((p) => p.gun_id === me.gun_id || p.gun_num === me.gun_num) || me)
         : me;
+      // Race ranking mirrors the server's one derivation (best
+      // finished time, then total points, then best single round)
+      // over racers only. A benched viewer has no rank: "—".
+      const raceBenchNums = new Set(isRace && state.race_roster && Array.isArray(state.race_roster.bench) ? state.race_roster.bench : []);
+      const meBenched = isRace && raceBenchNums.has(me.gun_num);
+      const raceBestSingleHud = (p) => Math.max(0, ...(Array.isArray(p.run_history) ? p.run_history.map((e) => e.points || 0) : []));
+      const raceAheadHud = (q, p) => {
+        const qFin = q.best_run_time != null;
+        const pFin = p.best_run_time != null;
+        if (qFin && pFin) return q.best_run_time < p.best_run_time;
+        if (qFin && !pFin) return true;
+        if (!qFin && !pFin) {
+          if (q.score !== p.score) return q.score > p.score;
+          return raceBestSingleHud(q) > raceBestSingleHud(p);
+        }
+        return false;
+      };
       const rank = isRace
-        ? 1 + rankPool.filter((p) => {
-            const pFin = p.run_completed && p.run_time != null;
-            const meFin = rankMe.run_completed && rankMe.run_time != null;
-            if (pFin && meFin) return p.run_time < rankMe.run_time;
-            if (pFin && !meFin) return true;
-            if (!pFin && !meFin) return p.score > rankMe.score;
-            return false;
-          }).length
+        ? (meBenched ? null : 1 + rankPool.filter((p) => !raceBenchNums.has(p.gun_num) && raceAheadHud(p, rankMe)).length)
         : 1 + rankPool.filter((p) => p.score > rankMe.score).length;
       document.getElementById('hudModeLabel').textContent = state.mode.title;
-      document.getElementById('hudClock').textContent = state.phase === 'COUNTDOWN'
-        ? `00:${String(state.countdown_remaining).padStart(2, '0')}`
-        : state.clock;
-      document.getElementById('hudRank').textContent = `#${rank}`;
+      // Race clock counts UP with tenths during a run, shows the
+      // countdown number during COUNTDOWN, and never shows the cap
+      // remainder counting down.
+      const hudClockEl = document.getElementById('hudClock');
+      const fmtRaceElapsed = (s) => {
+        const t = Math.max(0, s || 0);
+        const m = Math.floor(t / 60);
+        const sec = Math.floor(t % 60);
+        const tenth = Math.floor((t * 10) % 10);
+        return `${m}:${String(sec).padStart(2, '0')}.${tenth}`;
+      };
+      if (state.phase === 'COUNTDOWN') {
+        hudClockEl.textContent = `00:${String(state.countdown_remaining).padStart(2, '0')}`;
+      } else if (isRace && state.phase === 'PLAYING' && state.race_state) {
+        const rsClock = state.race_state;
+        if (rsClock.turn_phase === 'RUNNING') {
+          hudClockEl.textContent = fmtRaceElapsed(rsClock.elapsed);
+        } else if (rsClock.turn_phase === 'COUNTDOWN') {
+          hudClockEl.textContent = String(rsClock.countdown_remaining);
+        } else if (rsClock.turn_phase === 'TURN_END') {
+          const activeP = (state.players || []).find((p) => p.gun_id === rsClock.active_gun_id);
+          const lastEntry = activeP && Array.isArray(activeP.run_history) && activeP.run_history.length
+            ? activeP.run_history[activeP.run_history.length - 1] : null;
+          hudClockEl.textContent = lastEntry && lastEntry.completed && lastEntry.time != null ? fmtRaceElapsed(lastEntry.time) : 'TIME UP';
+        } else {
+          hudClockEl.textContent = '0:00.0';
+        }
+      } else {
+        hudClockEl.textContent = state.clock;
+      }
+      document.getElementById('hudRank').textContent = rank === null ? '—' : `#${rank}`;
       // The score box shows the mode's real number: rounds won in Duel
       // (score already counts those), eliminations in LMS (score there
-      // is a sort-order artifact, not points).
-      document.getElementById('hudScore').textContent = isLMS ? rankMe.frags : rankMe.score;
-      document.querySelector('#hudScoreBox .t-label').textContent = isDuel ? 'ROUNDS' : (isLMS ? 'ELIMS' : 'SCORE');
+      // is a sort-order artifact, not points), the best finished time
+      // in the race (total points until a finish), "—" when sitting out.
+      if (isRace && meBenched) {
+        document.getElementById('hudScore').textContent = '—';
+        document.querySelector('#hudScoreBox .t-label').textContent = 'OUT';
+      } else if (isRace && rankMe.best_run_time != null) {
+        document.getElementById('hudScore').textContent = `${rankMe.best_run_time.toFixed(1)}s`;
+        document.querySelector('#hudScoreBox .t-label').textContent = 'BEST';
+      } else {
+        document.getElementById('hudScore').textContent = isLMS ? rankMe.frags : rankMe.score;
+        document.querySelector('#hudScoreBox .t-label').textContent = isDuel ? 'ROUNDS' : (isLMS ? 'ELIMS' : 'SCORE');
+      }
 
       // Big countdown treatment while the guns count down (or waiting on P1 trigger).
       const hero = document.getElementById('countdownHero');
@@ -1782,19 +2054,72 @@
       const raceBlock = document.getElementById('hudRaceBlock');
       const showRaceBlock = isRace && showGameStats && !resultsRevealed;
       raceBlock.style.display = showRaceBlock ? 'flex' : 'none';
+      // A benched viewer sees only the one-line sitting-out status
+      // (the sitting class hides the block's other rows).
+      raceBlock.classList.toggle('sitting', !!meBenched);
       if (showRaceBlock) {
-        document.getElementById('hudRaceTags').textContent = me.tags;
-        document.getElementById('hudRaceTower').textContent = me.tower_hits;
         const rs = state.race_state;
         const bases = Math.max(1, parseInt(state.settings?.numberOfBase ?? 4, 10) || 4);
-        const meUp = !!(rs && rs.active_gun_id === me.gun_id);
-        const meFinished = me.run_completed && me.run_time != null;
+        const maxRounds = Math.max(1, (rs && rs.max_rounds) || 1);
+        const roundNum = Math.max(1, (rs && rs.round_index) || 1);
+        const meUp = !!(rs && rs.active_gun_id === me.gun_id) && !meBenched;
+        const history = Array.isArray(me.run_history) ? me.run_history : [];
+        const myEntry = (r) => history.find((e) => e.round === r);
+        const myCurrent = myEntry(roundNum);
         const runner = rs ? (allPlayers || []).find((p) => p.gun_id === rs.active_gun_id) : null;
         const runnerName = runner ? (runner.name || '').toUpperCase() : '';
         const turnPhase = rs ? rs.turn_phase : null;
+        const runnerEntry = runner && Array.isArray(runner.run_history) && runner.run_history.length
+          ? runner.run_history[runner.run_history.length - 1] : null;
+
+        // Position line: round/run counters, my place in the order,
+        // and the FASTEST marker when I hold the best finished time.
+        const orderIds = rs && Array.isArray(rs.turn_order) && rs.turn_order.length
+          ? rs.turn_order
+          : (allPlayers || []).map((p) => p.gun_id);
+        const myPos = orderIds.indexOf(me.gun_id) + 1;
+        const racerCount = Math.max(1, orderIds.length);
+        const runNum = turnPhase === 'DONE' ? racerCount * maxRounds : Math.min((roundNum - 1) * racerCount + (rs ? (rs.turn_index || 0) : 0) + 1, racerCount * maxRounds);
+        const racersAll = (allPlayers || []).filter((p) => !raceBenchNums.has(p.gun_num));
+        const bestTimes = racersAll.filter((p) => p.best_run_time != null).map((p) => p.best_run_time);
+        const iAmFastest = me.best_run_time != null && bestTimes.length > 0 && me.best_run_time === Math.min(...bestTimes);
+        document.getElementById('hudRacePosition').textContent = meBenched
+          ? `SITTING OUT · ROUND ${roundNum} OF ${maxRounds}`
+          : `ROUND ${roundNum} OF ${maxRounds} · RUN ${runNum} OF ${racerCount * maxRounds} · YOU RUN #${Math.max(1, myPos)}${iAmFastest ? ' · ★ FASTEST' : ''}`;
+
+        // Per-round chips: finished time + points, DNF + points, live
+        // elapsed while my run is in progress, "--" for unrun rounds.
+        document.getElementById('hudRaceChips').innerHTML = meBenched ? '' : Array.from({ length: maxRounds }, (_, i) => {
+          const r = i + 1;
+          const entry = myEntry(r);
+          if (entry) {
+            return entry.completed && entry.time != null
+              ? `<span class="race-chip">R${r} ${entry.time.toFixed(1)}s ${entry.points}p</span>`
+              : `<span class="race-chip dnf">R${r} DNF ${entry.points}p</span>`;
+          }
+          if (meUp && r === roundNum && turnPhase === 'RUNNING') {
+            return `<span class="race-chip live">R${r} ${(rs.elapsed || 0).toFixed(1)}s ${me.tags + me.tower_hits}p</span>`;
+          }
+          return `<span class="race-chip">R${r} --</span>`;
+        }).join('');
+
+        // Tags/tower show this round's numbers: live counters while
+        // I'm up, the recorded entry once I've run this round.
+        const shownTags = meUp ? me.tags : (myCurrent ? myCurrent.tags : 0);
+        const shownTower = meUp ? me.tower_hits : (myCurrent ? myCurrent.tower_hits : 0);
+        document.getElementById('hudRaceTags').textContent = shownTags;
+        document.getElementById('hudRaceTower').textContent = shownTower;
+
         // Status line: the live turn, from this player's point of view.
+        // Auto never mentions a trigger (there is no wait phase).
         let status = '';
-        if (turnPhase === 'WAIT_TRIGGER') {
+        if (meBenched) {
+          status = turnPhase === 'DONE' ? 'RACE COMPLETE — YOU SAT OUT' : 'SITTING OUT — WATCHING THE RACE';
+        } else if (turnPhase === 'ROUND_INTRO') {
+          status = `ROUND ${roundNum} OF ${maxRounds} — GET READY`;
+        } else if (turnPhase === 'PLAYER_INTRO') {
+          status = meUp ? 'YOU ARE UP — GET READY' : `${runnerName} IS UP — GET READY`;
+        } else if (turnPhase === 'WAIT_TRIGGER') {
           status = meUp ? 'PULL THE TRIGGER TO START' : `${runnerName} IS UP — WAITING FOR TRIGGER`;
         } else if (turnPhase === 'COUNTDOWN') {
           status = meUp ? `GET READY — ${rs.countdown_remaining}` : `${runnerName} STARTS IN ${rs.countdown_remaining}…`;
@@ -1802,45 +2127,109 @@
           status = meUp ? `YOUR RUN — ${(rs.elapsed || 0).toFixed(1)}s` : `${runnerName} — ${(rs.elapsed || 0).toFixed(1)}s`;
         } else if (turnPhase === 'TURN_END') {
           if (meUp) {
-            status = meFinished ? `FINISHED ${me.run_time.toFixed(1)}s` : `TIME UP — ${me.score} PTS`;
+            status = myCurrent && myCurrent.completed && myCurrent.time != null
+              ? `FINISHED ${myCurrent.time.toFixed(1)}s`
+              : `TIME UP — ${myCurrent ? myCurrent.points : 0} PTS`;
           } else if (runner) {
-            status = runner.run_completed && runner.run_time != null
-              ? `${runnerName} FINISHED ${runner.run_time.toFixed(1)}s`
-              : `${runnerName} — TIME UP · ${runner.score} PTS`;
+            status = runnerEntry && runnerEntry.completed && runnerEntry.time != null
+              ? `${runnerName} FINISHED ${runnerEntry.time.toFixed(1)}s`
+              : `${runnerName} — TIME UP · ${runnerEntry ? runnerEntry.points : 0} PTS`;
           }
         } else {
           status = 'RACE COMPLETE';
         }
-        // A finished run keeps its time on screen while others run.
-        if (meFinished && !meUp) {
-          status += ` · YOU ${me.run_time.toFixed(1)}s`;
-          const finTimes = (allPlayers || []).filter((p) => p.run_completed && p.run_time != null).map((p) => p.run_time);
-          if (finTimes.length && me.run_time === Math.min(...finTimes)) status += ' ★ FASTEST';
+        // My best time stays on screen while others run.
+        if (!meBenched && me.best_run_time != null && !meUp && turnPhase !== 'DONE') {
+          status += ` · YOUR BEST ${me.best_run_time.toFixed(1)}s`;
         }
         document.getElementById('hudRaceStatus').textContent = status;
+
         // Course row: my next action while I'm up, my result once my
-        // run is over. The gun alternates scan/shoot states, so a
-        // tower deficit means the tower shot comes next.
-        const alreadyRan = !!(rs && Array.isArray(rs.turn_order) && rs.turn_order.indexOf(me.gun_id) >= 0 && rs.turn_order.indexOf(me.gun_id) < rs.turn_index);
+        // run is over, and — distinctly — waiting for the next round
+        // vs. having finished all rounds. The gun alternates
+        // scan/shoot states, so a tower deficit means the tower shot
+        // comes next.
+        const doneAllRounds = history.length >= maxRounds;
         const awaitingShot = me.tower_hits < me.tags;
         let courseLabel;
-        if (meFinished) {
-          courseLabel = `FINISHED ${me.run_time.toFixed(1)}s`;
-        } else if (alreadyRan || turnPhase === 'DONE') {
-          courseLabel = `TIME UP — ${me.score} PTS`;
-        } else if (awaitingShot) {
-          courseLabel = 'SHOOT THE TOWER';
-        } else if (me.tags < bases) {
-          courseLabel = `NEXT: T-BASE ${me.tags + 1}`;
+        if (meBenched) {
+          courseLabel = 'SITTING OUT';
+        } else if (meUp && turnPhase === 'RUNNING') {
+          courseLabel = awaitingShot ? 'SHOOT THE TOWER' : (me.tags < bases ? `NEXT: T-BASE ${me.tags + 1}` : 'FINISH!');
+        } else if (meUp) {
+          courseLabel = 'GET READY';
+        } else if (doneAllRounds) {
+          courseLabel = me.best_run_time != null ? `ALL ROUNDS DONE — BEST ${me.best_run_time.toFixed(1)}s` : 'ALL ROUNDS DONE';
+        } else if (myCurrent) {
+          courseLabel = `WAITING FOR ROUND ${Math.min(roundNum + 1, maxRounds)}`;
         } else {
-          courseLabel = 'FINISH!';
+          courseLabel = awaitingShot ? 'SHOOT THE TOWER' : (me.tags < bases ? `NEXT: T-BASE ${me.tags + 1}` : 'FINISH!');
         }
         document.getElementById('hudRaceCourse').textContent = courseLabel;
-        const tagged = Math.min(me.tags, bases);
+        const pipTags = meUp ? Math.min(me.tags, bases) : (myCurrent ? Math.min(myCurrent.tags, bases) : 0);
+        const pipNext = meUp && turnPhase === 'RUNNING' && !awaitingShot;
         document.getElementById('hudRacePips').innerHTML = Array.from({ length: bases }, (_, i) => {
-          const cls = i < tagged ? 'done' : (i === tagged && meUp && !awaitingShot && !meFinished ? 'next' : '');
+          const cls = i < pipTags ? 'done' : (i === pipTags && pipNext ? 'next' : '');
           return `<span class="race-pip ${cls}"></span>`;
         }).join('');
+      }
+
+      // Race standings table: frozen race order, current-round and
+      // best columns, live from the snapshot. Gameplay only; at
+      // GAME_OVER it stays hidden until the host reveals results
+      // (same gate as the rank/score boxes), then shows below the
+      // game-over card. Never faded.
+      const raceTable = document.getElementById('hudRaceTable');
+      const showRaceTable = isRace && !!state.race_state
+        && (['UPLOADING', 'WAIT_TRIGGER', 'COUNTDOWN', 'PLAYING'].includes(state.phase)
+          || (state.phase === 'GAME_OVER' && resultsRevealed));
+      raceTable.style.display = showRaceTable ? 'flex' : 'none';
+      if (showRaceTable) {
+        const rs = state.race_state;
+        const roundNum = Math.max(1, rs.round_index || 1);
+        const maxRounds = Math.max(1, rs.max_rounds || 1);
+        document.getElementById('hudRaceTableHead').textContent = `Race Standings · Round ${roundNum} of ${maxRounds}`;
+        const orderIds = Array.isArray(rs.turn_order) && rs.turn_order.length
+          ? rs.turn_order
+          : (state.race_roster && Array.isArray(state.race_roster.order)
+            ? state.race_roster.order.map((n) => (allPlayers || []).find((p) => p.gun_num === n)?.gun_id).filter((id) => id != null)
+            : (allPlayers || []).map((p) => p.gun_id));
+        const rowsHtml = orderIds.map((gid, idx) => {
+          const p = (allPlayers || []).find((q) => q.gun_id === gid);
+          if (!p) return '';
+          const entry = (Array.isArray(p.run_history) ? p.run_history : []).find((e) => e.round === roundNum);
+          let current;
+          if (entry) {
+            current = entry.completed && entry.time != null
+              ? `${entry.time.toFixed(1)}s · ${entry.points}p`
+              : `DNF · ${entry.points}p`;
+          } else if (p.gun_id === rs.active_gun_id && rs.turn_phase === 'RUNNING') {
+            current = `${(rs.elapsed || 0).toFixed(1)}s · ${p.tags + p.tower_hits}p`;
+          } else if (p.gun_id === rs.active_gun_id && ['PLAYER_INTRO', 'WAIT_TRIGGER', 'COUNTDOWN'].includes(rs.turn_phase)) {
+            current = 'UP NOW';
+          } else {
+            current = '--';
+          }
+          const bestEntry = (Array.isArray(p.run_history) ? p.run_history : [])
+            .filter((e) => e.completed && e.time != null)
+            .sort((a, b) => a.time - b.time)[0];
+          const best = bestEntry ? `${bestEntry.time.toFixed(1)}s · ${bestEntry.points}p` : '--';
+          const cls = [
+            'hud-race-table-row',
+            p.gun_id === rs.active_gun_id && ['PLAYER_INTRO', 'WAIT_TRIGGER', 'COUNTDOWN', 'RUNNING'].includes(rs.turn_phase) ? 'current' : '',
+            p.gun_id === me.gun_id ? 'me' : '',
+          ].filter(Boolean).join(' ');
+          // NEXT marker from the server's single derivation
+          // (race_state.next_gun_id), mirroring the TV UP NEXT pill.
+          const nextBadge = p.gun_id === rs.next_gun_id ? '<span class="hud-race-next-badge">NEXT</span>' : '';
+          return `<div class="${cls}">
+            <span class="hud-race-table-pos">${idx + 1}</span>
+            <span class="hud-race-table-name">P${p.gun_num} ${(p.name || '').toUpperCase()}${nextBadge}</span>
+            <span class="hud-race-table-cell${current === '--' ? ' dim' : ''}">${current}</span>
+            <span class="hud-race-table-cell${best === '--' ? ' dim' : ''}">${best}</span>
+          </div>`;
+        }).join('');
+        document.getElementById('hudRaceTableRows').innerHTML = rowsHtml;
       }
 
       // New-tag detection: flash + haptics the moment a fresh tag lands.
@@ -1963,10 +2352,37 @@
         document.getElementById('gameOverHead').textContent = won ? '🏆 VICTORY!' : 'MATCH OVER';
         const finalNum = isLMS ? rankMe.frags : rankMe.score;
         const finalWord = isDuel ? (finalNum === 1 ? 'round won' : 'rounds won') : isLMS ? (finalNum === 1 ? 'elim' : 'elims') : (finalNum === 1 ? 'point' : 'points');
-        document.getElementById('gameOverRank').textContent = isRace && rankMe.run_completed && rankMe.run_time != null
-          ? `Final rank #${rank} · ${rankMe.run_time.toFixed(1)}s`
-          : `Final rank #${rank} · ${finalNum} ${finalWord}`;
-        document.getElementById('gameOverStats').innerHTML = `
+        // Race: per-round times/points + best + total, never
+        // hits/frags/accuracy/streak. No score chart or matchups.
+        const chartBoxEl = document.getElementById('hudChartBox');
+        const matchupsEl = document.getElementById('hudMatchups');
+        if (isRace) {
+          document.getElementById('gameOverRank').textContent = meBenched
+            ? 'Sat out this match · No runs'
+            : (rankMe.best_run_time != null
+              ? `Final rank #${rank} · Best ${rankMe.best_run_time.toFixed(1)}s`
+              : `Final rank #${rank} · ${finalNum} ${finalWord}`);
+          const goMaxRounds = Math.max(1, (state.race_state && state.race_state.max_rounds) || (Array.isArray(rankMe.run_history) ? rankMe.run_history.length : 1));
+          const goHistory = Array.isArray(rankMe.run_history) ? rankMe.run_history : [];
+          const goChips = [];
+          for (let r = 1; r <= goMaxRounds; r += 1) {
+            const entry = goHistory.find((e) => e.round === r);
+            goChips.push(entry
+              ? (entry.completed && entry.time != null
+                ? `<span class="hud-stat-chip">R${r} ${entry.time.toFixed(1)}s · ${entry.points}p</span>`
+                : `<span class="hud-stat-chip">R${r} DNF · ${entry.points}p</span>`)
+              : `<span class="hud-stat-chip">R${r} --</span>`);
+          }
+          goChips.push(`<span class="hud-stat-chip">Best ${rankMe.best_run_time != null ? `${rankMe.best_run_time.toFixed(1)}s` : '--'}</span>`);
+          goChips.push(`<span class="hud-stat-chip">${rankMe.score} pts total</span>`);
+          document.getElementById('gameOverStats').innerHTML = meBenched
+            ? '<span class="hud-stat-chip">Sat out — no runs</span>'
+            : goChips.join('');
+          if (chartBoxEl) chartBoxEl.style.display = 'none';
+          if (matchupsEl) matchupsEl.style.display = 'none';
+        } else {
+          document.getElementById('gameOverRank').textContent = `Final rank #${rank} · ${finalNum} ${finalWord}`;
+          document.getElementById('gameOverStats').innerHTML = `
           <span class="hud-stat-chip" title="Hits Landed">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3"/></svg>
             ${rankMe.hits_landed} hits
@@ -1983,8 +2399,11 @@
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2c.5 3.5 3 5.5 3 9a3 3 0 1 1-6 0c0-1.5.6-2.8 1.5-3.8C8.5 8.5 7 10.6 7 13a5 5 0 0 0 10 0c0-4.2-2.6-7.2-5-11z"/></svg>
             ${rankMe.best_streak} streak
           </span>`;
-        drawHudScoreChart(state);
-        renderHudMatchups(state, rankMe, finalStandings);
+          if (chartBoxEl) chartBoxEl.style.display = '';
+          if (matchupsEl) matchupsEl.style.display = '';
+          drawHudScoreChart(state);
+          renderHudMatchups(state, rankMe, finalStandings);
+        }
       } else {
         waitResultsCard.style.display = 'none';
         overCard.style.display = 'none';
@@ -2003,7 +2422,11 @@
         } else if (state.mode.id === 'OldFashionDuel') {
           hint = 'Wait for the "FIRE!" call — firing early gives the point to your opponent';
         } else if (state.mode.id === 'TagThenShoot') {
-          hint = 'Pull the trigger to start — scan bases in order, then shoot the tower';
+          // A benched viewer gets no mechanics hint: they are not
+          // running, and the one-line sitting-out status says so.
+          hint = meBenched ? '' : (state.settings && state.settings.gameLaunch === 0)
+            ? 'Wait for the countdown — scan bases in order, then shoot the tower'
+            : 'Pull the trigger to start — scan bases in order, then shoot the tower';
         } else if (state.mode.id === 'FreeFrag' && state.settings && state.settings.scoreLimit > 0) {
           hint = `First to ${state.settings.scoreLimit} hits wins`;
         }
