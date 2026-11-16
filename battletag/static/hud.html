@@ -2035,7 +2035,7 @@
       // the rounds tally live here, mirroring the main-screen strip.
       const duelBlock = document.getElementById('hudDuelBlock');
       const ds = state.duel_state || null;
-      const showDuelBlock = isDuel && isRoundActive && !!ds && typeof ds.round === 'number' && !resultsRevealed;
+      const showDuelBlock = isDuel && isRoundActive && state.phase !== 'GAME_OVER' && !!ds && typeof ds.round === 'number' && !resultsRevealed;
       duelBlock.style.display = showDuelBlock ? 'flex' : 'none';
       if (showDuelBlock) {
         const subLabels = {
@@ -2072,7 +2072,7 @@
       // Race block: my run totals, the turn status, and my course
       // progress, replacing the all-infinity vitals in TagThenShoot.
       const raceBlock = document.getElementById('hudRaceBlock');
-      const showRaceBlock = isRace && showGameStats && !resultsRevealed;
+      const showRaceBlock = isRace && showGameStats && state.phase !== 'GAME_OVER' && !resultsRevealed;
       raceBlock.style.display = showRaceBlock ? 'flex' : 'none';
       // A benched viewer sees only the one-line sitting-out status
       // (the sitting class hides the block's other rows).

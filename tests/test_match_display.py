@@ -62,3 +62,45 @@ def test_signal_lost_false_before_first_report_of_match() -> None:
     for p in eng.players.values():
         assert p.last_status_ts == 0.0
         assert p.to_dict()["signal_lost"] is False
+
+
+def test_finish_match_hides_winner_in_feed_until_results_revealed() -> None:
+    import asyncio
+    from battletag import app as bt_app
+    from battletag.modes import PlayerState
+
+    eng = bt_app.engine
+    saved = (
+        dict(eng.players),
+        eng.phase,
+        eng.mode_name,
+        eng.results_revealed,
+        list(eng.events),
+        list(eng.match_history),
+    )
+    try:
+        eng.mode_name = "FreeFrag"
+        eng.phase = "PLAYING"
+        eng.results_revealed = False
+        eng.events.clear()
+        eng.match_history.clear()
+        eng.players = {
+            1: PlayerState(gun_num=1, gun_id=1, ref_hex="0101", name="ALPHA", avatar="Shark", score=5),
+            2: PlayerState(gun_num=2, gun_id=2, ref_hex="0102", name="BRAVO", avatar="Eagle", score=12),
+        }
+
+        asyncio.run(bt_app._finish_match(reason="Match complete!"))
+        assert eng.results_revealed is False
+        pre_texts = [e.text for e in eng.events]
+        assert any("Match complete!" in t for t in pre_texts)
+        assert not any("VICTORY" in t or "BRAVO" in t for t in pre_texts)
+
+        asyncio.run(bt_app.api_reveal_results())
+        assert eng.results_revealed is True
+        post_texts = [e.text for e in eng.events]
+        assert any("VICTORY: BRAVO!" in t for t in post_texts)
+    finally:
+        eng.players, eng.phase, eng.mode_name, eng.results_revealed, events, history = saved
+        eng.events = events
+        eng.match_history = history
+        bt_app.pending_notifications.clear()

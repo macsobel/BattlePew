@@ -5734,10 +5734,11 @@
       }
 
       // Duel round display: current round, subphase, round winner, per-round results.
+      // Hidden during the GAME_OVER "See Results" gate so round chips don't spoil the winner.
       const duelStrip = document.getElementById('duelStrip');
       if (duelStrip) {
         const ds = state.duel_state;
-        const showDuel = modeDisplay(state).showDuelStrip;
+        const showDuel = modeDisplay(state).showDuelStrip && !isGameOverGate;
         if (showDuel) {
           const rndNum = Math.max(1, ds.round || 0);
           const roundLabel = ds.subphase === 'WAIT'
@@ -5797,7 +5798,7 @@
       const raceStrip = document.getElementById('raceStrip');
       if (raceStrip) {
         const rs = state.race_state;
-        const showRace = modeDisplay(state).showRaceStrip;
+        const showRace = modeDisplay(state).showRaceStrip && !isGameOverGate;
         if (showRace) {
           const players = state.players || [];
           const active = players.find((p) => p.gun_id === rs.active_gun_id);

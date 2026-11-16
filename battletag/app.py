@@ -835,6 +835,10 @@ async def api_reveal_results() -> JSONResponse:
     was_revealed = engine.results_revealed
     engine.results_revealed = True
     if not was_revealed:
+        if engine.match_history:
+            headline = engine.match_history[-1].get("headline")
+            if headline:
+                engine.add_event("system", headline)
         _trigger_winner_announcement()
     await broadcast_state()
     return JSONResponse({"ok": True})
@@ -1668,7 +1672,9 @@ async def _finish_match(reason: str = "Match Over") -> None:
     else:
         headline = "DRAW GAME — TIE SCORE!"
 
-    engine.add_event("system", f"{headline} ({reason})")
+    # Defer the VICTORY/DRAW headline in the live feed until
+    # /api/results/reveal so pressing "See Results" reveals the winner.
+    engine.add_event("system", f"Match complete! ({reason})")
 
     engine.match_history.append(
         {
