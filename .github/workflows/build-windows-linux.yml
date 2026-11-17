@@ -106,6 +106,7 @@ jobs:
           mkdir -p release
           tar -czf "release/BattlePew-Linux-${VERSION}-${SHORT_SHA}.tar.gz" -C dist BattlePew
           ls -lh release
+
       - name: Upload Linux artifact
         if: github.event_name != 'pull_request'
         uses: actions/upload-artifact@v4
