@@ -2,19 +2,8 @@ name: Build BattlePew (Windows & Linux)
 
 on:
   push:
-    branches:
-      - main
     tags:
       - "v*"
-  pull_request:
-    branches:
-      - main
-    paths:
-      - "battletag/**"
-      - "desktop_launcher.py"
-      - "run_battletag.py"
-      - "macos-app/requirements-app.txt"
-      - ".github/workflows/build-windows-linux.yml"
   workflow_dispatch:
 
 jobs:
@@ -61,10 +50,12 @@ jobs:
           Get-ChildItem release
 
       - name: Upload Windows artifact
+        if: github.event_name != 'pull_request'
         uses: actions/upload-artifact@v4
         with:
           name: battlepew-windows-${{ github.sha }}
           path: release/BattlePew-Windows-*.zip
+          retention-days: 5
 
   build-linux:
     runs-on: ubuntu-24.04
@@ -115,12 +106,13 @@ jobs:
           mkdir -p release
           tar -czf "release/BattlePew-Linux-${VERSION}-${SHORT_SHA}.tar.gz" -C dist BattlePew
           ls -lh release
-
       - name: Upload Linux artifact
+        if: github.event_name != 'pull_request'
         uses: actions/upload-artifact@v4
         with:
           name: battlepew-linux-${{ github.sha }}
           path: release/BattlePew-Linux-*.tar.gz
+          retention-days: 5
 
   release:
     needs: [build-windows, build-linux]
