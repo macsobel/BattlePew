@@ -2,18 +2,8 @@ name: Build macOS App
 
 on:
   push:
-    branches:
-      - main
     tags:
       - 'v*'
-  pull_request:
-    branches:
-      - main
-    paths:
-      - 'battletag/**'
-      - 'run_battletag.py'
-      - 'macos-app/**'
-      - '.github/workflows/build-macos-app.yml'
   workflow_dispatch:
 
 jobs:
@@ -51,7 +41,7 @@ jobs:
           path: |
             macos-app/build/BattlePew-macOS-*.zip
             macos-app/build/BUILD_MANIFEST.txt
-          retention-days: 30
+          retention-days: 5
 
   release:
     name: Publish GitHub Release
