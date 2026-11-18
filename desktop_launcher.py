@@ -2,8 +2,10 @@
 
 from __future__ import annotations
 
+import json
 import multiprocessing
 import os
+import pathlib
 import socket
 import sys
 import threading
@@ -13,6 +15,94 @@ import urllib.request
 import webbrowser
 
 import uvicorn
+
+
+def _window_prefs_path() -> pathlib.Path:
+    if sys.platform == "win32":
+        base = os.environ.get("APPDATA") or str(pathlib.Path.home() / "AppData" / "Roaming")
+        return pathlib.Path(base) / "BattlePew" / "window.json"
+    xdg = os.environ.get("XDG_CONFIG_HOME") or str(pathlib.Path.home() / ".config")
+    return pathlib.Path(xdg) / "BattlePew" / "window.json"
+
+
+def _load_fullscreen_pref() -> bool:
+    try:
+        data = json.loads(_window_prefs_path().read_text(encoding="utf-8"))
+        if isinstance(data, dict) and isinstance(data.get("fullscreen"), bool):
+            return data["fullscreen"]
+    except Exception:
+        pass
+    return True
+
+
+def _save_fullscreen_pref(fullscreen: bool) -> None:
+    try:
+        path = _window_prefs_path()
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(json.dumps({"fullscreen": bool(fullscreen)}), encoding="utf-8")
+    except Exception:
+        pass
+
+
+class DesktopApi:
+    """JS-to-Python bridge for fullscreen/windowed toggle and quitting."""
+
+    def __init__(self, initial_fullscreen: bool) -> None:
+        self._window = None
+        self._is_fullscreen = bool(initial_fullscreen)
+
+    def bind_window(self, window) -> None:
+        self._window = window
+
+    def get_fullscreen(self) -> bool:
+        return self._is_fullscreen
+
+    def toggle_fullscreen(self) -> bool:
+        if self._window is None:
+            return self._is_fullscreen
+        self._window.toggle_fullscreen()
+        self._is_fullscreen = not self._is_fullscreen
+        _save_fullscreen_pref(self._is_fullscreen)
+        return self._is_fullscreen
+
+    def set_fullscreen(self, enabled: bool) -> bool:
+        want = bool(enabled)
+        if want == self._is_fullscreen:
+            return self._is_fullscreen
+        return self.toggle_fullscreen()
+
+    def quit_app(self) -> None:
+        if self._window is not None:
+            self._window.destroy()
+
+
+_KEYBIND_JS = """
+(() => {
+  if (window.__battlepewDesktopKeysBound) return;
+  window.__battlepewDesktopKeysBound = true;
+  document.addEventListener('keydown', (e) => {
+    const api = window.pywebview && window.pywebview.api;
+    if (!api) return;
+    const isF11 = e.key === 'F11';
+    const isAltEnter = e.key === 'Enter' && e.altKey && !e.ctrlKey && !e.metaKey;
+    if (isF11 || isAltEnter) {
+      e.preventDefault();
+      api.toggle_fullscreen().then((fs) => {
+        if (window.__onDesktopFullscreenChanged) window.__onDesktopFullscreenChanged(fs);
+      });
+      return;
+    }
+    if (e.key === 'Escape' && !e.ctrlKey && !e.metaKey && !e.altKey) {
+      const tag = (document.activeElement && document.activeElement.tagName || '').toLowerCase();
+      if (tag === 'input' || tag === 'textarea' || tag === 'select') return;
+      if (document.querySelector('.modal-overlay.open')) return;
+      api.set_fullscreen(false).then((fs) => {
+        if (window.__onDesktopFullscreenChanged) window.__onDesktopFullscreenChanged(fs);
+      });
+    }
+  });
+})();
+"""
 
 
 def _find_free_port(start: int = 3466, end: int = 3475) -> int:
@@ -68,13 +158,26 @@ def main() -> int:
     try:
         import webview
 
-        webview.create_window(
+        start_fullscreen = _load_fullscreen_pref()
+        api = DesktopApi(start_fullscreen)
+        win = webview.create_window(
             "BattlePew",
             base_url,
             width=1280,
             height=800,
             min_size=(900, 600),
+            fullscreen=start_fullscreen,
+            js_api=api,
         )
+        api.bind_window(win)
+
+        def _on_loaded() -> None:
+            try:
+                win.evaluate_js(_KEYBIND_JS)
+            except Exception:
+                pass
+
+        win.events.loaded += _on_loaded
         webview.start()
     except Exception:
         webbrowser.open(base_url)

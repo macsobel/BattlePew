@@ -27,9 +27,14 @@ jobs:
         run: |
           python -c "import battletag.app, desktop_launcher; print('OK')"
 
-      - name: Build Windows app with PyInstaller
+      - name: Generate Windows icon
         run: |
-          pyinstaller --noconfirm --windowed --name BattlePew `
+          python -c "from PIL import Image; import os; os.makedirs('build', exist_ok=True); img = Image.open('macos-app/Resources/AppIcon-1024.png').convert('RGBA'); img.save('build/BattlePew.ico', format='ICO', sizes=[(16,16),(24,24),(32,32),(48,48),(64,64),(128,128),(256,256)])"
+
+      - name: Build Windows single-file .exe with PyInstaller
+        run: |
+          pyinstaller --noconfirm --onefile --windowed --name BattlePew `
+            --icon "build/BattlePew.ico" `
             --add-data "battletag;battletag" `
             --add-data "run_battletag.py;." `
             --hidden-import uvicorn.logging `
@@ -39,14 +44,14 @@ jobs:
             --hidden-import uvicorn.lifespan.on `
             desktop_launcher.py
 
-      - name: Package Windows release archive
+      - name: Package Windows release executable
         shell: pwsh
         run: |
           $version = python -c "import battletag; print(battletag.__version__)"
           $shortSha = "${{ github.sha }}".Substring(0, 7)
           New-Item -ItemType Directory -Force -Path release | Out-Null
-          $zipPath = "release/BattlePew-Windows-$version-$shortSha.zip"
-          Compress-Archive -Path "dist/BattlePew/*" -DestinationPath $zipPath -Force
+          $exePath = "release/BattlePew-Windows-$version-$shortSha.exe"
+          Copy-Item "dist/BattlePew.exe" $exePath -Force
           Get-ChildItem release
 
       - name: Upload Windows artifact
@@ -54,7 +59,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: battlepew-windows-${{ github.sha }}
-          path: release/BattlePew-Windows-*.zip
+          path: release/BattlePew-Windows-*.exe
           retention-days: 5
 
   build-linux:
@@ -99,12 +104,36 @@ jobs:
             --hidden-import uvicorn.lifespan.on \
             desktop_launcher.py
 
-      - name: Package Linux release archive
+      - name: Package Linux AppImage
         run: |
           VERSION=$(python -c "import battletag; print(battletag.__version__)")
           SHORT_SHA="${GITHUB_SHA::7}"
-          mkdir -p release
-          tar -czf "release/BattlePew-Linux-${VERSION}-${SHORT_SHA}.tar.gz" -C dist BattlePew
+          mkdir -p release AppDir/usr/lib/battlepew AppDir/usr/bin AppDir/usr/share/icons/hicolor/256x256/apps
+          cp -a dist/BattlePew/. AppDir/usr/lib/battlepew/
+          ln -s ../lib/battlepew/BattlePew AppDir/usr/bin/BattlePew
+          cat > AppDir/AppRun << 'EOF'
+          #!/bin/sh
+          HERE="$(dirname "$(readlink -f "$0")")"
+          exec "$HERE/usr/lib/battlepew/BattlePew" "$@"
+          EOF
+          chmod +x AppDir/AppRun
+          cat > AppDir/battlepew.desktop << 'EOF'
+          [Desktop Entry]
+          Type=Application
+          Name=BattlePew
+          Comment=Arena Master Control Center for Battle Tag
+          Exec=BattlePew
+          Icon=battlepew
+          Categories=Game;
+          Terminal=false
+          EOF
+          python -c "from PIL import Image; img = Image.open('macos-app/Resources/AppIcon-1024.png').convert('RGBA').resize((256, 256), Image.LANCZOS); img.save('AppDir/battlepew.png'); img.save('AppDir/.DirIcon'); img.save('AppDir/usr/share/icons/hicolor/256x256/apps/battlepew.png')"
+          curl -fsSL -o appimagetool.AppImage https://github.com/AppImage/appimagetool/releases/download/continuous/appimagetool-x86_64.AppImage
+          chmod +x appimagetool.AppImage
+          ./appimagetool.AppImage --appimage-extract >/dev/null
+          APPIMAGE_OUT="release/BattlePew-Linux-${VERSION}-${SHORT_SHA}-x86_64.AppImage"
+          ARCH=x86_64 ./squashfs-root/AppRun AppDir "$APPIMAGE_OUT"
+          chmod +x "$APPIMAGE_OUT"
           ls -lh release
 
       - name: Upload Linux artifact
@@ -112,7 +141,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: battlepew-linux-${{ github.sha }}
-          path: release/BattlePew-Linux-*.tar.gz
+          path: release/BattlePew-Linux-*.AppImage
           retention-days: 5
 
   release:

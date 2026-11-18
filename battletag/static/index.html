@@ -607,6 +607,12 @@
       background: #FFF5F3;
     }
 
+    .header-fullscreen-btn:hover {
+      border-color: var(--bt-orange);
+      color: var(--bt-orange);
+      background: #FFF7F2;
+    }
+
     .header-quit-btn svg {
       width: 20px;
       height: 20px;
@@ -3761,6 +3767,15 @@
             <span class="qr-badge-sub">Scan for HUD</span>
           </span>
         </a>
+
+        <button type="button" class="header-quit-btn header-fullscreen-btn" id="headerFullscreenBtn" title="Toggle Fullscreen (F11)" aria-label="Toggle Fullscreen">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <polyline points="15 3 21 3 21 9"></polyline>
+            <polyline points="9 21 3 21 3 15"></polyline>
+            <line x1="21" y1="3" x2="14" y2="10"></line>
+            <line x1="3" y1="21" x2="10" y2="14"></line>
+          </svg>
+        </button>
 
         <button type="button" class="header-quit-btn" id="headerQuitBtn" title="Quit BattlePew" aria-label="Quit BattlePew">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
@@ -7737,6 +7752,45 @@
         audioAssetsQuitBtn.style.display = 'inline-flex';
         audioAssetsQuitBtn.addEventListener('click', quitNativeMacApp);
       }
+    }
+
+    function initPywebviewDesktopControls() {
+      const api = window.pywebview && window.pywebview.api;
+      if (!api || window.__battlepewDesktopWired) return;
+      window.__battlepewDesktopWired = true;
+
+      const fsBtn = document.getElementById('headerFullscreenBtn');
+      const syncFsBtn = (isFs) => {
+        if (!fsBtn) return;
+        fsBtn.title = isFs ? 'Exit Fullscreen / Windowed (F11)' : 'Enter Fullscreen (F11)';
+        fsBtn.setAttribute('aria-pressed', isFs ? 'true' : 'false');
+      };
+      window.__onDesktopFullscreenChanged = syncFsBtn;
+
+      if (fsBtn) {
+        fsBtn.style.display = 'inline-flex';
+        api.get_fullscreen().then(syncFsBtn).catch(() => {});
+        fsBtn.addEventListener('click', () => {
+          api.toggle_fullscreen().then(syncFsBtn).catch(() => {});
+        });
+      }
+
+      const quitDesktop = () => {
+        if (api.quit_app) api.quit_app();
+      };
+      ['headerQuitBtn', 'ubiconnectQuitBtn', 'audioAssetsQuitBtn'].forEach((id) => {
+        const el = document.getElementById(id);
+        if (el) {
+          el.style.display = 'inline-flex';
+          el.addEventListener('click', quitDesktop);
+        }
+      });
+    }
+
+    if (window.pywebview && window.pywebview.api) {
+      initPywebviewDesktopControls();
+    } else {
+      window.addEventListener('pywebviewready', initPywebviewDesktopControls, { once: true });
     }
 
     async function closeSettingsModal() {
