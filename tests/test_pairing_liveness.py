@@ -568,3 +568,149 @@ def test_refresh_vest_states_keeps_fresh_gun(monkeypatch) -> None:
     asyncio.run(app_mod._refresh_vest_states())
     assert len(eng.players) == 1
     assert stub.unpair_calls == []
+
+
+# ---------------------------------------------------------------------------
+# Multi-gun pairing resilience: ref-filtered re-acks and direct revision retries
+# ---------------------------------------------------------------------------
+
+
+def _fast_pair_hw(fake) -> RealHIDTransport:
+    hw = _transport(fake)
+    pair = hw.sequences["pair"]
+    fast_steps = []
+    for st in pair["steps"]:
+        ns = dict(st)
+        if "drain_ms" in ns:
+            ns["drain_ms"] = 25
+        if "wait_ms" in ns:
+            ns["wait_ms"] = 30
+        fast_steps.append(ns)
+    hw.sequences["pair"] = dict(pair, steps=fast_steps)
+    return hw
+
+
+class _MultiGunPairFakeHIDDevice:
+    """Fake HID device simulating gun REF_A pairing amidst chatter from REF_B."""
+
+    def __init__(self, drop_rev_attempts: int = 1, drop_prof_attempts: int = 0) -> None:
+        self.drop_rev_attempts = drop_rev_attempts
+        self.drop_prof_attempts = drop_prof_attempts
+        self.writes: list[bytes] = []
+        self.inbox: list[bytes] = []
+        self.acked = False
+        self.rev_seen = 0
+        self.prof_seen = 0
+
+    def set_nonblocking(self, _flag: bool) -> None:
+        pass
+
+    @staticmethod
+    def _pkt(prefix_hex: str, ref_hex: str = "") -> bytes:
+        buf = bytearray(64)
+        p = bytes.fromhex(prefix_hex)
+        buf[: len(p)] = p
+        if ref_hex:
+            r = bytes.fromhex(ref_hex)
+            buf[3 : 3 + len(r)] = r
+        return bytes([0x00]) + bytes(buf)
+
+    def write(self, data: bytes) -> None:
+        payload = bytes(data[1:]) if len(data) == 65 else bytes(data)
+        self.writes.append(payload)
+        head = payload[:3].hex().upper()
+        if head == "0BFF12" and not self.acked:
+            self.acked = True
+            # Queue two other-gun beacons and one trailing REF_A repeat for settle drain.
+            self.inbox.extend(
+                [
+                    self._pkt("100012", REF_B),
+                    self._pkt("100012", REF_A),
+                    self._pkt("100012", REF_B),
+                ]
+            )
+        elif head == "000204":
+            self.rev_seen += 1
+            # Simulate RF noise from REF_B before/during revision reply.
+            self.inbox.append(self._pkt("100012", REF_B))
+            if self.rev_seen > self.drop_rev_attempts:
+                self.inbox.append(self._pkt(f"04020400020000{REF_A}"))
+        elif head == "050284":
+            self.prof_seen += 1
+            self.inbox.append(self._pkt("100012", REF_B))
+            if self.prof_seen > self.drop_prof_attempts:
+                name = b"Rex"
+                avatar = b"cat.tga"
+                prof = (
+                    bytes.fromhex("3502840000001130")
+                    + bytes([len(name)])
+                    + name
+                    + bytes([len(avatar)])
+                    + avatar
+                )
+                self.inbox.append(self._pkt(prof.hex().upper()))
+
+    def read(self, _size: int, timeout_ms: int = 100) -> bytes:
+        if self.inbox:
+            return self.inbox.pop(0)
+        if not self.acked:
+            # Before ack, alternate REF_B noise and REF_A announcement.
+            self.inbox.append(self._pkt("100012", REF_A))
+            return self._pkt("100012", REF_B)
+        return b""
+
+
+def test_pair_single_gun_retries_revision_without_rewaiting_and_filters_other_reacks() -> None:
+    fake = _MultiGunPairFakeHIDDevice(drop_rev_attempts=1, drop_prof_attempts=0)
+    hw = _fast_pair_hw(fake)
+    info = hw.pair_single_gun(REF_A, bytes.fromhex(REF_A))
+    assert info is not None
+    assert info["gun_id"] == 2
+    assert info["name"] == "Rex"
+    assert info["avatar"] == "Cat"
+    assert REF_A in hw.paired_by_ref
+
+    heads = [w[:3].hex().upper() for w in fake.writes]
+    # Ack phase ran only once (did not restart at 100012 / 01001301).
+    assert heads.count("010013") == 2
+    # Revision 000204 retried directly on failure.
+    assert heads.count("000204") == 2
+    # Exactly one re-ack sent for REF_A during settle drain, none triggered by REF_B noise.
+    assert heads.count("0BFF12") == 2
+
+
+def test_pair_single_gun_succeeds_if_profile_replies_after_revision_timeouts() -> None:
+    fake = _MultiGunPairFakeHIDDevice(drop_rev_attempts=3, drop_prof_attempts=0)
+    hw = _fast_pair_hw(fake)
+    info = hw.pair_single_gun(REF_A, bytes.fromhex(REF_A))
+    assert info is not None
+    assert info["gun_id"] == 2
+    assert fake.rev_seen == 3
+    assert fake.prof_seen == 1
+    assert REF_A in hw.paired_by_ref
+
+
+def test_pair_single_gun_fails_when_revision_and_profile_both_timeout() -> None:
+    fake = _MultiGunPairFakeHIDDevice(drop_rev_attempts=3, drop_prof_attempts=2)
+    hw = _fast_pair_hw(fake)
+    info = hw.pair_single_gun(REF_A, bytes.fromhex(REF_A))
+    assert info is None
+    assert fake.rev_seen == 3
+    assert fake.prof_seen == 2
+    assert REF_A not in hw.paired_by_ref
+
+
+def test_drain_queue_reacks_only_target_ref() -> None:
+    fake = _MultiGunPairFakeHIDDevice()
+    fake.acked = True
+    fake.inbox = [
+        fake._pkt("100012", REF_B),
+        fake._pkt("100012", REF_A),
+        fake._pkt("100012", REF_B),
+    ]
+    hw = _transport(fake)
+    ack_b = bytes.fromhex(f"0BFF12020101{REF_A}".ljust(128, "0"))
+    drained, re_acks = hw.drain_queue(drain_ms=25, last_ack_b=ack_b, ref=REF_A)
+    assert drained == 3
+    assert re_acks == 1
+    assert len(fake.writes) == 1

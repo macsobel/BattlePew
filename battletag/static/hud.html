@@ -1922,15 +1922,20 @@
       } else {
         raceToggle.style.display = 'none';
       }
+      const isRoundActive = ['UPLOADING', 'WAIT_TRIGGER', 'COUNTDOWN', 'PLAYING', 'GAME_OVER'].includes(state.phase);
       const vestEl = document.getElementById('hudVest');
-      vestEl.textContent = me.vest_ok ? 'Vest connected' : 'Vest not detected';
-      vestEl.style.color = me.vest_ok ? '#7BD88A' : '#FF8575';
+      if (vestEl) {
+        vestEl.style.display = isRoundActive ? 'none' : '';
+        if (!isRoundActive) {
+          vestEl.textContent = me.vest_ok ? 'Vest connected' : 'Vest not detected';
+          vestEl.style.color = me.vest_ok ? '#7BD88A' : '#FF8575';
+        }
+      }
       const signalEl = document.getElementById('hudSignal');
       if (signalEl) {
-        signalEl.style.display = (state.phase === 'PLAYING' && me.signal_lost) ? '' : 'none';
+        signalEl.style.display = 'none';
       }
 
-      const isRoundActive = ['UPLOADING', 'WAIT_TRIGGER', 'COUNTDOWN', 'PLAYING', 'GAME_OVER'].includes(state.phase);
       const hasPrevStats = Array.isArray(state.match_history) && state.match_history.length > 0;
       const showGameStats = isRoundActive || (hasPrevStats && !isGameSelection);
       const resultsRevealed = !!state.results_revealed
@@ -1996,8 +2001,18 @@
         }
         return false;
       };
+      const lmsAheadHud = (q, p) => {
+        const qAlive = q.life_points > 0;
+        const pAlive = p.life_points > 0;
+        if (qAlive !== pAlive) return qAlive;
+        if (q.score !== p.score) return q.score > p.score;
+        if (q.life_points !== p.life_points) return q.life_points > p.life_points;
+        return (q.frags || 0) > (p.frags || 0);
+      };
       const rank = isRace
         ? (meBenched ? null : 1 + rankPool.filter((p) => !raceBenchNums.has(p.gun_num) && raceAheadHud(p, rankMe)).length)
+        : isLMS
+        ? 1 + rankPool.filter((p) => lmsAheadHud(p, rankMe)).length
         : 1 + rankPool.filter((p) => p.score > rankMe.score).length;
       document.getElementById('hudModeLabel').textContent = state.mode.title;
       // Race clock counts UP with tenths during a run, shows the
@@ -2035,10 +2050,8 @@
         && (state.duel_state.countdown_remaining || 0) > 0;
       hudClockEl.style.color = isDuelCd ? 'var(--team-red)' : '';
       document.getElementById('hudRank').textContent = rank === null ? '—' : `#${rank}`;
-      // The score box shows the mode's real number: points in Duel,
-      // eliminations in LMS (score there is a sort-order artifact, not
-      // points), the best finished time in the race (total points until
-      // a finish), "—" when sitting out.
+      // The score box shows the mode's real points (plus eliminations in
+      // LMS), or the best finished time in the race ("—" when sitting out).
       if (isRace && meBenched) {
         document.getElementById('hudScore').textContent = '—';
         document.querySelector('#hudScoreBox .t-label').textContent = 'OUT';
@@ -2046,8 +2059,10 @@
         document.getElementById('hudScore').textContent = `${rankMe.best_run_time.toFixed(1)}s`;
         document.querySelector('#hudScoreBox .t-label').textContent = 'BEST';
       } else {
-        document.getElementById('hudScore').textContent = isLMS ? rankMe.frags : rankMe.score;
-        document.querySelector('#hudScoreBox .t-label').textContent = isLMS ? 'ELIMS' : (isDuel ? 'POINTS' : 'SCORE');
+        document.getElementById('hudScore').textContent = rankMe.score;
+        document.querySelector('#hudScoreBox .t-label').textContent = isLMS
+          ? `PTS · ${rankMe.frags} ${rankMe.frags === 1 ? 'ELIM' : 'ELIMS'}`
+          : (isDuel ? 'POINTS' : 'SCORE');
       }
 
       // Big countdown treatment while the guns count down (or waiting on P1 trigger).
@@ -2440,8 +2455,8 @@
         overCard.style.display = 'flex';
         const won = rankMe.status_badge === 'WINNER';
         document.getElementById('gameOverHead').textContent = won ? '🏆 VICTORY!' : 'MATCH OVER';
-        const finalNum = isLMS ? rankMe.frags : rankMe.score;
-        const finalWord = isLMS ? (finalNum === 1 ? 'elim' : 'elims') : (finalNum === 1 ? 'point' : 'points');
+        const finalNum = rankMe.score;
+        const finalWord = finalNum === 1 ? 'point' : 'points';
         // Race: per-round times/points + best + total, never
         // hits/frags/accuracy/streak. No score chart or matchups.
         const chartBoxEl = document.getElementById('hudChartBox');
@@ -2474,7 +2489,10 @@
           const lmsHpNote = isLMS
             ? (rankMe.life_points > 0 ? ` · ${rankMe.life_points}/${rankMe.max_life} HP left` : ' · Eliminated')
             : '';
-          document.getElementById('gameOverRank').textContent = `Final rank #${rank}${lmsHpNote} · ${finalNum} ${finalWord}`;
+          const scoreSummary = isLMS
+            ? `${rankMe.score} ${rankMe.score === 1 ? 'pt' : 'pts'} · ${rankMe.frags} ${rankMe.frags === 1 ? 'elim' : 'elims'}`
+            : `${finalNum} ${finalWord}`;
+          document.getElementById('gameOverRank').textContent = `Final rank #${rank}${lmsHpNote} · ${scoreSummary}`;
           document.getElementById('gameOverStats').innerHTML = `
           ${isLMS ? `<span class="hud-stat-chip" title="Remaining Hit Points">${rankMe.life_points}/${rankMe.max_life} HP</span>` : ''}
           ${isDuel ? `<span class="hud-stat-chip" title="Early Fires (Penalties)">${rankMe.early_fires || 0} early</span>` : ''}
@@ -2484,7 +2502,7 @@
           </span>
           <span class="hud-stat-chip" title="Frags">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2L4 14h7l-1 8 9-12h-7l1-8z"/></svg>
-            ${rankMe.frags} frags
+            ${rankMe.frags} ${isLMS ? 'elims' : 'frags'}
           </span>
           <span class="hud-stat-chip" title="Accuracy">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 12l5-5"/><circle cx="12" cy="12" r="1.5" fill="currentColor"/></svg>

@@ -784,14 +784,14 @@ def _trigger_winner_announcement() -> None:
         winners = engine.race_winners()
     elif engine.mode_name == "LastManStanding":
         # Survival decides: any alive player beats all eliminated players,
-        # and among alive players higher HP / score wins.
+        # and among alive players higher score / remaining HP wins.
         ranked_players = engine.get_sorted_players()
         if not ranked_players:
             return
-        top_key = (ranked_players[0].life_points > 0, ranked_players[0].life_points, ranked_players[0].score)
+        top_key = (ranked_players[0].life_points > 0, ranked_players[0].score, ranked_players[0].life_points)
         winners = [
             p for p in ranked_players
-            if (p.life_points > 0, p.life_points, p.score) == top_key
+            if (p.life_points > 0, p.score, p.life_points) == top_key
         ]
     else:
         ranked_players = sorted(engine.players.values(), key=lambda p: p.score, reverse=True)
@@ -872,6 +872,7 @@ async def api_return_to_lobby() -> JSONResponse:
     now = time.time()
     for p in engine.players.values():
         p.status_badge = "READY"
+        p.gun_online = True
         if p.last_seen_ts > 0:
             p.last_seen_ts = now
     engine.audio.play_music("musicmenu.wav")
@@ -1494,7 +1495,6 @@ async def _run_match_lifecycle() -> None:
         await broadcast_state()
 
         last_bot_step = time.time()
-        last_vest_sweep = time.time()
         race_prompt_tick = 0
         while engine.phase == "PLAYING":
             engine.tick_mode_timers()
@@ -1559,20 +1559,6 @@ async def _run_match_lifecycle() -> None:
                 # The simulator reports tower hits through the same
                 # channel as the hardware 0xC3 path.
                 engine.ingest_ubiconnect_hits(engine.sim.ubiconnect_hits)
-
-            # Periodic vest sweep: a vest unplugged mid-match must show up
-            # on the scoreboard and in the feed, not just at the next
-            # upload. Every 5 s; the sweep exits early once every gun has
-            # answered, and two silent sweeps are needed before a gun is
-            # shown vest-less, so one dropped reply never flaps the
-            # display. The HID lock serializes the sweep with the polls.
-            if (
-                not engine.use_simulator
-                and engine.hw
-                and (time.time() - last_vest_sweep) >= 5.0
-            ):
-                last_vest_sweep = time.time()
-                await _refresh_vest_states(announce_changes=True)
 
             # Optional bot arena action in simulator mode
             if engine.use_simulator and _bot_demo_enabled and (time.time() - last_bot_step) > 1.35:

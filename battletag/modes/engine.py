@@ -624,6 +624,11 @@ class ArenaEngine:
                         self._vest_miss_counts[gid] = 0
                     new_ok = False
             else:
+                if in_match:
+                    # During a round, guns are busy streaming 0x95 status and
+                    # 0x05 ping replies; a missed C1 broadcast sweep must never
+                    # mark or drop an active player offline mid-match.
+                    continue
                 self._vest_miss_counts[gid] = self._vest_miss_counts.get(gid, 0) + 1
                 if self._vest_miss_counts[gid] < miss_threshold:
                     continue
@@ -1106,6 +1111,7 @@ class ArenaEngine:
         self.results_revealed = False
         self.match_end_ts = 0.0
         self._pending_audio = []
+        self._vest_miss_counts.clear()
         self.audio.reset_match_timers()
         team_map = {gid: p.team_id for gid, p in self.players.items()}
         self.sim.reset_for_mode(self.mode_name, self.settings, team_map=team_map)
@@ -1142,6 +1148,7 @@ class ArenaEngine:
             p.clips = max_clips
             p.max_clips = max_clips
             p.status_badge = "ACTIVE"
+            p.gun_online = True
             p.miss_streak = 0
             p._empty_ammo_warned = False
             p._last_empty_warn_ts = 0.0
@@ -1218,6 +1225,7 @@ class ArenaEngine:
         now = time.time()
         player.last_status_ts = now
         player.last_seen_ts = now
+        player.gun_online = True
 
         # 1. Establish t=0 baseline so residual shift-register values are ignored
         if not player.baseline_set:

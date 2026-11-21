@@ -170,38 +170,72 @@ def test_duel_six_ammo_no_timer_and_rounds_advance() -> None:
 
 
 def test_lms_survival_scoring_and_alive_based_outcomes() -> None:
-    """F4/F7: no timer; alive score is life + #players, eliminated
-    score is #players - #alive, and the sole survivor wins even with
-    the lowest score."""
+    """Maximum game time + survival & combat scoring: players start at 0,
+    earn +1 pt per hit landed and +3 bonus per elimination, alive players
+    always rank above eliminated ones, and when time expires with multiple
+    survivors the highest-scoring (then highest-HP) survivor wins."""
     eng = ArenaEngine()
+    assert MODE_CATALOG["LastManStanding"]["timed"] is True
+    assert MODE_CATALOG["LastManStanding"]["defaults"]["durationSeconds"] == 300
+    lms_dur_opt = next(
+        o for o in MODE_CATALOG["LastManStanding"]["options"] if o["key"] == "durationSeconds"
+    )
+    assert lms_dur_opt == {
+        "key": "durationSeconds",
+        "label": "Maximum Game Time",
+        "choices": [300, 600, 900, 1200],
+    }
     assert MODE_CATALOG["LastManStanding"]["defaults"]["lifePoints"] == 25
     lms_hp_opt = next(o for o in MODE_CATALOG["LastManStanding"]["options"] if o["key"] == "lifePoints")
     assert lms_hp_opt == {"key": "lifePoints", "label": "Player Hit Points", "choices": [5, 10, 25, 50, 75, 100]}
-    _start(eng, "LastManStanding", guns=3, settings={"lifePoints": 5})
-    assert MODE_CATALOG["LastManStanding"]["timed"] is False
-    assert eng.get_remaining_seconds() is None
+    _start(eng, "LastManStanding", guns=3, settings={"lifePoints": 5, "durationSeconds": 600})
+    assert all(p.score == 0 and p.frags == 0 for p in eng.players.values())
+    rem = eng.get_remaining_seconds()
+    assert rem is not None and 590.0 <= rem <= 600.0
     eng.match_start_ts = time.time() - 1000
-    assert eng.check_auto_end_conditions() is False
+    assert eng.check_auto_end_conditions() is True
+    # Tie on score and HP among survivors -> no single outright winner.
+    assert eng.compute_gameover_outcomes() == {2: False, 3: False, 4: False}
     eng.match_start_ts = time.time()
 
-    victim = eng.players[3]
-    eng.sim.sim_fire_shot(2, 3)
+    # Gun 3 lands 2 hits on Gun 4 -> +2 pts for Gun 3, Gun 4 at 0 pts / 3 HP.
+    for _ in range(2):
+        eng.sim.sim_fire_shot(3, 4)
+        _poll_all(eng)
+    assert eng.players[3].score == 2
+    assert eng.players[3].hits_landed == 2
+    assert eng.players[3].frags == 0
+    assert eng.players[4].score == 0
+    assert eng.players[4].life_points == 3
+    # Multiple survivors: higher score leads and wins if clock expires.
+    assert eng.get_sorted_players()[0].gun_id == 3
+    assert eng.compute_gameover_outcomes() == {2: False, 3: True, 4: False}
+
+    # Gun 3 eliminates Gun 4 (3 more hits -> 5 hits + 3 elimination bonus = 8 pts, 1 frag).
+    for _ in range(3):
+        eng.sim.sim_fire_shot(3, 4)
+        _poll_all(eng)
+    assert eng.players[4].life_points == 0
+    assert eng.players[4].status_badge == "ELIMINATED"
+    assert eng.players[4].score == 0
+    assert eng.players[3].frags == 1
+    assert eng.players[3].score == 8
+
+    # Gun 3 hits Gun 2 once (Gun 3 rises to 9 pts), then Gun 2 eliminates Gun 3
+    # (5 hits + 3 elimination bonus = 8 pts, 1 frag). Gun 2 is the sole survivor
+    # and must still win #1 and gameover_outcomes even with fewer points than Gun 3.
+    eng.sim.sim_fire_shot(3, 2)
     _poll_all(eng)
-    assert victim.score == 4 + 3  # life 4 + 3 players
-    for _ in range(4):
+    assert eng.players[3].score == 9
+    for _ in range(5):
         eng.sim.sim_fire_shot(2, 3)
         _poll_all(eng)
-    assert victim.life_points == 0
-    assert victim.status_badge == "ELIMINATED"
-    assert victim.score == 3 - 2  # 3 players, 2 alive
-
-    for _ in range(5):
-        eng.sim.sim_fire_shot(2, 4)
-        _poll_all(eng)
-    assert eng.players[4].score == 3 - 1
-    # The survivor never took a hit: their score is the starting
-    # life + #players (5 + 3), above every eliminated player's.
-    assert eng.players[2].score == 5 + 3
+    assert eng.players[3].life_points == 0
+    assert eng.players[3].score == 9
+    assert eng.players[2].life_points == 4
+    assert eng.players[2].frags == 1
+    assert eng.players[2].score == 8
+    assert eng.get_sorted_players()[0].gun_id == 2
     assert eng.compute_gameover_outcomes() == {2: True, 3: False, 4: False}
     assert eng.check_auto_end_conditions() is True
 

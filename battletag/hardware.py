@@ -530,8 +530,22 @@ class RealHIDTransport:
             time.sleep(0.005)
         return None
 
+    @staticmethod
+    def _matches_pairing_beacon_ref(payload: bytes, ref: str | None) -> bool:
+        """True when payload is a 10 00 12 pairing beacon matching ref (or any when unset)."""
+        if payload[:3] != bytes.fromhex("100012"):
+            return False
+        if ref is None:
+            return True
+        return len(payload) >= 11 and payload[3:11].hex().upper() == ref.upper()
+
     @_serialized
-    def drain_queue(self, drain_ms: int = 500, last_ack_b: bytes | None = None) -> tuple[int, int]:
+    def drain_queue(
+        self,
+        drain_ms: int = 500,
+        last_ack_b: bytes | None = None,
+        ref: str | None = None,
+    ) -> tuple[int, int]:
         re_acks = 0
         drained = 0
         deadline = time.monotonic() + drain_ms / 1000.0
@@ -544,7 +558,11 @@ class RealHIDTransport:
             payload = raw[1:] if len(raw) == REPORT_LEN + 1 else raw
             drained += 1
             self.log(f"  drained queued IN: {payload.hex().upper()}")
-            if payload[:3] == bytes.fromhex("100012") and last_ack_b is not None and re_acks < 2:
+            if (
+                last_ack_b is not None
+                and re_acks < 2
+                and self._matches_pairing_beacon_ref(payload, ref)
+            ):
                 self.dev.write(bytes([0x00]) + last_ack_b)
                 re_acks += 1
                 self.log("  re-sent 0B ack")
@@ -562,7 +580,7 @@ class RealHIDTransport:
             self.log(f"  step {i}/{len(seq['steps'])}: {note}")
 
             if "drain_ms" in step:
-                self.drain_queue(step.get("drain_ms", 500), last_ack_b)
+                self.drain_queue(step.get("drain_ms", 500), last_ack_b, ref=ref)
                 continue
 
             if "wait_for_prefix" in step:
@@ -632,7 +650,11 @@ class RealHIDTransport:
                 if payload_reply[: len(want)] == want:
                     matched = payload_reply
                     break
-                if payload_reply[:3] == bytes.fromhex("100012") and last_ack_b is not None and re_acks < 2:
+                if (
+                    last_ack_b is not None
+                    and re_acks < 2
+                    and self._matches_pairing_beacon_ref(payload_reply, ref)
+                ):
                     self.dev.write(bytes([0x00]) + last_ack_b)
                     re_acks += 1
 
@@ -788,12 +810,13 @@ class RealHIDTransport:
                     new_step["expect_prefix"] = f"35{gun_id_hex}"
             pair_seq["steps"].append(new_step)
 
-        # Split the pairing sequence into the core handshake (steps 1-7 ending
-        # with the 04 <id> revision reply) and the optional profile read
-        # (step 8, 05 <id> 84 -> 35 <id>). Once the core handshake succeeds,
-        # the gun is already paired on the RF link and stops sending 10 00 12
-        # announcements; if the profile reply is dropped, retrying from step 1
-        # would always time out and strand a paired gun off-screen.
+        # Split the pairing sequence into the ack phase (steps 1-6 ending after
+        # 0A/0B acks + settle drain), the revision check (step 7, 00 <id> 04 ->
+        # 04 <id>), and the profile read (step 8, 05 <id> 84 -> 35 <id>). Once
+        # 0A/0B acks go out, the gun says "OK", adopts gun_id, and stops
+        # sending 10 00 12 announcements; retrying from step 1 would stall for
+        # 30s and strand an already-acked gun off-screen, so retry revision and
+        # profile directly instead.
         rev_idx = next(
             (
                 idx
@@ -802,21 +825,28 @@ class RealHIDTransport:
             ),
             len(pair_seq["steps"]) - 1,
         )
-        core_seq = dict(pair_seq, steps=pair_seq["steps"][: rev_idx + 1])
+        ack_seq = dict(pair_seq, steps=pair_seq["steps"][:rev_idx])
+        rev_seq = {
+            "name": f"revision gun {gun_id:02x}",
+            "capture": pair_seq.get("capture"),
+            "ref": ref_hex,
+            "lock_ref": True,
+            "steps": [pair_seq["steps"][rev_idx]],
+        }
         profile_steps = pair_seq["steps"][rev_idx + 1 :]
 
-        # Run the core handshake, retrying once: a single dropped RF reply
-        # before the gun receives its ack must not cost the gun.
-        paired = False
-        for pair_attempt in (1, 2):
-            if self.run_sequence(core_seq):
-                paired = True
-                break
-            self.log(f"  pair attempt {pair_attempt} failed, retrying sequence")
-        if not paired:
+        if ack_seq["steps"] and not self.run_sequence(ack_seq):
             self.log(f"FAIL: pair gun {gun_id:02x}")
             return None
 
+        rev_ok = False
+        for rev_attempt in (1, 2, 3):
+            if self.run_sequence(rev_seq):
+                rev_ok = True
+                break
+            self.log(f"  revision attempt {rev_attempt} failed for gun {gun_id:02x}, retrying revision")
+
+        prof_ok = False
         if profile_steps:
             profile_seq = {
                 "name": f"profile gun {gun_id:02x}",
@@ -825,7 +855,6 @@ class RealHIDTransport:
                 "lock_ref": True,
                 "steps": profile_steps,
             }
-            prof_ok = False
             for prof_attempt in (1, 2):
                 if self.run_sequence(profile_seq):
                     prof_ok = True
@@ -833,6 +862,10 @@ class RealHIDTransport:
                 self.log(f"  profile attempt {prof_attempt} failed for gun {gun_id:02x}, retrying profile read")
             if not prof_ok:
                 self.log(f"  WARNING: profile read failed for gun {gun_id:02x}; using default name/avatar")
+
+        if not (rev_ok or prof_ok):
+            self.log(f"FAIL: pair gun {gun_id:02x}")
+            return None
 
         profile_name = name
         profile_avatar = AVATAR_NAMES[(class_id - 1) % len(AVATAR_NAMES)]

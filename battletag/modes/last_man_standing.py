@@ -1,8 +1,10 @@
-"""LastManStanding mode: survival elimination, no respawns.
+"""LastManStanding mode: survival elimination with combat scoring, no respawns.
 
-Hits and kills award no points — only counters. While alive a
-player's score is life + #players; on elimination it becomes
-#players - #alive. The last player standing wins.
+Players earn +1 point per hit landed and +3 bonus points per elimination.
+Survival remains the primary win condition: alive players always rank
+above eliminated players, so the last player standing always wins. If
+maximum game time expires with multiple survivors, the survivor with the
+most points (then remaining HP) wins.
 """
 
 from __future__ import annotations
@@ -29,9 +31,9 @@ class LastManStandingMode(GameMode):
         "subtitle": "Survival Elimination · No Respawns · Final Survivor Wins",
         "tier": 1,
         "badge": "Elimination",
-        # The original has no timer: the match ends when one player is
-        # left alive. No duration setting exists for this mode.
-        "timed": False,
+        # Arena Master maximum game time cap (5/10/15/20m); the match also
+        # ends immediately as soon as at most one survivor remains alive.
+        "timed": True,
         "min_players": 2,
         "max_players": 8,
         "teams": False,
@@ -40,13 +42,14 @@ class LastManStandingMode(GameMode):
         "icon": "/static/assets/textures/Ui/Pictograms/96x/LastManStanding.png",
         "banner": "/static/assets/textures/Packages/LastManStanding/Ui/Loading_LastManStanding.png",
         "ranking_bg": "/static/assets/textures/Ui/Ranking_Bg_LastManStanding.png",
-        "description": "High-stakes survival! Players have limited Life Points and NO T-Base respawns. Once your HP hits 0, you are eliminated — the last player standing takes victory!",
+        "description": "High-stakes survival! Players have limited Life Points and NO T-Base respawns. Earn +1 pt per hit and +3 bonus per elimination — the last player standing takes victory!",
         "bullets": [
-            "Limited Life Points & ammo",
-            "No T-Base respawns",
+            "+1 pt per hit · +3 pt Elimination bonus",
+            "No T-Base respawns · limited Life & Ammo",
             "Last player standing wins",
         ],
         "defaults": {
+            "durationSeconds": 300,
             "countdownSeconds": 10,
             "gameLaunch": 0,
             "lifePoints": 25,
@@ -57,6 +60,7 @@ class LastManStandingMode(GameMode):
             "medkit": 0,
         },
         "options": [
+            {"key": "durationSeconds", "label": "Maximum Game Time", "choices": [300, 600, 900, 1200]},
             {"key": "gameLaunch", "label": "Game Launch", "choices": [0, 1]},
             {"key": "lifePoints", "label": "Player Hit Points", "choices": [5, 10, 25, 50, 75, 100]},
             {"key": "ammunitions", "label": "Shots per Clip", "choices": [6, 9, 12, 20]},
@@ -69,14 +73,6 @@ class LastManStandingMode(GameMode):
     respawn_audio = False
     no_respawn = True
 
-    def initial_score(
-        self, ctx: ArenaEngine, player: PlayerState, max_life: int, num_players: int
-    ) -> int:
-        # The original survival formula sets an alive player's score
-        # to life_points + num_players; initialize it at match start
-        # so an untouched survivor does not stay at 0.
-        return max_life + num_players
-
     def on_status_report(
         self, ctx: ArenaEngine, player: PlayerState, status: DecodedStatus, ammo_dropped: bool
     ) -> None:
@@ -85,16 +81,7 @@ class LastManStandingMode(GameMode):
     def record_life_hits(
         self, ctx: ArenaEngine, shooters: list[int], victim: PlayerState, curr_life: int
     ) -> None:
-        """Score LastManStanding hits by the original's survival formula.
-
-        Hits and kills award no points — only counters. While alive a
-        player's score is life + #players, recomputed when their life
-        drops; on elimination it becomes #players - #alive, set once at
-        the moment of elimination. Healing never raises the score: the
-        recompute lives in the life-decrease branch only, as in the
-        original's RoundLoop (a quirk, preserved).
-        """
-        num_players = len(ctx.players)
+        """Score LastManStanding hits (+1 pt/hit, +3 bonus per elimination)."""
         for sgid in shooters:
             shooter = ctx.players.get(sgid)
             if not shooter:
@@ -102,6 +89,9 @@ class LastManStandingMode(GameMode):
             ctx.last_action_ts = time.time()
             shooter.miss_streak = 0
             shooter.hits_landed += 1
+            shooter.score += 1
+            shooter.streak += 1
+            shooter.best_streak = max(shooter.best_streak, shooter.streak)
             shooter.last_tagged_target = victim.display_name
             victim.last_tagged_by = shooter.display_name
             victim.last_tagged_by_time = time.time()
@@ -110,24 +100,27 @@ class LastManStandingMode(GameMode):
             verb = random.choice(KILL_VERBS)
             ctx.add_event(
                 "hit",
-                f"{shooter.display_name} {verb} {victim.display_name}",
+                f"{shooter.display_name} {verb} {victim.display_name} (+1 pt)",
                 actor=shooter,
                 target=victim,
             )
             if curr_life > 0:
-                ctx.audio.trigger_pool("hit_scored")
-        if curr_life > 0:
-            victim.score = victim.life_points + num_players
-        else:
+                if shooter.streak == 5:
+                    ctx.audio.trigger_pool("streak_5", custom_subtitle=f"{shooter.display_name} is on a 5-hit streak!")
+                elif shooter.streak == 3:
+                    ctx.audio.trigger_pool("streak_3", custom_subtitle=f"{shooter.display_name} — 3-hit streak!")
+                else:
+                    ctx.audio.trigger_pool("hit_scored")
+        if curr_life == 0:
             alive = [p for p in ctx.players.values() if p.life_points > 0]
-            victim.score = num_players - len(alive)
             killer = ctx.players.get(shooters[0]) if shooters else None
             if killer is not None:
                 killer.frags += 1
+                killer.score += 3
                 fverb = random.choice(FRAG_VERBS)
                 ctx.add_event(
                     "frag",
-                    f"ELIMINATED! {killer.display_name} {fverb} {victim.display_name}",
+                    f"ELIMINATED! {killer.display_name} {fverb} {victim.display_name} (+3 bonus)",
                     actor=killer,
                     target=victim,
                 )
@@ -146,18 +139,19 @@ class LastManStandingMode(GameMode):
     def sort_players(self, ctx: ArenaEngine, players: list[PlayerState]) -> list[PlayerState]:
         return sorted(
             players,
-            key=lambda p: (p.life_points > 0, p.life_points, p.score, p.hits_landed, -p.deaths),
+            key=lambda p: (p.life_points > 0, p.score, p.life_points, p.frags, p.hits_landed, -p.deaths),
             reverse=True,
         )
 
     def gameover_outcomes(self, ctx: ArenaEngine) -> dict[int, bool]:
-        # Survival decides: every player still alive gets winner
-        # LEDs regardless of score, so the sole survivor is never
-        # shown red behind an eliminated player's higher score. If
-        # somehow nobody is alive, fall back to the score rule.
-        alive = {gid for gid, p in ctx.players.items() if p.life_points > 0}
+        # Survival decides: alive players beat eliminated ones; if time expires
+        # with multiple survivors, only an un-tied top-scoring (then highest-HP)
+        # survivor wins green LEDs.
+        alive = [p for p in ctx.players.values() if p.life_points > 0]
         if alive:
-            return {gid: gid in alive for gid in ctx.players}
+            top_key = max((p.score, p.life_points) for p in alive)
+            winners = {p.gun_id for p in alive if (p.score, p.life_points) == top_key}
+            return {gid: (len(winners) == 1 and gid in winners) for gid in ctx.players}
         return super().gameover_outcomes(ctx)
 
     def check_end_condition(self, ctx: ArenaEngine) -> bool:

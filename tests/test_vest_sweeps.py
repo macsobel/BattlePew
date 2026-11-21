@@ -173,3 +173,34 @@ def test_apply_vest_states_is_lenient_during_match() -> None:
     changed = eng.apply_vest_states({gid_a: False, gid_b: True})
     assert [(p.gun_id, ok) for p, ok in changed] == [(gid_a, False)]
     assert eng.players[gid_a].vest_ok is False
+
+
+def test_silent_c1_sweeps_never_mark_players_offline_during_match() -> None:
+    eng, gids = _engine_gids()
+    gid_a, gid_b = gids
+    from battletag.modes import VEST_MATCH_MISS_SWEEPS_TO_DISCONNECT as M
+
+    eng.phase = "PLAYING"
+    for _ in range(M + 5):
+        assert eng.apply_vest_states({gid_b: True}) == []
+        assert eng.players[gid_a].gun_online is True
+        assert eng.players[gid_a].vest_ok is True
+    assert gid_a in eng.players
+
+
+def test_status_report_and_match_reset_restore_gun_online() -> None:
+    from battletag.protocol import DecodedStatus
+
+    eng, gids = _engine_gids()
+    gid_a, _ = gids
+    eng.players[gid_a].gun_online = False
+    eng.ingest_status_report(
+        DecodedStatus(gun_id=gid_a, word_count=0, send_words=[], hit_ids=[0, 0, 0, 0, 0])
+    )
+    assert eng.players[gid_a].gun_online is True
+
+    eng.players[gid_a].gun_online = False
+    eng._vest_miss_counts[gid_a] = 3
+    eng.reset_stats_for_new_match()
+    assert eng.players[gid_a].gun_online is True
+    assert eng._vest_miss_counts == {}

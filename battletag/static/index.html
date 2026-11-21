@@ -1869,6 +1869,15 @@
       color: var(--text-muted);
     }
 
+    .tv-score-sub {
+      font-size: 0.72rem;
+      font-weight: 800;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+      color: var(--bt-orange);
+      margin-top: 2px;
+    }
+
     .tv-stats-chips {
       display: flex;
       align-items: center;
@@ -5988,11 +5997,13 @@
       // Scoreboard: in team modes players are grouped under team headers
       // ordered by team total; solo modes keep the flat score-ordered grid.
       const sortedByScore = [...state.players].sort((a, b) => b.score - a.score);
-      // The race crowns the fastest finished run, not the points
-      // leader: state.players arrives in the server's race ranking,
-      // so the first finisher in it is the fastest so far.
+      // The race crowns the fastest finished run, not the points leader;
+      // LastManStanding crowns the highest-scoring survivor (`state.players`
+      // arrives server-sorted with alive players ahead of eliminated ones).
       const leaderGunId = state.mode.id === 'TagThenShoot'
         ? (((state.players || []).find((p) => p.best_run_time != null) || {}).gun_id ?? null)
+        : state.mode.id === 'LastManStanding'
+        ? (((state.players || []).find((p) => p.life_points > 0 && p.score > 0) || {}).gun_id ?? null)
         : (sortedByScore.length > 0 && sortedByScore[0].score > 0 ? sortedByScore[0].gun_id : null);
 
       const renderPills = (cur, max, onClass) => {
@@ -6023,23 +6034,20 @@
 
       const tvCardHtml = (p, soloIdx = null) => {
         const { isDuel, isLMS, isRace } = modeDisplay(state);
-        // The big number is mode-specific: rounds won in Duel (score
-        // already counts those), eliminations in LMS (score there is a
-        // sort-order artifact, not points), the best finished time in
-        // the race (total points until a finish), points elsewhere.
+        // The big number shows points everywhere except timed-race finishers
+        // (which headline their best finished run time). Last Man Standing
+        // also displays eliminations underneath Points in `.tv-score-sub`.
         const displayScore = isRace
           ? (p.best_run_time != null ? `${p.best_run_time.toFixed(1)}s` : p.score)
-          : (isLMS ? p.frags : p.score);
+          : p.score;
         const scoreLabel = isRace
           ? (p.best_run_time != null ? 'Best Time' : 'Points')
-          : (isLMS ? 'Elims' : 'Points');
+          : 'Points';
         const isLeader = p.gun_id === leaderGunId;
         const scoreColor = state.mode.teams ? p.team_color : (isLeader ? 'var(--bt-gold)' : 'var(--bt-orange)');
         // Diff-driven feedback: a score pop when the score rose, a red
         // flash when the player just took a hit, dimming when out of action.
-        const scorePopped = isLMS
-          ? (prevFrags[p.gun_id] !== undefined && p.frags > prevFrags[p.gun_id])
-          : (prevScores[p.gun_id] !== undefined && p.score > prevScores[p.gun_id]);
+        const scorePopped = prevScores[p.gun_id] !== undefined && p.score > prevScores[p.gun_id];
         const hitFlashed = prevHitsTaken[p.gun_id] !== undefined && p.hits_received > prevHitsTaken[p.gun_id];
         const knockedOut = showLife && prevLifePoints[p.gun_id] !== undefined && prevLifePoints[p.gun_id] > 0 && p.life_points === 0;
         const respawned = showLife && prevLifePoints[p.gun_id] !== undefined && prevLifePoints[p.gun_id] === 0 && p.life_points > 0;
@@ -6158,8 +6166,6 @@
               <div class="tv-player-name" style="display: flex; align-items: center; gap: 6px;">
                 ${isLeader ? '<span class="tv-leader-crown">👑</span>' : ''}<span style="overflow: hidden; text-overflow: ellipsis;">${esc((p.name || '').toUpperCase())}</span>
               </div>
-              ${p.gun_online === false ? `<div><span class="tv-vest-warn">T-BLASTER OFFLINE — RECONNECTING</span></div>` : !p.vest_ok ? `<div><span class="tv-vest-warn">${isRace ? 'NO VEST — VEST REQUIRED' : "NO VEST — HITS WON'T REGISTER"}</span></div>` : ''}
-              ${state.phase === 'PLAYING' && p.signal_lost ? `<div><span class="tv-signal-warn">NO SIGNAL — CHECK THE BLASTER</span></div>` : ''}
               ${isLMS && p.life_points === 0 ? `<div><span class="tv-elim-badge">ELIMINATED</span></div>` : ''}
               ${isUpNow ? `<div><span class="tv-up-badge">UP NOW</span></div>` : ''}
               ${isUpNext ? `<div><span class="tv-next-badge">UP NEXT</span></div>` : ''}
@@ -6170,6 +6176,7 @@
             <div class="tv-score-box">
               <div class="tv-score-num ${scorePopped ? 'score-pop' : ''}" style="color: ${scoreColor};">${displayScore}</div>
               <div class="tv-score-label">${scoreLabel}</div>
+              ${isLMS ? `<div class="tv-score-sub">${p.frags} ${p.frags === 1 ? 'Elim' : 'Elims'}</div>` : ''}
             </div>
           </div>
         `;
@@ -6186,7 +6193,7 @@
         state.duel_state ? [state.duel_state.max_rounds, state.duel_state.round_results] : null,
         state.race_state ? [state.race_state.turn_phase, state.race_state.active_gun_id, state.race_state.next_gun_id, state.race_state.turn_index, state.race_state.round_index, state.race_state.max_rounds, state.race_state.launch_mode] : null,
         state.race_roster || null,
-        gridPlayers.map((p) => [p.gun_id, p.name, p.avatar, p.score, p.frags, p.life_points, p.max_life, p.ammo, p.max_ammo, p.clips, p.vest_ok, p.signal_lost, p.team_id, p.team_color, p.tags, p.tower_hits, p.run_history, p.best_run_time]),
+        gridPlayers.map((p) => [p.gun_id, p.name, p.avatar, p.score, p.frags, p.life_points, p.max_life, p.ammo, p.max_ammo, p.clips, p.team_id, p.team_color, p.tags, p.tower_hits, p.run_history, p.best_run_time]),
       ]);
       if (gridSignature !== lastGridSignature) {
         lastGridSignature = gridSignature;
@@ -6607,8 +6614,8 @@
               ? Boolean(
                   runnerUp
                   && (runnerUp.life_points > 0) === (topWinner.life_points > 0)
-                  && runnerUp.life_points === topWinner.life_points
                   && runnerUp.score === topWinner.score
+                  && runnerUp.life_points === topWinner.life_points
                 )
               : Boolean(runnerUp && runnerUp.score === topWinner.score);
             if (isTie) {
@@ -6619,7 +6626,7 @@
               winningGunNum = topWinner.gun_num;
               document.getElementById('resultsHeadline').textContent = `Victory: ${topWinner.name.toUpperCase()}!`;
               document.getElementById('resultsSub').textContent = isLMS && topWinner.life_points > 0
-                ? `${state.mode.title} Match Complete · Last Survivor (${topWinner.life_points} HP · ${topWinner.score} Pts)`
+                ? `${state.mode.title} Match Complete · Last Survivor (${topWinner.life_points} HP · ${topWinner.score} Pts · ${topWinner.frags} ${topWinner.frags === 1 ? 'Elim' : 'Elims'})`
                 : `${state.mode.title} Match Complete · Top Score: ${topWinner.score} Points`;
             }
         }
@@ -6660,8 +6667,8 @@
             const qAlive = q.life_points > 0;
             const pAlive = p.life_points > 0;
             if (qAlive !== pAlive) return qAlive;
-            if (q.life_points !== p.life_points) return q.life_points > p.life_points;
-            return q.score > p.score;
+            if (q.score !== p.score) return q.score > p.score;
+            return q.life_points > p.life_points;
           }).length + 1
         : (p) => sorted.filter((q) => q.score > p.score).length + 1;
       const raceRoundChips = (p) => {
