@@ -1233,12 +1233,13 @@ class ArenaEngine:
 
         # 2. Update shots fired
         shots_delta = 0
+        count_shots = self._mode.count_shots_fired(self)
         if status.shots_fired is not None:
-            if status.shots_fired >= player.prev_shots:
+            if count_shots and status.shots_fired >= player.prev_shots:
                 shots_delta = status.shots_fired - player.prev_shots
                 player.shots_fired += shots_delta
             player.prev_shots = status.shots_fired
-        elif status.ammo is not None:
+        elif count_shots and status.ammo is not None:
             # Derive shots from ammo drop in modes that don't send nb_shot directly
             # (clip-less modes like OldFashionDuel leave status.clips as None).
             if (status.clips is None or status.clips == player.prev_clips) and status.ammo < player.prev_ammo:

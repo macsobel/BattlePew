@@ -4406,6 +4406,20 @@
       musicAudio.play().catch(() => { });
     }
 
+    let fireAudioBuffer = null;
+    let fireAudioLoading = false;
+
+    function preloadFireAudioBuffer() {
+      if (fireAudioBuffer || fireAudioLoading || !audioCtx) return;
+      fireAudioLoading = true;
+      fetch('/audio/announcer/DLG_GM_GLOBAL_83.wav')
+        .then((res) => (res.ok ? res.arrayBuffer() : Promise.reject(new Error('fetch failed'))))
+        .then((buf) => audioCtx.decodeAudioData(buf))
+        .then((decoded) => { fireAudioBuffer = decoded; })
+        .catch(() => {})
+        .finally(() => { fireAudioLoading = false; });
+    }
+
     function initAudio() {
       if (!audioCtx) {
         const AudioContext = window.AudioContext || window.webkitAudioContext;
@@ -4414,6 +4428,7 @@
       if (audioCtx.state === 'suspended') {
         audioCtx.resume();
       }
+      preloadFireAudioBuffer();
       if (audioEnabled && (!musicAudio || musicAudio.paused)) {
         startBackgroundMusic();
       }
@@ -4450,6 +4465,40 @@
     function playAudioFile(path, vol = 1.0, onBlocked = null) {
       if (!audioEnabled) return null;
       initAudio();
+      if (path.endsWith('/DLG_GM_GLOBAL_83.wav') && fireAudioBuffer && audioCtx) {
+        try {
+          const src = audioCtx.createBufferSource();
+          src.buffer = fireAudioBuffer;
+          const gain = audioCtx.createGain();
+          gain.gain.value = Math.max(0.0, vol);
+          src.connect(gain);
+          gain.connect(audioCtx.destination);
+          const listeners = { ended: [], error: [] };
+          const handle = {
+            ended: false,
+            paused: false,
+            currentTime: 0,
+            pause() {
+              if (!this.paused) {
+                this.paused = true;
+                try { src.stop(); } catch (_e) {}
+              }
+            },
+            addEventListener(ev, fn) {
+              if (listeners[ev]) listeners[ev].push(fn);
+            },
+          };
+          src.onended = () => {
+            handle.ended = true;
+            listeners.ended.forEach((fn) => fn());
+          };
+          const offset = Math.min(0.32, fireAudioBuffer.duration * 0.4);
+          src.start(0, offset);
+          return handle;
+        } catch (_e) {
+          // Fall back to <audio> below if BufferSource fails.
+        }
+      }
       const a = new Audio(path);
       if (vol > 1.0 && audioCtx) {
         try {

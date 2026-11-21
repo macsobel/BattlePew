@@ -140,7 +140,9 @@ def test_duel_six_ammo_no_timer_and_rounds_advance() -> None:
         assert not {"DLG_GM_GLOBAL_26.wav", "DLG_GM_GLOBAL_27.wav", "DLG_GM_GLOBAL_28.wav"} & set(names)
 
     # Round 2: an early hit (before DRAW) forfeits the round to the victim
-    # without counting as a legal hit landed or received.
+    # without counting as a legal hit landed or received, or penalizing accuracy.
+    shots_before_early = p1.shots_fired
+    acc_before_early = p1.accuracy
     eng.duel_state["next_transition_at"] = 0
     eng.tick_mode_timers()
     assert eng.duel_state["round"] == 2 and eng.duel_state["subphase"] == "WAIT"
@@ -149,6 +151,8 @@ def test_duel_six_ammo_no_timer_and_rounds_advance() -> None:
     assert p2.score == 1
     assert p1.early_fires == 1 and p2.early_fires == 0
     assert p1.hits_landed == 1 and p2.hits_received == 1
+    assert p1.shots_fired == shots_before_early
+    assert p1.accuracy == acc_before_early
     assert eng.duel_state["round_results"][-1] == {"round": 2, "winner_gun_num": 2}
 
     # Round 3: both duelists empty their guns -> a recorded draw.

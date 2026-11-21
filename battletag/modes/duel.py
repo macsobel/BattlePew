@@ -67,6 +67,11 @@ class OldFashionDuelMode(GameMode):
     def ammo_caps(self, ctx: ArenaEngine) -> tuple[int, int]:
         return (6, 0)
 
+    def count_shots_fired(self, ctx: ArenaEngine) -> bool:
+        # Early fires before FIRE! and post-round shots are fouls/stray
+        # shots, not legal attempts, so they never penalize accuracy.
+        return bool(ctx.duel_state.get("can_shoot", False))
+
     def on_match_start(self, ctx: ArenaEngine) -> None:
         ctx._duel_round_triggered = False
         ctx.duel_state = {

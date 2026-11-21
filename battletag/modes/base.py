@@ -96,6 +96,10 @@ class GameMode(ABC):
     # instead of SCAN T-BASE. Only LastManStanding sets this.
     no_respawn: bool = False
 
+    def count_shots_fired(self, ctx: ArenaEngine) -> bool:
+        """Whether status ammo/shot deltas should increment `shots_fired`."""
+        return True
+
     # --- Metadata conveniences (read from METADATA, same values the
     # old MODE_CATALOG entries carried). ---
 

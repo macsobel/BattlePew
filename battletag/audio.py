@@ -363,7 +363,7 @@ ANNOUNCER_POOLS: dict[str, dict[str, Any]] = {
         "files": ["DLG_GM_GLOBAL_83.wav"],
         "priority": 0,
         "proba": 1.0,
-        "volume": 1.8,
+        "volume": 2.0,
         "subtitle": "FIRE!",
     },
     "duel_cheat": {
