@@ -149,7 +149,7 @@ You can also avoid the warning by right-clicking the downloaded `.zip`, choosing
 | **Team Frag** | Two to four teams (Red, Blue, Yellow, Green) with health points and respawns at your team's base. |
 | **Free For All** | Two to eight players, every player for themselves, with health, ammo clips and base respawns. |
 | **Last Man Standing** | Survival mode. Once you're out, you're out — last player standing wins. |
-| **Wild West Duel** | A two-player quick-draw showdown over five tense rounds. |
+| **Wild West Duel** | A two-player quick-draw showdown over multiple tense rounds. |
 | **Starter Frag** | Unlimited health, but you reload by scanning an RFID ammo card. |
 | **Tag'n Shoot** | A solo race: scan the base stations, then shoot the UbiConnect tower. |
 
