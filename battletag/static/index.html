@@ -4492,7 +4492,7 @@
             handle.ended = true;
             listeners.ended.forEach((fn) => fn());
           };
-          const offset = Math.min(0.32, fireAudioBuffer.duration * 0.4);
+          const offset = Math.min(0.27, fireAudioBuffer.duration * 0.4);
           src.start(0, offset);
           return handle;
         } catch (_e) {
@@ -5998,7 +5998,7 @@
       const renderPills = (cur, max, onClass) => {
         const total = Math.max(1, max);
         const cap = Math.min(12, total);
-        const filled = total <= 12 ? cur : Math.round((cur / total) * cap);
+        const filled = total <= 12 ? cur : (cur > 0 ? Math.max(1, Math.round((cur / total) * cap)) : 0);
         return Array.from({ length: cap }, (_, i) =>
           `<span class="tv-pill ${i < filled ? onClass : ''}"></span>`
         ).join('');
@@ -6054,7 +6054,8 @@
           outOfAction ? 'out-of-action' : '',
         ].filter(Boolean).join(' ');
 
-        const hpClass = p.life_points <= 1 ? 'hp-low' : 'hp-on';
+        const isLowHp = p.life_points > 0 && (p.max_life <= 10 ? p.life_points <= 1 : (p.life_points / Math.max(1, p.max_life)) <= 0.2);
+        const hpClass = isLowHp ? 'hp-low' : 'hp-on';
         const showClips = showAmmo && state.mode.id !== 'OldFashionDuel';
 
         const playerCount = gridPlayers.length;
@@ -6712,6 +6713,7 @@
                 ${p.early_fires || 0}
               </span>
             </div>` : `<div class="results-rank-stats">
+              ${isLMS ? `<span class="results-stat-chip" title="Remaining Hit Points">${p.life_points > 0 ? `${p.life_points}/${p.max_life} HP` : 'ELIMINATED'}</span>` : ''}
               <span class="results-stat-chip" title="Hits Landed">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3"/></svg>
                 ${p.hits_landed}

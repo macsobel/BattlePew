@@ -49,7 +49,7 @@ class LastManStandingMode(GameMode):
         "defaults": {
             "countdownSeconds": 10,
             "gameLaunch": 0,
-            "lifePoints": 5,
+            "lifePoints": 25,
             "ammunitions": 9,
             "clips": 3,
             "swap": 0,
@@ -58,7 +58,7 @@ class LastManStandingMode(GameMode):
         },
         "options": [
             {"key": "gameLaunch", "label": "Game Launch", "choices": [0, 1]},
-            {"key": "lifePoints", "label": "Starting Lives", "choices": [3, 5, 7, 9]},
+            {"key": "lifePoints", "label": "Player Hit Points", "choices": [5, 10, 25, 50, 75, 100]},
             {"key": "ammunitions", "label": "Shots per Clip", "choices": [6, 9, 12, 20]},
             {"key": "clips", "label": "Clips (magazines)", "choices": [1, 2, 3, 4, 5]},
             {"key": "swap", "label": "Swap Boxes", "choices": [0, 1]},

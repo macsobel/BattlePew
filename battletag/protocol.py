@@ -146,7 +146,7 @@ def build_config_packet(
         ]
     elif mode_name == "LastManStanding":
         values = [
-            int(settings.get("lifePoints", 5)),
+            int(settings.get("lifePoints", 25)),
             int(settings.get("ammunitions", 9)),
             int(settings.get("clips", 5)),
             int(settings.get("swap", 0)),

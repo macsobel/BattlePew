@@ -174,7 +174,10 @@ def test_lms_survival_scoring_and_alive_based_outcomes() -> None:
     score is #players - #alive, and the sole survivor wins even with
     the lowest score."""
     eng = ArenaEngine()
-    _start(eng, "LastManStanding", guns=3)
+    assert MODE_CATALOG["LastManStanding"]["defaults"]["lifePoints"] == 25
+    lms_hp_opt = next(o for o in MODE_CATALOG["LastManStanding"]["options"] if o["key"] == "lifePoints")
+    assert lms_hp_opt == {"key": "lifePoints", "label": "Player Hit Points", "choices": [5, 10, 25, 50, 75, 100]}
+    _start(eng, "LastManStanding", guns=3, settings={"lifePoints": 5})
     assert MODE_CATALOG["LastManStanding"]["timed"] is False
     assert eng.get_remaining_seconds() is None
     eng.match_start_ts = time.time() - 1000
