@@ -348,12 +348,11 @@ ANNOUNCER_POOLS: dict[str, dict[str, Any]] = {
         "subtitle": "It's a draw!",
     },
     "duel_prepare": {
-        # Per-round intros are 03/04/05 only; 01 is a setup line and
-        # lives in the duel_setup pool.
-        "files": [f"DLG_GM_OW_DUEL_0{i}.wav" for i in (3, 4, 5)],
+        # Always play "T-blaster along the leg" (OW_DUEL_03) each round.
+        "files": ["DLG_GM_OW_DUEL_03.wav"],
         "priority": 0,
         "proba": 1.0,
-        "subtitle": "Duelists ready... wait for the signal!",
+        "subtitle": "T-blaster along the leg!",
     },
     "duel_draw": {
         # A single clear "Fire!" (GLOBAL_83, 0.87 s): the original's

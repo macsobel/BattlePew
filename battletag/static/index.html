@@ -4508,6 +4508,22 @@
       playAudioFile(path, vol);
     }
 
+    function renderDuelStarsHtml(p, state) {
+      if (!state || !state.duel_state) return '';
+      const maxR = Math.max(1, state.duel_state.max_rounds || (state.settings && state.settings.rounds) || 5);
+      const resList = Array.isArray(state.duel_state.round_results) ? state.duel_state.round_results : [];
+      const starsHtml = Array.from({ length: maxR }, (_, i) => {
+        const rNum = i + 1;
+        const entry = resList.find((e) => e.round === rNum);
+        const won = Boolean(entry && entry.winner_gun_num === p.gun_num);
+        const tip = won ? `Round ${rNum}: Won (+1 pt)` : (entry ? (entry.winner_gun_num ? `Round ${rNum}: Lost` : `Round ${rNum}: Draw`) : `Round ${rNum}`);
+        return won
+          ? `<svg class="tv-duel-star won" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round" aria-label="${esc(tip)}" title="${esc(tip)}"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>`
+          : `<svg class="tv-duel-star" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" aria-label="${esc(tip)}" title="${esc(tip)}"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>`;
+      }).join('');
+      return `<div class="tv-duel-stars">${starsHtml}</div>`;
+    }
+
     // Display contract: one derivation of per-mode display flags from
     // the snapshot's mode id + contract slices (duel_state /
     // race_state). Render functions destructure from this instead of
@@ -5765,11 +5781,17 @@
         const untimed = state.mode && state.mode.timed === false;
         const scoreTarget = state.mode && state.mode.id === 'FreeFrag' && state.settings && state.settings.scoreLimit > 0
           ? ` · First to ${state.settings.scoreLimit}` : '';
-        const elapsedLabel = state.mode && state.mode.id === 'OldFashionDuel'
-          ? `Round ${Math.max(1, (state.duel_state && state.duel_state.round) || 1)} Time`
-          : 'Elapsed Time';
+        const isDuelCountdown = state.mode && state.mode.id === 'OldFashionDuel'
+          && state.duel_state
+          && ['INTRO', 'ROUND_END'].includes(state.duel_state.subphase)
+          && (state.duel_state.countdown_remaining || 0) > 0;
+        const elapsedLabel = isDuelCountdown
+          ? ((state.duel_state.round || 0) === 0 ? 'Round 1 Starts In...' : 'Next Round Starts In...')
+          : (state.mode && state.mode.id === 'OldFashionDuel'
+            ? `Round ${Math.max(1, (state.duel_state && state.duel_state.round) || 1)} Time`
+            : 'Elapsed Time');
         clockSub.textContent = (untimed ? elapsedLabel : 'Time Remaining') + scoreTarget;
-        clockDigits.classList.toggle('urgent', !untimed && state.remaining_seconds != null && state.remaining_seconds <= 15);
+        clockDigits.classList.toggle('urgent', isDuelCountdown || (!untimed && state.remaining_seconds != null && state.remaining_seconds <= 15));
       }
 
       // Duel round display: current round, subphase, round winner, per-round results.
@@ -5801,15 +5823,17 @@
             phaseCls = 'phase-end';
             headText = ds.last_result_text || 'ROUND COMPLETE';
             const hasMore = (ds.round || 0) < (ds.max_rounds || 0);
+            const cd = ds.countdown_remaining || 0;
             subText = hasMore
-              ? (nextSecs > 0 ? `Next round starting in ${nextSecs}s…` : 'Starting next round…')
+              ? (cd > 0 ? `Next round starts in ${cd}…` : (nextSecs > 0 ? `Next round starting in ${nextSecs}s…` : 'Starting next round…'))
               : 'Final round complete — finishing duel…';
           } else if (ds.subphase === 'COMPLETE') {
             phaseCls = 'phase-end';
             headText = 'DUEL COMPLETE';
             subText = 'All rounds finished!';
           } else {
-            headText = 'GET READY FOR ROUND 1…';
+            const cd = ds.countdown_remaining || 0;
+            headText = cd > 0 ? `ROUND 1 STARTS IN ${cd}…` : 'GET READY FOR ROUND 1…';
             subText = 'Duelists take your positions';
           }
           duelStrip.className = 'tv-duel-strip' + (phaseCls ? ` ${phaseCls}` : '');
@@ -6056,20 +6080,7 @@
                    ${showClips ? renderClipPips(p.clips) : ''}
                  </div>
                ` : `<div class="tv-bar-row"><span style="color: var(--team-blue); display:inline-flex; align-items:center; gap:4px;">${iconBlaster} ∞</span></div>`}
-               ${isDuel && state.duel_state ? (() => {
-                 const maxR = Math.max(1, state.duel_state.max_rounds || (state.settings && state.settings.rounds) || 5);
-                 const resList = Array.isArray(state.duel_state.round_results) ? state.duel_state.round_results : [];
-                 const starsHtml = Array.from({ length: maxR }, (_, i) => {
-                   const rNum = i + 1;
-                   const entry = resList.find((e) => e.round === rNum);
-                   const won = Boolean(entry && entry.winner_gun_num === p.gun_num);
-                   const tip = won ? `Round ${rNum}: Won (+1 pt)` : (entry ? (entry.winner_gun_num ? `Round ${rNum}: Lost` : `Round ${rNum}: Draw`) : `Round ${rNum}`);
-                   return won
-                     ? `<svg class="tv-duel-star won" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round" aria-label="${esc(tip)}" title="${esc(tip)}"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>`
-                     : `<svg class="tv-duel-star" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" aria-label="${esc(tip)}" title="${esc(tip)}"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>`;
-                 }).join('');
-                 return `<div class="tv-duel-stars">${starsHtml}</div>`;
-               })() : ''}
+               ${isDuel ? renderDuelStarsHtml(p, state) : ''}
              </div>`);
 
         return `
@@ -6450,7 +6461,7 @@
       resultsRenderedOnce = true;
 
       document.getElementById('resultsModeName').textContent = state.mode.title;
-      const { isRace, isLMS } = modeDisplay(state);
+      const { isRace, isLMS, isDuel } = modeDisplay(state);
       // The race and LastManStanding arrive in the server's mode ranking
       // (race: finished runs by time then unfinished by points; LMS:
       // alive > life_points > score > hits_landed); re-sorting by score
@@ -6619,6 +6630,20 @@
             ${isRace ? `<div class="results-rank-stats">
               ${raceRoundChips(p)}
               <span class="results-stat-chip" title="Total points across all runs">${p.score} pts total</span>
+            </div>` : isDuel ? `<div class="results-rank-stats">
+              ${renderDuelStarsHtml(p, state)}
+              <span class="results-stat-chip" title="Hits Landed">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3"/></svg>
+                ${p.hits_landed}
+              </span>
+              <span class="results-stat-chip" title="Hits Taken">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+                ${p.hits_received}
+              </span>
+              <span class="results-stat-chip" title="Accuracy">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 12l5-5"/><circle cx="12" cy="12" r="1.5" fill="currentColor"/></svg>
+                ${p.accuracy}%
+              </span>
             </div>` : `<div class="results-rank-stats">
               <span class="results-stat-chip" title="Hits Landed">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3"/></svg>
@@ -7155,6 +7180,7 @@
           <div style="flex: 1;">
             <div style="font-family: var(--font-display); font-size: 1.1rem; color: var(--text-dark);">${esc((p.name || '').toUpperCase())}</div>
             <div style="font-size: 0.8rem; font-weight: 700; color: var(--text-muted);">${p.score} pts · ${p.accuracy}% accuracy · ${p.shots_fired} shots fired</div>
+            ${appState.mode && appState.mode.id === 'OldFashionDuel' ? `<div style="margin-top: 6px;">${renderDuelStarsHtml(p, appState)}</div>` : ''}
           </div>
         </div>
         <div class="pstats-highlights">
@@ -7167,8 +7193,8 @@
             <div class="pstats-box-val">${nemesis ? esc((nemesis.name || `P${nemesis.gun_num}`).toUpperCase()) : '—'}</div>
           </div>
           <div class="pstats-box">
-            <div class="pstats-box-label">Best Streak</div>
-            <div class="pstats-box-val">${p.best_streak} hits</div>
+            <div class="pstats-box-label">${appState.mode && appState.mode.id === 'OldFashionDuel' ? 'Best Win Streak' : 'Best Streak'}</div>
+            <div class="pstats-box-val">${p.best_streak} ${appState.mode && appState.mode.id === 'OldFashionDuel' ? (p.best_streak === 1 ? 'round' : 'rounds') : 'hits'}</div>
           </div>
         </div>
         <table class="pstats-h2h-table">

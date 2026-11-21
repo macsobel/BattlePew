@@ -975,6 +975,10 @@ class ArenaEngine:
         return max(0.0, end - self.match_start_ts)
 
     def format_clock(self) -> str:
+        if self.mode_name == "OldFashionDuel":
+            cd = int(self.duel_state.get("countdown_remaining", 0) or 0)
+            if self.duel_state.get("subphase") in ("INTRO", "ROUND_END") and cd > 0:
+                return f"00:{cd:02d}"
         if not self._is_timed_mode():
             elapsed = self.get_elapsed_seconds()
             mins = int(elapsed) // 60
@@ -1238,7 +1242,8 @@ class ArenaEngine:
             player.prev_shots = status.shots_fired
         elif status.ammo is not None:
             # Derive shots from ammo drop in modes that don't send nb_shot directly
-            if status.clips == player.prev_clips and status.ammo < player.prev_ammo:
+            # (clip-less modes like OldFashionDuel leave status.clips as None).
+            if (status.clips is None or status.clips == player.prev_clips) and status.ammo < player.prev_ammo:
                 shots_delta = player.prev_ammo - status.ammo
                 player.shots_fired += shots_delta
 

@@ -75,7 +75,8 @@ class OldFashionDuelMode(GameMode):
             "phase_code": 2,
             "subphase": "INTRO",
             "can_shoot": False,
-            "next_transition_at": time.time() + 3.0,
+            "next_transition_at": time.time() + 4.0,
+            "countdown_remaining": 0,
             "round_scores": {gid: 0 for gid in ctx.players},
             "round_results": [],
             "last_result_text": "",
@@ -101,6 +102,7 @@ class OldFashionDuelMode(GameMode):
         max_rnd = int(ctx.duel_state.get("max_rounds", 5))
         curr_rnd = int(ctx.duel_state.get("round", 0))
         if now >= ctx.duel_state.get("next_transition_at", 0.0):
+            ctx.duel_state["countdown_remaining"] = 0
             if sub in ("INTRO", "ROUND_END"):
                 # The match itself starts on a manual trigger pull
                 # (WAIT_TRIGGER phase); rounds then follow one another
@@ -126,8 +128,9 @@ class OldFashionDuelMode(GameMode):
                 ctx.duel_state["subphase"] = "ROUND_END"
                 ctx.duel_state["phase_code"] = 2
                 ctx.duel_state["can_shoot"] = False
+                ctx.duel_state["countdown_remaining"] = 0
                 ctx.duel_state["round_ended_at"] = now
-                ctx.duel_state["next_transition_at"] = now + 7.0
+                ctx.duel_state["next_transition_at"] = now + 8.5
                 ctx.duel_state["last_winner_gun_num"] = None
                 ctx.duel_state["last_result_text"] = (
                     f"ROUND {ctx.duel_state['round']}: DRAW — NO POINT AWARDED"
@@ -135,6 +138,13 @@ class OldFashionDuelMode(GameMode):
                 self._record_duel_round_result(ctx, None)
                 ctx.add_event("duel", f"Round {ctx.duel_state['round']} ended in a draw!")
                 ctx.audio.trigger_pool("duel_drawn", force=True)
+        elif sub in ("INTRO", "ROUND_END") and curr_rnd < max_rnd:
+            rem_s = ctx.duel_state.get("next_transition_at", 0.0) - now
+            if 0.0 < rem_s <= 3.0:
+                cd = max(1, min(3, int(rem_s) + 1))
+                if cd != int(ctx.duel_state.get("countdown_remaining", 0) or 0):
+                    ctx.duel_state["countdown_remaining"] = cd
+                    ctx.audio.play_countdown_number(cd)
 
     def on_followup(self, ctx: ArenaEngine, entry: dict[str, Any]) -> bool:
         if entry["kind"] == "duel_can_shoot":
@@ -182,17 +192,18 @@ class OldFashionDuelMode(GameMode):
         ctx.duel_state["phase_code"] = 1
         ctx.duel_state["subphase"] = "WAIT"
         ctx.duel_state["can_shoot"] = False
+        ctx.duel_state["countdown_remaining"] = 0
         ctx.duel_state["round_started_at"] = now
         ctx.duel_state["round_ended_at"] = 0.0
         ctx.duel_state["last_result_text"] = ""
         ctx.duel_state["last_winner_gun_num"] = None
-        # Round 1 carries the setup intro after the round announcement, so
-        # its standoff floor covers both lines (6 s) and the DRAW cue never
-        # talks over the intro; later rounds use a weighted 3–20 s range
-        # (15% quick 3–5 s, 10% tense 15–20 s, 75% standard 5–15 s).
+        # Round 1 carries the setup intro AND "T-blaster along the leg"
+        # after the round announcement, so its floor is 8.5 s; later rounds
+        # use a weighted 3–20 s range (15% quick 3–5 s, 10% tense 15–20 s,
+        # 75% standard 5–15 s).
         roll = random.random()
         if next_rnd == 1:
-            wait_s = random.uniform(15.0, 20.0) if roll < 0.10 else random.uniform(6.0, 15.0)
+            wait_s = random.uniform(15.0, 20.0) if roll < 0.10 else random.uniform(8.5, 15.0)
         elif roll < 0.15:
             wait_s = random.uniform(3.0, 5.0)
         elif roll < 0.25:
@@ -220,6 +231,15 @@ class OldFashionDuelMode(GameMode):
             pool_key="duel_setup" if next_rnd == 1 else "duel_prepare",
             force=True,
         )
+        if next_rnd == 1:
+            ctx._schedule_audio_followup(
+                delay + 4.5,
+                "file",
+                filename="DLG_GM_OW_DUEL_03.wav",
+                subtitle="T-blaster along the leg!",
+                priority=0,
+                duration=2.5,
+            )
 
     def on_status_report(
         self, ctx: ArenaEngine, player: PlayerState, status: DecodedStatus, ammo_dropped: bool
@@ -244,6 +264,14 @@ class OldFashionDuelMode(GameMode):
                     player.hits_received += delta
                     shooters = count_new_shooters(player.prev_slots, status.hit_ids, delta)
                     early_shooter = ctx.players.get(shooters[0]) if shooters else None
+                    if early_shooter is not None:
+                        early_shooter.hits_landed += 1
+                        early_shooter.hits_dealt_to[player.gun_num] = (
+                            early_shooter.hits_dealt_to.get(player.gun_num, 0) + 1
+                        )
+                        player.hits_taken_from[early_shooter.gun_num] = (
+                            player.hits_taken_from.get(early_shooter.gun_num, 0) + 1
+                        )
                 else:
                     early_shooter = player
                 opponent = (
@@ -253,6 +281,9 @@ class OldFashionDuelMode(GameMode):
                 )
                 if early_shooter is not None and opponent is not None:
                     opponent.score += 1
+                    opponent.streak += 1
+                    opponent.best_streak = max(opponent.best_streak, opponent.streak)
+                    early_shooter.streak = 0
                     self._record_duel_round_result(ctx, opponent)
                     ctx.duel_state["last_winner_gun_num"] = opponent.gun_num
                     ctx.duel_state["last_result_text"] = (
@@ -272,16 +303,17 @@ class OldFashionDuelMode(GameMode):
                     ctx.audio.trigger_pool("duel_cheat", custom_subtitle=cheat_sub, force=True)
                     cheat_wait = max(0.5, ctx.audio.active_until - time.time()) + 0.25
                     self._announce_duel_round_win(ctx, opponent, initial_delay=cheat_wait)
-                    next_wait = 9.5
+                    next_wait = 10.5
                 else:
                     self._record_duel_round_result(ctx, None)
                     ctx.duel_state["last_winner_gun_num"] = None
                     ctx.duel_state["last_result_text"] = f"ROUND {rnd}: DRAW — NO POINT"
                     ctx.audio.trigger_pool("duel_drawn", force=True)
-                    next_wait = 7.0
+                    next_wait = 8.5
                 ctx.duel_state["subphase"] = "ROUND_END"
                 ctx.duel_state["phase_code"] = 2
                 ctx.duel_state["can_shoot"] = False
+                ctx.duel_state["countdown_remaining"] = 0
                 now = time.time()
                 ctx.duel_state["round_ended_at"] = now
                 ctx.duel_state["next_transition_at"] = now + next_wait
@@ -295,6 +327,15 @@ class OldFashionDuelMode(GameMode):
                     shooter.score += 1
                     shooter.hits_landed += 1
                     shooter.frags += 1
+                    shooter.streak += 1
+                    shooter.best_streak = max(shooter.best_streak, shooter.streak)
+                    shooter.hits_dealt_to[player.gun_num] = (
+                        shooter.hits_dealt_to.get(player.gun_num, 0) + 1
+                    )
+                    player.streak = 0
+                    player.hits_taken_from[shooter.gun_num] = (
+                        player.hits_taken_from.get(shooter.gun_num, 0) + 1
+                    )
                     ctx.duel_state["last_winner_gun_num"] = shooter.gun_num
                     ctx.duel_state["last_result_text"] = (
                         f"PLAYER {shooter.gun_num} ({shooter.display_name}) GETS THE POINT! (+1 PT)"
@@ -315,9 +356,10 @@ class OldFashionDuelMode(GameMode):
                 ctx.duel_state["subphase"] = "ROUND_END"
                 ctx.duel_state["phase_code"] = 2
                 ctx.duel_state["can_shoot"] = False
+                ctx.duel_state["countdown_remaining"] = 0
                 now = time.time()
                 ctx.duel_state["round_ended_at"] = now
-                ctx.duel_state["next_transition_at"] = now + 7.0
+                ctx.duel_state["next_transition_at"] = now + 8.5
                 ctx._check_lead_change()
             elif (
                 can_shoot
@@ -327,9 +369,10 @@ class OldFashionDuelMode(GameMode):
                 ctx.duel_state["subphase"] = "ROUND_END"
                 ctx.duel_state["phase_code"] = 2
                 ctx.duel_state["can_shoot"] = False
+                ctx.duel_state["countdown_remaining"] = 0
                 now = time.time()
                 ctx.duel_state["round_ended_at"] = now
-                ctx.duel_state["next_transition_at"] = now + 7.0
+                ctx.duel_state["next_transition_at"] = now + 8.5
                 ctx.duel_state["last_winner_gun_num"] = None
                 ctx.duel_state["last_result_text"] = (
                     f"ROUND {rnd}: BOTH OUT OF AMMO — DRAW (NO POINT)"

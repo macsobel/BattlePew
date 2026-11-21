@@ -455,7 +455,7 @@ def test_duel_announces_round_winner_on_hit_and_early_fire() -> None:
     # Round 1: INTRO -> WAIT (flush setup intro) -> DRAW -> can_shoot -> P1 hits P2
     eng.duel_state["next_transition_at"] = 0
     eng.tick_mode_timers()  # INTRO -> WAIT
-    eng.tick_pending_audio(now=time.time() + 2.5)  # flush duel_setup during WAIT
+    eng.tick_pending_audio(now=time.time() + 10.0)  # flush duel_setup + OW_DUEL_03 during WAIT
     eng.duel_state["next_transition_at"] = 0
     eng.tick_mode_timers()  # WAIT -> DRAW (triggers duel_draw at priority=0)
     eng.tick_pending_audio(now=time.time() + 1.0)
@@ -466,7 +466,7 @@ def test_duel_announces_round_winner_on_hit_and_early_fire() -> None:
     _poll_all(eng)
     assert eng.duel_state["last_winner_gun_num"] == 1
     assert "PLAYER 1" in eng.duel_state["last_result_text"]
-    assert eng.duel_state["next_transition_at"] - time.time() >= 6.0
+    assert eng.duel_state["next_transition_at"] - time.time() >= 7.5
 
     # Immediate cue is DLG_GM_GLOBAL_55.wav ("Player 1!") with priority=-1
     assert [c.filename for c in eng.audio.recent_cues] == ["DLG_GM_GLOBAL_55.wav"]
@@ -479,10 +479,24 @@ def test_duel_announces_round_winner_on_hit_and_early_fire() -> None:
         "DLG_GM_GLOBAL_119.wav",
     ]
 
+    # 3, 2, 1 countdown before Round 2 starts
+    eng.audio.recent_cues.clear()
+    for expected_cd, offset in [(3, 2.5), (2, 1.5), (1, 0.5)]:
+        eng.duel_state["next_transition_at"] = time.time() + offset
+        eng.tick_mode_timers()
+        assert eng.duel_state["countdown_remaining"] == expected_cd
+        assert eng.format_clock() == f"00:0{expected_cd}"
+    assert [c.filename for c in eng.audio.recent_cues] == [
+        "DLG_GM_GLOBAL_10.wav",
+        "DLG_GM_GLOBAL_11.wav",
+        "DLG_GM_GLOBAL_12.wav",
+    ]
+
     # Round 2: early fire during WAIT by P1 -> P2 gets the point + full sequence
     eng.duel_state["next_transition_at"] = 0
     eng.tick_mode_timers()  # ROUND_END -> WAIT (round 2)
-    eng.tick_pending_audio(now=time.time() + 2.5)  # flush duel_prepare during WAIT
+    eng.tick_pending_audio(now=time.time() + 2.5)  # flush duel_prepare (OW_DUEL_03) during WAIT
+    assert any(c.filename == "DLG_GM_OW_DUEL_03.wav" for c in eng.audio.recent_cues)
     assert eng.duel_state["round"] == 2
     assert eng.duel_state["last_winner_gun_num"] is None
     assert eng.duel_state["last_result_text"] == ""
@@ -503,3 +517,34 @@ def test_duel_announces_round_winner_on_hit_and_early_fire() -> None:
         "DLG_GM_GLOBAL_119.wav",
     ]
     assert eng.audio.recent_cues[1].priority == -1
+
+
+def test_duel_tracks_shots_accuracy_h2h_and_streaks_without_clips() -> None:
+    """Clip-less hardware reports (status.clips=None) in OldFashionDuel still
+    track shots_fired, accuracy, hits_dealt_to, hits_taken_from, and best_streak."""
+    from battletag.protocol import DecodedStatus
+
+    eng = ArenaEngine()
+    _start(eng, "OldFashionDuel")
+    p1, p2 = eng.players[2], eng.players[3]
+
+    eng.duel_state["next_transition_at"] = 0
+    eng.tick_mode_timers()  # INTRO -> WAIT -> Round 1
+    eng.duel_state["next_transition_at"] = 0
+    eng.tick_mode_timers()  # WAIT -> DRAW
+    eng.tick_pending_audio(now=time.time() + 1.0)
+
+    # Simulate hardware status where clips is None: P1 fires 2 shots (6 -> 4)
+    # and hits P2 once.
+    eng.ingest_status_report(
+        DecodedStatus(gun_id=2, word_count=2, send_words=[4, 0], ammo=4, clips=None, shots_fired=None, hits_received=0, hit_ids=[0, 0, 0, 0, 0])
+    )
+    eng.ingest_status_report(
+        DecodedStatus(gun_id=3, word_count=2, send_words=[6, 1], ammo=6, clips=None, shots_fired=None, hits_received=1, hit_ids=[2, 0, 0, 0, 0])
+    )
+    assert p1.shots_fired == 2
+    assert p1.hits_landed == 1
+    assert p1.accuracy == 50.0
+    assert p1.hits_dealt_to == {2: 1}
+    assert p2.hits_taken_from == {1: 1}
+    assert p1.best_streak == 1
