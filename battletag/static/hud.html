@@ -290,6 +290,14 @@
     .duel-subphase.end { color: #FDBA74; font-size: 1.2rem; }
     .duel-subphase.complete { color: var(--team-yellow); }
 
+    .duel-subnote {
+      font-size: 0.88rem;
+      font-weight: 700;
+      color: #9BA3B5;
+      letter-spacing: 0.03em;
+      margin-top: -2px;
+    }
+
     .duel-tally {
       font-family: var(--font-display);
       font-size: 1.3rem;
@@ -298,24 +306,47 @@
 
     .duel-chips {
       display: flex;
-      flex-wrap: wrap;
+      justify-content: center;
+    }
+
+    /* One row of round stars, from the viewer's point of view. */
+    .duel-stars {
+      display: flex;
+      flex-wrap: nowrap;
       justify-content: center;
       gap: 6px;
     }
 
-    .duel-chip {
-      font-size: 0.75rem;
-      font-weight: 700;
-      letter-spacing: 0.04em;
-      padding: 3px 8px;
-      border-radius: 999px;
-      background: #11151E;
-      border: 1px solid var(--hud-border);
-      color: #C7CEDD;
+    .duel-star {
+      width: 30px;
+      height: 30px;
+      flex-shrink: 0;
     }
 
-    .duel-chip.mine { border-color: var(--team-green); color: #7BD88A; }
-    .duel-chip.rival { border-color: var(--team-red); color: #FF8575; }
+    /* Round not finished yet: empty outline (the live round pulses). */
+    .duel-star.pending { color: #4A5368; }
+    .duel-star.pending.live {
+      color: #C7CEDD;
+      animation: duelStarPulse 1.1s ease-in-out infinite alternate;
+    }
+
+    /* I got the point: bright gold. */
+    .duel-star.won {
+      color: #FBBF24;
+      filter: drop-shadow(0 0 6px rgba(251, 191, 36, 0.6));
+      transform: scale(1.1);
+    }
+
+    /* Rival got the point: dark, muted red. */
+    .duel-star.lost { color: #7A2E2E; }
+
+    /* Draw: no point for anyone — struck-out outline. */
+    .duel-star.draw { color: #6B7389; }
+
+    @keyframes duelStarPulse {
+      from { opacity: 0.45; }
+      to { opacity: 1; }
+    }
 
     /* Race block (Tag'n Shoot only): tags, tower, course progress. */
     .race-card {
@@ -1422,6 +1453,7 @@
   <section class="duel-card" id="hudDuelBlock" style="display: none;">
     <div class="duel-block-head" id="hudDuelRound">ROUND 1 OF 5</div>
     <div class="duel-subphase end" id="hudDuelSubphase">GET READY</div>
+    <div class="duel-subnote" id="hudDuelSubnote" style="display: none;"></div>
     <div class="duel-tally" id="hudDuelTally"></div>
     <div class="duel-chips" id="hudDuelChips"></div>
   </section>
@@ -2045,11 +2077,20 @@
         const cd = ds.countdown_remaining || 0;
         const subLabels = {
           INTRO: cd > 0 ? `ROUND 1 STARTS IN ${cd}…` : 'GET READY…',
-          WAIT: 'HOLD FIRE — WAIT FOR "FIRE!"',
+          WAIT: 'WAIT TO HEAR "FIRE!"',
           DRAW: '🔥 FIRE! SHOOT NOW! 🔥',
           ROUND_END: ds.last_result_text || 'ROUND OVER',
           COMPLETE: 'DUEL COMPLETE',
         };
+        const subNoteEl = document.getElementById('hudDuelSubnote');
+        if (subNoteEl) {
+          if (ds.subphase === 'WAIT') {
+            subNoteEl.textContent = 'T-Blasters along your leg';
+            subNoteEl.style.display = '';
+          } else {
+            subNoteEl.style.display = 'none';
+          }
+        }
         const roundTag = ds.subphase === 'WAIT' ? ' · NEW ROUND' : '';
         document.getElementById('hudDuelRound').textContent = `ROUND ${Math.max(1, ds.round)} OF ${ds.max_rounds}${roundTag}`;
         const subEl = document.getElementById('hudDuelSubphase');
@@ -2067,11 +2108,30 @@
         document.getElementById('hudDuelTally').textContent = rival
           ? `YOU ${myWins} — ${rivalWins} ${(rival.name || '').toUpperCase()}`
           : `YOU ${myWins}`;
-        document.getElementById('hudDuelChips').innerHTML = (ds.round_results || []).map((r) => {
-          if (!r.winner_gun_num) return `<span class="duel-chip">R${r.round}: DRAW</span>`;
-          const mine = allPlayers.find((p) => p.gun_num === r.winner_gun_num)?.gun_id === me.gun_id;
-          return `<span class="duel-chip ${mine ? 'mine' : 'rival'}">R${r.round}: ${mine ? 'YOU ★' : 'RIVAL'}</span>`;
-        }).join('');
+        // One row of stars, one per round, from my point of view:
+        //   gold filled  = I got the point
+        //   dark red     = my rival got the point
+        //   struck-out   = round ended in a draw (no point)
+        //   outline      = round not finished (the live round pulses)
+        const STAR_POINTS = '12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2';
+        const starSvg = (cls, filled, tip, strike) =>
+          `<svg class="duel-star ${cls}" viewBox="0 0 24 24" fill="${filled ? 'currentColor' : 'none'}" stroke="currentColor" stroke-width="${filled ? 1.5 : 2}" stroke-linejoin="round" role="img" aria-label="${tip}"><title>${tip}</title><polygon points="${STAR_POINTS}"/>${strike ? '<line x1="4" y1="20" x2="20" y2="4" stroke-width="2.2" stroke-linecap="round"/>' : ''}</svg>`;
+        const maxStars = Math.max(1, ds.max_rounds || 5);
+        const results = Array.isArray(ds.round_results) ? ds.round_results : [];
+        const liveRound = (ds.subphase === 'WAIT' || ds.subphase === 'DRAW') ? ds.round : 0;
+        const rivalName = rival ? (rival.name || `Player ${rival.gun_num}`) : 'Rival';
+        document.getElementById('hudDuelChips').innerHTML =
+          `<div class="duel-stars">${Array.from({ length: maxStars }, (_, i) => {
+            const rNum = i + 1;
+            const entry = results.find((e) => e.round === rNum);
+            if (!entry) {
+              return starSvg(liveRound === rNum ? 'pending live' : 'pending', false, `Round ${rNum}: ${liveRound === rNum ? 'in progress' : 'not played yet'}`, false);
+            }
+            if (!entry.winner_gun_num) return starSvg('draw', false, `Round ${rNum}: draw — no point`, true);
+            return entry.winner_gun_num === me.gun_num
+              ? starSvg('won', true, `Round ${rNum}: you got the point`, false)
+              : starSvg('lost', true, `Round ${rNum}: ${rivalName} got the point`, false);
+          }).join('')}</div>`;
       }
 
       // Race block: my run totals, the turn status, and my course
@@ -2455,7 +2515,7 @@
         } else if (state.mode.id === 'StarterFrag') {
           hint = 'Ammo boxes reload your clip';
         } else if (state.mode.id === 'OldFashionDuel') {
-          hint = 'Wait for the "FIRE!" call — firing early gives the point to your opponent';
+          hint = 'T-Blasters along your leg · Wait to hear "Fire!" — firing early gives the point to your opponent';
         } else if (state.mode.id === 'TagThenShoot') {
           // A benched viewer gets no mechanics hint: they are not
           // running, and the one-line sitting-out status says so.
