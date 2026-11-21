@@ -868,8 +868,12 @@ async def api_return_to_lobby() -> JSONResponse:
     # VICTORY line). The match record itself is kept in match_history.
     # Guns stay paired — returning to setup never unpairs anything.
     engine.events.clear()
+    engine._vest_miss_counts.clear()
+    now = time.time()
     for p in engine.players.values():
         p.status_badge = "READY"
+        if p.last_seen_ts > 0:
+            p.last_seen_ts = now
     engine.audio.play_music("musicmenu.wav")
     await broadcast_state()
     return JSONResponse({"ok": True, "phase": "LOBBY"})

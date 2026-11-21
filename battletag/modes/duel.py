@@ -261,17 +261,8 @@ class OldFashionDuelMode(GameMode):
                 early_shooter: PlayerState | None = None
                 if curr_hits > player.prev_hits_rec:
                     delta = curr_hits - player.prev_hits_rec
-                    player.hits_received += delta
                     shooters = count_new_shooters(player.prev_slots, status.hit_ids, delta)
                     early_shooter = ctx.players.get(shooters[0]) if shooters else None
-                    if early_shooter is not None:
-                        early_shooter.hits_landed += 1
-                        early_shooter.hits_dealt_to[player.gun_num] = (
-                            early_shooter.hits_dealt_to.get(player.gun_num, 0) + 1
-                        )
-                        player.hits_taken_from[early_shooter.gun_num] = (
-                            player.hits_taken_from.get(early_shooter.gun_num, 0) + 1
-                        )
                 else:
                     early_shooter = player
                 opponent = (
@@ -280,6 +271,7 @@ class OldFashionDuelMode(GameMode):
                     else None
                 )
                 if early_shooter is not None and opponent is not None:
+                    early_shooter.early_fires += 1
                     opponent.score += 1
                     opponent.streak += 1
                     opponent.best_streak = max(opponent.best_streak, opponent.streak)

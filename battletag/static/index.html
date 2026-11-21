@@ -4451,7 +4451,21 @@
       if (!audioEnabled) return null;
       initAudio();
       const a = new Audio(path);
-      a.volume = Math.min(1.0, Math.max(0.0, vol));
+      if (vol > 1.0 && audioCtx) {
+        try {
+          if (audioCtx.state === 'suspended') audioCtx.resume();
+          const src = audioCtx.createMediaElementSource(a);
+          const gain = audioCtx.createGain();
+          gain.gain.value = vol;
+          src.connect(gain);
+          gain.connect(audioCtx.destination);
+          a.volume = 1.0;
+        } catch (_e) {
+          a.volume = 1.0;
+        }
+      } else {
+        a.volume = Math.min(1.0, Math.max(0.0, vol));
+      }
       a.play().catch((err) => {
         if (onBlocked && err && err.name === 'NotAllowedError') {
           onBlocked();
@@ -6644,6 +6658,10 @@
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 12l5-5"/><circle cx="12" cy="12" r="1.5" fill="currentColor"/></svg>
                 ${p.accuracy}%
               </span>
+              <span class="results-stat-chip" title="Early Fires (Penalties)">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+                ${p.early_fires || 0}
+              </span>
             </div>` : `<div class="results-rank-stats">
               <span class="results-stat-chip" title="Hits Landed">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3"/></svg>
@@ -7179,7 +7197,7 @@
           </div>
           <div style="flex: 1;">
             <div style="font-family: var(--font-display); font-size: 1.1rem; color: var(--text-dark);">${esc((p.name || '').toUpperCase())}</div>
-            <div style="font-size: 0.8rem; font-weight: 700; color: var(--text-muted);">${p.score} pts · ${p.accuracy}% accuracy · ${p.shots_fired} shots fired</div>
+            <div style="font-size: 0.8rem; font-weight: 700; color: var(--text-muted);">${p.score} pts · ${p.accuracy}% accuracy · ${p.shots_fired} shots fired${appState.mode && appState.mode.id === 'OldFashionDuel' ? ` · ${p.early_fires || 0} early fire${(p.early_fires || 0) === 1 ? '' : 's'}` : ''}</div>
             ${appState.mode && appState.mode.id === 'OldFashionDuel' ? `<div style="margin-top: 6px;">${renderDuelStarsHtml(p, appState)}</div>` : ''}
           </div>
         </div>

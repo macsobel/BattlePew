@@ -122,6 +122,7 @@ class AudioCue:
     priority: int = 3
     subtitle: str = ""
     loop: bool = False
+    volume: float = 0.9
     timestamp: float = field(default_factory=time.time)
 
     def to_dict(self) -> dict[str, Any]:
@@ -139,7 +140,7 @@ class AudioCue:
             # music, or UI sound ever plays.
             "sound_file": self.url,
             "channel": self.category,
-            "volume": 0.9,
+            "volume": self.volume,
         }
 
 
@@ -181,10 +182,10 @@ ANNOUNCER_POOLS: dict[str, dict[str, Any]] = {
         "subtitle": "Match started — Go! Go! Go!",
     },
     "game_end": {
-        "files": _g(50, 51, 52),
+        "files": _g(50, 51),
         "priority": 0,
         "proba": 1.0,
-        "subtitle": "Game Over! Return to UbiConnect.",
+        "subtitle": "Game Over!",
     },
     "time_60": {
         "files": _g(45),
@@ -358,10 +359,11 @@ ANNOUNCER_POOLS: dict[str, dict[str, Any]] = {
         # A single clear "Fire!" (GLOBAL_83, 0.87 s): the original's
         # DUEL_06 ("Ready? Fire!") says the word at the very end of a
         # 2 s line and DUEL_07 is just "Quick draw!", both too easy to
-        # misjudge against the shooting window.
+        # misjudge against the shooting window. Boosted 2x over default 0.9.
         "files": ["DLG_GM_GLOBAL_83.wav"],
         "priority": 0,
         "proba": 1.0,
+        "volume": 1.8,
         "subtitle": "FIRE!",
     },
     "duel_cheat": {
@@ -592,6 +594,7 @@ class GameMasterAudio:
                 filename=chosen,
                 priority=priority,
                 subtitle=custom_subtitle or pool.get("subtitle", ""),
+                volume=float(pool.get("volume", 0.9)),
             )
         )
 

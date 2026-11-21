@@ -76,6 +76,7 @@ class PlayerState:
     # totals from this history — never from a single-run field.
     run_history: list[dict[str, Any]] = field(default_factory=list)
     shots_fired: int = 0
+    early_fires: int = 0
     streak: int = 0
     best_streak: int = 0
     life_points: int = 5
@@ -181,6 +182,7 @@ class PlayerState:
             "best_run_time": self.best_run_time,
             "best_run": dict(self.best_run) if self.best_run is not None else None,
             "shots_fired": self.shots_fired,
+            "early_fires": self.early_fires,
             "accuracy": self.accuracy,
             "streak": self.streak,
             "best_streak": self.best_streak,
@@ -289,18 +291,13 @@ VEST_SILENT_SWEEPS_TO_DISCONNECT = 2
 VEST_MATCH_MISS_SWEEPS_TO_DISCONNECT = 4
 # A gun that was acked never re-announces on its own, so dropping a gun that
 # merely hit an RF lapse would strand it until a power cycle. Only a long
-# lobby silence (~20 s of 2 s sweeps) is treated as "powered off"; before that
+# lobby silence (~120 s of 2 s sweeps) is treated as "powered off"; before that
 # the slot is kept and shown as offline. Never removed outside the LOBBY.
-# This sweep-count removal is the backstop behind the 4 s quiet-timeout
-# (LOBBY_QUIET_TIMEOUT_S), which normally fires first.
-LOBBY_SILENT_SWEEPS_TO_REMOVE = 10
-# Lobby quiet-timeout: the original's fast Pinger unregisters a gun after
-# ~4 s of silence in setup (ping after 2 s, unregister after 4 s). The
-# lobby C1 sweep runs every 2 s, so a live gun is heard from at least
-# every ~2.5 s and 4 s leaves a full missed sweep of margin. Guns that
-# hit this timeout drop from the roster with a "went quiet" notice; the
-# sweep-count removal above stays as the backstop.
-LOBBY_QUIET_TIMEOUT_S = 4.0
+LOBBY_SILENT_SWEEPS_TO_REMOVE = 60
+# Lobby quiet-timeout: drop a gun from the lobby roster only after 2 minutes
+# (120 s) of total silence so brief RF lapses or post-match transitions never
+# disconnect active vests immediately.
+LOBBY_QUIET_TIMEOUT_S = 120.0
 # Mid-match silence before a gun counts as not answering: polls run every
 # cycle (~0.3 s per gun on hardware), so 10 s is ~30 missed polls.
 MATCH_DISCONNECT_TIMEOUT_S = 10.0
@@ -1133,6 +1130,7 @@ class ArenaEngine:
             p.tower_hits = 0
             p.run_history = []
             p.shots_fired = 0
+            p.early_fires = 0
             p.streak = 0
             p.best_streak = 0
             p.hits_dealt_to.clear()

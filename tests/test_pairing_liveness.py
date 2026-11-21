@@ -545,7 +545,7 @@ def test_config_retry_endpoint_rejects_simulator(monkeypatch) -> None:
 def test_refresh_vest_states_removes_quiet_gun_without_ignore(monkeypatch) -> None:
     import battletag.app as app_mod
 
-    eng = _engine_with_players([(1, 2, REF_A, 0.0), (2, 3, REF_B, 30.0)])
+    eng = _engine_with_players([(1, 2, REF_A, 0.0), (2, 3, REF_B, LOBBY_QUIET_TIMEOUT_S + 10.0)])
     eng.use_simulator = False
     stub = _StubHardware()
     eng.hw = stub  # type: ignore[assignment]
