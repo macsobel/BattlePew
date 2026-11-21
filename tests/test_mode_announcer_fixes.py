@@ -98,7 +98,7 @@ def test_duel_six_ammo_no_timer_and_rounds_advance() -> None:
     assert eng.get_remaining_seconds() is None
     eng.match_start_ts = time.time() - 1000
     assert eng.check_auto_end_conditions() is False
-    assert eng.format_clock() == "16:40"  # elapsed, counting up
+    assert eng.format_clock() == "00:00"  # before Round 1 begins
     eng.match_start_ts = time.time()
 
     # Round 1: INTRO -> WAIT -> DRAW. canShoot stays False until the
@@ -106,6 +106,8 @@ def test_duel_six_ammo_no_timer_and_rounds_advance() -> None:
     eng.duel_state["next_transition_at"] = 0
     eng.tick_mode_timers()
     assert eng.duel_state["subphase"] == "WAIT"
+    eng.duel_state["round_started_at"] = time.time() - 15.0
+    assert eng.format_clock() == "00:15"  # counts up per round
     eng.duel_state["next_transition_at"] = 0
     eng.tick_mode_timers()
     assert eng.duel_state["subphase"] == "DRAW"
@@ -114,6 +116,8 @@ def test_duel_six_ammo_no_timer_and_rounds_advance() -> None:
     assert eng.duel_state["can_shoot"] is True
 
     # Five misses leave the round live with 6 bullets; the 6th wins it.
+    # Even if both players land hits in the same poll cycle, only 1 point
+    # can be awarded in the round.
     for _ in range(5):
         eng.sim.sim_fire_shot(2, None)
         _poll_all(eng)
@@ -122,6 +126,10 @@ def test_duel_six_ammo_no_timer_and_rounds_advance() -> None:
     _poll_all(eng)
     assert p1.score == 1
     assert eng.duel_state["subphase"] == "ROUND_END"
+    # A subsequent hit in the same round cannot award a second point.
+    eng.sim.sim_fire_shot(3, 2)
+    _poll_all(eng)
+    assert p1.score == 1 and p2.score == 0
     assert eng.duel_state["round_scores"] == {2: 1, 3: 0}  # keyed by gun_id
     assert eng.duel_state["round_results"] == [{"round": 1, "winner_gun_num": 1}]
     if ANNOUNCER_DIR.is_dir():

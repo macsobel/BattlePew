@@ -128,11 +128,11 @@ def test_round_one_standoff_floor_covers_both_lines() -> None:
     _start(eng, rounds=3)
     _to_wait(eng)
     remaining = eng.duel_state["next_transition_at"] - time.time()
-    assert 5.9 <= remaining <= 8.0
+    assert 5.9 <= remaining <= 20.0
     _finish_round_by_timeout(eng)
     _to_wait(eng)
     remaining = eng.duel_state["next_transition_at"] - time.time()
-    assert 4.9 <= remaining <= 8.0
+    assert 2.9 <= remaining <= 20.0
 
 
 @AUDIO

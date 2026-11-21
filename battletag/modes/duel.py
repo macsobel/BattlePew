@@ -45,7 +45,7 @@ class OldFashionDuelMode(GameMode):
         "icon": "/static/assets/textures/Ui/Pictograms/96x/OldFashionDuel.png",
         "banner": "/static/assets/textures/Packages/OldFashionDuel/Ui/Loading_OldFashionDuel.png",
         "ranking_bg": "/static/assets/textures/Ui/Ranking_Bg_OldFashionDuel.png",
-        "description": "Classic 2-player showdown across 3, 5, or 7 tense rounds! Player 1 pulls the trigger to start the match. Point your T-Blaster down during the 5–8s standoff; when the announcer yells FIRE, shoot first — you have 6 bullets per round. Firing before the signal gives the round point to your opponent!",
+        "description": "Classic 2-player showdown across 3, 5, or 7 tense rounds! Player 1 pulls the trigger to start the match. Point your T-Blaster down during the 3–20s standoff; when the announcer yells FIRE, shoot first — you have 6 bullets per round. Firing before the signal gives the round point to your opponent!",
         "bullets": [
             "1v1 quickdraw · Player 1 pulls trigger to start",
             "6 bullets per round · First hit after FIRE wins +1 pt",
@@ -80,6 +80,8 @@ class OldFashionDuelMode(GameMode):
             "round_results": [],
             "last_result_text": "",
             "last_winner_gun_num": None,
+            "round_started_at": 0.0,
+            "round_ended_at": 0.0,
             "trigger_armed": False,
         }
         ctx.race_state = {}
@@ -124,6 +126,7 @@ class OldFashionDuelMode(GameMode):
                 ctx.duel_state["subphase"] = "ROUND_END"
                 ctx.duel_state["phase_code"] = 2
                 ctx.duel_state["can_shoot"] = False
+                ctx.duel_state["round_ended_at"] = now
                 ctx.duel_state["next_transition_at"] = now + 7.0
                 ctx.duel_state["last_winner_gun_num"] = None
                 ctx.duel_state["last_result_text"] = (
@@ -179,13 +182,24 @@ class OldFashionDuelMode(GameMode):
         ctx.duel_state["phase_code"] = 1
         ctx.duel_state["subphase"] = "WAIT"
         ctx.duel_state["can_shoot"] = False
+        ctx.duel_state["round_started_at"] = now
+        ctx.duel_state["round_ended_at"] = 0.0
         ctx.duel_state["last_result_text"] = ""
         ctx.duel_state["last_winner_gun_num"] = None
         # Round 1 carries the setup intro after the round announcement, so
         # its standoff floor covers both lines (6 s) and the DRAW cue never
-        # talks over the intro; later rounds keep the usual 5 s floor.
-        wait_floor = 6.0 if next_rnd == 1 else 5.0
-        ctx.duel_state["next_transition_at"] = now + random.uniform(wait_floor, 8.0)
+        # talks over the intro; later rounds use a weighted 3–20 s range
+        # (15% quick 3–5 s, 10% tense 15–20 s, 75% standard 5–15 s).
+        roll = random.random()
+        if next_rnd == 1:
+            wait_s = random.uniform(15.0, 20.0) if roll < 0.10 else random.uniform(6.0, 15.0)
+        elif roll < 0.15:
+            wait_s = random.uniform(3.0, 5.0)
+        elif roll < 0.25:
+            wait_s = random.uniform(15.0, 20.0)
+        else:
+            wait_s = random.uniform(5.0, 15.0)
+        ctx.duel_state["next_transition_at"] = now + wait_s
         self._reset_duel_ammo(ctx)
         if next_rnd == 1:
             round_file, round_sub, round_dur = ("DLG_GM_GLOBAL_115.wav", "First round!", 1.2)
@@ -211,8 +225,15 @@ class OldFashionDuelMode(GameMode):
         self, ctx: ArenaEngine, player: PlayerState, status: DecodedStatus, ammo_dropped: bool
     ) -> None:
         curr_hits = status.hits_received or 0
-        if ctx.duel_state.get("phase_code", 2) <= 1:
-            rnd = ctx.duel_state.get("round", 1)
+        rnd = int(ctx.duel_state.get("round", 1))
+        already_resolved = any(
+            r.get("round") == rnd for r in ctx.duel_state.get("round_results", [])
+        )
+        if (
+            ctx.duel_state.get("phase_code", 2) <= 1
+            and ctx.duel_state.get("subphase") in ("WAIT", "DRAW")
+            and not already_resolved
+        ):
             can_shoot = ctx.duel_state.get("can_shoot", False)
             if not can_shoot and (curr_hits > player.prev_hits_rec or ammo_dropped):
                 # Firing (or landing a hit) before the DRAW signal:
@@ -261,7 +282,9 @@ class OldFashionDuelMode(GameMode):
                 ctx.duel_state["subphase"] = "ROUND_END"
                 ctx.duel_state["phase_code"] = 2
                 ctx.duel_state["can_shoot"] = False
-                ctx.duel_state["next_transition_at"] = time.time() + next_wait
+                now = time.time()
+                ctx.duel_state["round_ended_at"] = now
+                ctx.duel_state["next_transition_at"] = now + next_wait
                 ctx._check_lead_change()
             elif can_shoot and curr_hits > player.prev_hits_rec:
                 delta = curr_hits - player.prev_hits_rec
@@ -292,7 +315,9 @@ class OldFashionDuelMode(GameMode):
                 ctx.duel_state["subphase"] = "ROUND_END"
                 ctx.duel_state["phase_code"] = 2
                 ctx.duel_state["can_shoot"] = False
-                ctx.duel_state["next_transition_at"] = time.time() + 7.0
+                now = time.time()
+                ctx.duel_state["round_ended_at"] = now
+                ctx.duel_state["next_transition_at"] = now + 7.0
                 ctx._check_lead_change()
             elif (
                 can_shoot
@@ -302,7 +327,9 @@ class OldFashionDuelMode(GameMode):
                 ctx.duel_state["subphase"] = "ROUND_END"
                 ctx.duel_state["phase_code"] = 2
                 ctx.duel_state["can_shoot"] = False
-                ctx.duel_state["next_transition_at"] = time.time() + 7.0
+                now = time.time()
+                ctx.duel_state["round_ended_at"] = now
+                ctx.duel_state["next_transition_at"] = now + 7.0
                 ctx.duel_state["last_winner_gun_num"] = None
                 ctx.duel_state["last_result_text"] = (
                     f"ROUND {rnd}: BOTH OUT OF AMMO — DRAW (NO POINT)"

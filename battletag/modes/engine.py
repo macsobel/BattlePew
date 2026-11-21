@@ -959,6 +959,16 @@ class ArenaEngine:
         return self._mode.timed
 
     def get_elapsed_seconds(self) -> float:
+        if self.mode_name == "OldFashionDuel":
+            rs = float(self.duel_state.get("round_started_at", 0.0) or 0.0)
+            if rs <= 0.0:
+                return 0.0
+            end = float(self.duel_state.get("round_ended_at", 0.0) or 0.0)
+            if self.duel_state.get("subphase") in ("ROUND_END", "COMPLETE") and end > 0.0:
+                return max(0.0, end - rs)
+            if self.phase == "GAME_OVER" and self.match_end_ts > 0:
+                return max(0.0, self.match_end_ts - rs)
+            return max(0.0, time.time() - rs)
         if self.match_start_ts <= 0:
             return 0.0
         end = self.match_end_ts if (self.phase == "GAME_OVER" and self.match_end_ts > 0) else time.time()

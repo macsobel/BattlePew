@@ -1296,6 +1296,27 @@
       white-space: nowrap;
     }
 
+    .tv-duel-stars {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      margin-top: 2px;
+    }
+
+    .tv-duel-star {
+      width: 18px;
+      height: 18px;
+      flex-shrink: 0;
+      color: #CBD5E1;
+      transition: transform 0.2s ease, color 0.2s ease;
+    }
+
+    .tv-duel-star.won {
+      color: #F59E0B;
+      filter: drop-shadow(0 1px 4px rgba(245, 158, 11, 0.45));
+      transform: scale(1.06);
+    }
+
     /* TagThenShoot timed-turn strip: who's up, the live run clock,
        and the fastest finished run. */
     .tv-race-strip {
@@ -5744,7 +5765,10 @@
         const untimed = state.mode && state.mode.timed === false;
         const scoreTarget = state.mode && state.mode.id === 'FreeFrag' && state.settings && state.settings.scoreLimit > 0
           ? ` · First to ${state.settings.scoreLimit}` : '';
-        clockSub.textContent = (untimed ? 'Elapsed Time' : 'Time Remaining') + scoreTarget;
+        const elapsedLabel = state.mode && state.mode.id === 'OldFashionDuel'
+          ? `Round ${Math.max(1, (state.duel_state && state.duel_state.round) || 1)} Time`
+          : 'Elapsed Time';
+        clockSub.textContent = (untimed ? elapsedLabel : 'Time Remaining') + scoreTarget;
         clockDigits.classList.toggle('urgent', !untimed && state.remaining_seconds != null && state.remaining_seconds <= 15);
       }
 
@@ -5789,15 +5813,10 @@
             subText = 'Duelists take your positions';
           }
           duelStrip.className = 'tv-duel-strip' + (phaseCls ? ` ${phaseCls}` : '');
-          const chips = (ds.round_results || []).map((r) => {
-            const label = r.winner_gun_num ? `P${r.winner_gun_num} ★` : 'DRAW';
-            return `<span class="tv-duel-chip">${esc('R' + r.round + ': ' + label)}</span>`;
-          }).join('');
           duelStrip.innerHTML =
             `<div class="tv-duel-badge">${esc(roundLabel)}</div>`
             + `<div class="tv-duel-head">${esc(headText)}</div>`
-            + (subText ? `<div class="tv-duel-sub">${esc(subText)}</div>` : '')
-            + (chips ? `<div class="tv-duel-chips">${chips}</div>` : '');
+            + (subText ? `<div class="tv-duel-sub">${esc(subText)}</div>` : '');
           duelStrip.style.display = '';
         } else {
           duelStrip.className = 'tv-duel-strip';
@@ -5926,7 +5945,7 @@
           : (isLMS ? p.frags : p.score);
         const scoreLabel = isRace
           ? (p.best_run_time != null ? 'Best Time' : 'Points')
-          : (isDuel ? 'Rounds' : (isLMS ? 'Elims' : 'Points'));
+          : (isLMS ? 'Elims' : 'Points');
         const isLeader = p.gun_id === leaderGunId;
         const scoreColor = state.mode.teams ? p.team_color : (isLeader ? 'var(--bt-gold)' : 'var(--bt-orange)');
         // Diff-driven feedback: a score pop when the score rose, a red
@@ -6037,6 +6056,20 @@
                    ${showClips ? renderClipPips(p.clips) : ''}
                  </div>
                ` : `<div class="tv-bar-row"><span style="color: var(--team-blue); display:inline-flex; align-items:center; gap:4px;">${iconBlaster} ∞</span></div>`}
+               ${isDuel && state.duel_state ? (() => {
+                 const maxR = Math.max(1, state.duel_state.max_rounds || (state.settings && state.settings.rounds) || 5);
+                 const resList = Array.isArray(state.duel_state.round_results) ? state.duel_state.round_results : [];
+                 const starsHtml = Array.from({ length: maxR }, (_, i) => {
+                   const rNum = i + 1;
+                   const entry = resList.find((e) => e.round === rNum);
+                   const won = Boolean(entry && entry.winner_gun_num === p.gun_num);
+                   const tip = won ? `Round ${rNum}: Won (+1 pt)` : (entry ? (entry.winner_gun_num ? `Round ${rNum}: Lost` : `Round ${rNum}: Draw`) : `Round ${rNum}`);
+                   return won
+                     ? `<svg class="tv-duel-star won" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round" aria-label="${esc(tip)}" title="${esc(tip)}"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>`
+                     : `<svg class="tv-duel-star" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" aria-label="${esc(tip)}" title="${esc(tip)}"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>`;
+                 }).join('');
+                 return `<div class="tv-duel-stars">${starsHtml}</div>`;
+               })() : ''}
              </div>`);
 
         return `
@@ -6075,6 +6108,7 @@
       const gridSignature = JSON.stringify([
         state.mode.id,
         state.phase,
+        state.duel_state ? [state.duel_state.max_rounds, state.duel_state.round_results] : null,
         state.race_state ? [state.race_state.turn_phase, state.race_state.active_gun_id, state.race_state.next_gun_id, state.race_state.turn_index, state.race_state.round_index, state.race_state.max_rounds, state.race_state.launch_mode] : null,
         state.race_roster || null,
         gridPlayers.map((p) => [p.gun_id, p.name, p.avatar, p.score, p.frags, p.life_points, p.max_life, p.ammo, p.max_ammo, p.clips, p.vest_ok, p.signal_lost, p.team_id, p.team_color, p.tags, p.tower_hits, p.run_history, p.best_run_time]),
