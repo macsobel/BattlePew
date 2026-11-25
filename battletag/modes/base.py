@@ -216,13 +216,15 @@ class GameMode(ABC):
             self.record_life_hits(ctx, shooters, player, curr_life)
             if curr_life == 0:
                 player.deaths += 1
-                player.status_badge = "ELIMINATED" if self.no_respawn else "SCAN T-BASE"
+                uses_tbase = self.respawn_uses_team_base and int(ctx.settings.get("tBase", 1)) != 0
+                player.status_badge = "ELIMINATED" if self.no_respawn else ("SCAN T-BASE" if uses_tbase else "RESPAWNING")
         elif curr_life > player.prev_life:
             was_zero = player.prev_life == 0
             player.life_points = curr_life
             player.status_badge = "ACTIVE"
             if was_zero:
-                if self.respawn_uses_team_base:
+                uses_tbase = self.respawn_uses_team_base and int(ctx.settings.get("tBase", 1)) != 0
+                if uses_tbase:
                     team_rfid = TEAM_INFO.get(player.team_id, TEAM_INFO[1])["rfid_code"]
                     player.last_rfid = team_rfid
                     ctx.add_event(
@@ -452,3 +454,8 @@ class GameMode(ABC):
         """Host skip of the current race run. Only the race
         implements it."""
         return False, "No race is running."
+
+    def skip_pairing(self, ctx: ArenaEngine, now: float | None = None) -> tuple[bool, str]:
+        """Host skip of the current tournament duel pairing. Only duel
+        tournaments implement it."""
+        return False, "Only available in Wild West Duel tournaments."

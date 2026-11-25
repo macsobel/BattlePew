@@ -106,6 +106,15 @@ def build_vest_poll_packet() -> bytes:
     return bytes([0x00, 0xFF, 0xC1])
 
 
+def _effective_ammo_and_clips(
+    settings: dict[str, Any], default_ammo: int = 9, default_clips: int = 5
+) -> tuple[int, int]:
+    """Return (ammunitions, clips), using 999/99 when Ammo Boxes are disabled."""
+    if int(settings.get("ammoBox", 1)) == 0:
+        return 999, 99
+    return int(settings.get("ammunitions", default_ammo)), int(settings.get("clips", default_clips))
+
+
 def build_config_packet(
     gun_id: int,
     mode_name: str,
@@ -123,10 +132,11 @@ def build_config_packet(
     if mode_name in ("FreeFrag", "OldFashionDuel"):
         values = []
     elif mode_name == "TeamFrag":
+        ammo, clips = _effective_ammo_and_clips(settings, default_ammo=9, default_clips=5)
         values = [
             int(settings.get("lifePoints", 5)),
-            int(settings.get("ammunitions", 9)),
-            int(settings.get("clips", 5)),
+            ammo,
+            clips,
             int(settings.get("swap", 0)),
             int(settings.get("respawnTime", 0)),
             int(team_id),
@@ -135,29 +145,32 @@ def build_config_packet(
             int(settings.get("medkit", 0)),
         ]
     elif mode_name == "FreeForAll":
+        ammo, clips = _effective_ammo_and_clips(settings, default_ammo=9, default_clips=5)
         values = [
             int(settings.get("lifePoints", 5)),
-            int(settings.get("ammunitions", 9)),
-            int(settings.get("clips", 5)),
+            ammo,
+            clips,
             int(settings.get("swap", 0)),
             int(settings.get("respawnTime", 0)),
             int(settings.get("assist", 1)),
             int(settings.get("medkit", 0)),
         ]
     elif mode_name == "LastManStanding":
+        ammo, clips = _effective_ammo_and_clips(settings, default_ammo=9, default_clips=5)
         values = [
             int(settings.get("lifePoints", 25)),
-            int(settings.get("ammunitions", 9)),
-            int(settings.get("clips", 5)),
+            ammo,
+            clips,
             int(settings.get("swap", 0)),
             int(settings.get("assist", 1)),
             int(settings.get("medkit", 0)),
         ]
     elif mode_name == "StarterFrag":
+        ammo, clips = _effective_ammo_and_clips(settings, default_ammo=12, default_clips=3)
         values = [
             int(settings.get("assist", 1)),
-            int(settings.get("ammunitions", 12)),
-            int(settings.get("clips", 3)),
+            ammo,
+            clips,
         ]
     elif mode_name == "TagThenShoot":
         values = [

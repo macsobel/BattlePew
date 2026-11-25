@@ -289,6 +289,7 @@
     .duel-subphase.draw { color: var(--team-green); font-size: 2.3rem; }
     .duel-subphase.end { color: #FDBA74; font-size: 1.2rem; }
     .duel-subphase.complete { color: var(--team-yellow); }
+    .duel-subphase.ready { color: var(--bt-orange-bright); font-size: 1.45rem; }
 
     .duel-subnote {
       font-size: 0.88rem;
@@ -296,6 +297,29 @@
       color: #9BA3B5;
       letter-spacing: 0.03em;
       margin-top: -2px;
+    }
+
+    .duel-role-pill {
+      display: inline-block;
+      margin-top: 2px;
+      font-family: var(--font-display);
+      font-size: 0.72rem;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      padding: 2px 10px;
+      border-radius: 999px;
+      background: rgba(255, 255, 255, 0.08);
+      color: #CBD5E1;
+    }
+
+    .duel-role-pill.active {
+      background: var(--bt-orange);
+      color: #FFFFFF;
+    }
+
+    .duel-role-pill.next {
+      background: rgba(251, 191, 36, 0.2);
+      color: #FBBF24;
     }
 
     .duel-tally {
@@ -1844,7 +1868,8 @@
         isLMS,
         isRace,
         showLife: ['TeamFrag', 'FreeForAll', 'LastManStanding'].includes(id),
-        showAmmo: ['TeamFrag', 'FreeForAll', 'LastManStanding', 'StarterFrag', 'OldFashionDuel'].includes(id),
+        showAmmo: ['TeamFrag', 'FreeForAll', 'LastManStanding', 'StarterFrag', 'OldFashionDuel'].includes(id)
+          && (id === 'OldFashionDuel' || !(state.settings && state.settings.ammoBox === 0)),
         showDuelStrip: isDuel && !!state.duel_state && ['COUNTDOWN', 'PLAYING', 'GAME_OVER'].includes(state.phase),
         showRaceStrip: isRace && !!state.race_state && ['PLAYING', 'GAME_OVER'].includes(state.phase),
       };
@@ -2026,8 +2051,29 @@
         const tenth = Math.floor((t * 10) % 10);
         return `${m}:${String(sec).padStart(2, '0')}.${tenth}`;
       };
+      const ds = (isDuel && state.duel_state) ? state.duel_state : null;
+      const duelIsTourn = Boolean(ds && ds.is_tournament);
+      const duelActivePair = ds && Array.isArray(ds.active_pair) ? ds.active_pair : [];
+      const duelNextPair = ds && Array.isArray(ds.next_pair) ? ds.next_pair : [];
+      const duelMeActive = !duelIsTourn || duelActivePair.includes(me.gun_id);
+      const duelMeNext = duelIsTourn && !duelMeActive && duelNextPair.includes(me.gun_id);
+      const duelRival = duelMeActive
+        ? (allPlayers.find((p) => (duelActivePair.length ? duelActivePair.includes(p.gun_id) : true) && p.gun_id !== me.gun_id) || null)
+        : null;
+      const duelRecordOf = (p) => {
+        if (!ds || !ds.match_records || !p) return '';
+        const rec = ds.match_records[String(p.gun_num)];
+        if (!rec) return '';
+        const w = rec.wins || 0;
+        const l = rec.losses || 0;
+        const d = rec.draws || 0;
+        return d > 0 ? `${w}W–${l}L–${d}D` : `${w}W–${l}L`;
+      };
+
       if (state.phase === 'COUNTDOWN') {
         hudClockEl.textContent = `00:${String(state.countdown_remaining).padStart(2, '0')}`;
+      } else if (isDuel && ds && state.phase === 'PLAYING' && ['MATCH_INTRO', 'WAIT_TRIGGER'].includes(ds.subphase)) {
+        hudClockEl.textContent = 'READY';
       } else if (isRace && state.phase === 'PLAYING' && state.race_state) {
         const rsClock = state.race_state;
         if (rsClock.turn_phase === 'RUNNING') {
@@ -2045,9 +2091,9 @@
       } else {
         hudClockEl.textContent = state.clock;
       }
-      const isDuelCd = isDuel && state.duel_state
-        && ['INTRO', 'ROUND_END'].includes(state.duel_state.subphase)
-        && (state.duel_state.countdown_remaining || 0) > 0;
+      const isDuelCd = isDuel && ds
+        && ['INTRO', 'ROUND_END', 'COUNTDOWN'].includes(ds.subphase)
+        && (ds.countdown_remaining || 0) > 0;
       hudClockEl.style.color = isDuelCd ? 'var(--team-red)' : '';
       document.getElementById('hudRank').textContent = rank === null ? '—' : `#${rank}`;
       // The score box shows the mode's real points (plus eliminations in
@@ -2065,7 +2111,7 @@
           : (isDuel ? 'POINTS' : 'SCORE');
       }
 
-      // Big countdown treatment while the guns count down (or waiting on P1 trigger).
+      // Big countdown treatment while the guns count down (or waiting on trigger).
       const hero = document.getElementById('countdownHero');
       if (state.phase === 'COUNTDOWN') {
         hero.style.display = 'block';
@@ -2077,76 +2123,162 @@
         document.getElementById('countdownSub').textContent = me.gun_num === 1
           ? 'Pull your T-Blaster trigger to start the countdown!'
           : 'Waiting for Player 1 to pull their trigger…';
+      } else if (duelIsTourn && state.phase === 'PLAYING' && ds && ds.subphase === 'COUNTDOWN') {
+        hero.style.display = 'block';
+        document.getElementById('countdownNum').textContent = ds.countdown_remaining || 0;
+        const pA = allPlayers.find((p) => p.gun_id === duelActivePair[0]);
+        const pB = allPlayers.find((p) => p.gun_id === duelActivePair[1]);
+        document.getElementById('countdownSub').textContent = duelMeActive
+          ? 'Get ready — your duel is about to begin!'
+          : `Next duel starting: ${(pA && pA.name ? pA.name : 'Player A').toUpperCase()} vs ${(pB && pB.name ? pB.name : 'Player B').toUpperCase()}`;
       } else {
         hero.style.display = 'none';
       }
 
-      // Duel block: round, signal state, tally. The phone is what the
-      // duelist holds during the standoff, so the WAIT/DRAW state and
-      // the rounds tally live here, mirroring the main-screen strip.
+      // Duel block: round/pairing, signal state, tally, and role badge for tournaments.
+      // The phone is what the duelist holds during the standoff, so WAIT/DRAW and
+      // tournament rotation live here, mirroring the main-screen strip.
       const duelBlock = document.getElementById('hudDuelBlock');
-      const ds = state.duel_state || null;
       const showDuelBlock = isDuel && isRoundActive && state.phase !== 'GAME_OVER' && !!ds && typeof ds.round === 'number' && !resultsRevealed;
       duelBlock.style.display = showDuelBlock ? 'flex' : 'none';
       if (showDuelBlock) {
         const cd = ds.countdown_remaining || 0;
-        const subLabels = {
-          INTRO: cd > 0 ? `ROUND 1 STARTS IN ${cd}…` : 'GET READY…',
-          WAIT: 'WAIT TO HEAR "FIRE!"',
-          DRAW: '🔥 FIRE! SHOOT NOW! 🔥',
-          ROUND_END: ds.last_result_text || 'ROUND OVER',
-          COMPLETE: 'DUEL COMPLETE',
-        };
-        const subNoteEl = document.getElementById('hudDuelSubnote');
-        if (subNoteEl) {
-          if (ds.subphase === 'WAIT') {
-            subNoteEl.textContent = 'T-Blasters along your leg';
-            subNoteEl.style.display = '';
-          } else {
-            subNoteEl.style.display = 'none';
-          }
-        }
-        const roundTag = ds.subphase === 'WAIT' ? ' · NEW ROUND' : '';
-        document.getElementById('hudDuelRound').textContent = `ROUND ${Math.max(1, ds.round)} OF ${ds.max_rounds}${roundTag}`;
-        const subEl = document.getElementById('hudDuelSubphase');
+        const pA = allPlayers.find((p) => p.gun_id === duelActivePair[0]) || null;
+        const pB = allPlayers.find((p) => p.gun_id === duelActivePair[1]) || null;
+        const pAName = pA ? (pA.name || `Player ${pA.gun_num}`).toUpperCase() : 'PLAYER A';
+        const pBName = pB ? (pB.name || `Player ${pB.gun_num}`).toUpperCase() : 'PLAYER B';
+        const scores = ds.round_scores || {};
         const nextSecs = ds.next_transition_at ? Math.max(0, Math.ceil(ds.next_transition_at - Date.now() / 1000)) : 0;
         const hasMoreRounds = ds.round < ds.max_rounds;
-        const endTail = (ds.subphase === 'ROUND_END' && hasMoreRounds)
-          ? (cd > 0 ? ` (Next round starts in ${cd}…)` : (nextSecs > 0 ? ` (Next round in ${nextSecs}s…)` : ''))
-          : '';
-        subEl.textContent = (subLabels[ds.subphase] || ds.subphase || '') + endTail;
-        subEl.className = 'duel-subphase ' + (ds.subphase === 'WAIT' ? 'wait' : ds.subphase === 'DRAW' ? 'draw' : ds.subphase === 'COMPLETE' ? 'complete' : 'end');
-        const rival = allPlayers.find((p) => p.gun_id !== me.gun_id) || null;
-        const scores = ds.round_scores || {};
-        const myWins = scores[me.gun_id] || 0;
-        const rivalWins = rival ? (scores[rival.gun_id] || 0) : 0;
-        document.getElementById('hudDuelTally').textContent = rival
-          ? `YOU ${myWins} — ${rivalWins} ${(rival.name || '').toUpperCase()}`
-          : `YOU ${myWins}`;
-        // One row of stars, one per round, from my point of view:
-        //   gold filled  = I got the point
-        //   dark red     = my rival got the point
-        //   struck-out   = round ended in a draw (no point)
-        //   outline      = round not finished (the live round pulses)
-        const STAR_POINTS = '12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2';
-        const starSvg = (cls, filled, tip, strike) =>
-          `<svg class="duel-star ${cls}" viewBox="0 0 24 24" fill="${filled ? 'currentColor' : 'none'}" stroke="currentColor" stroke-width="${filled ? 1.5 : 2}" stroke-linejoin="round" role="img" aria-label="${tip}"><title>${tip}</title><polygon points="${STAR_POINTS}"/>${strike ? '<line x1="4" y1="20" x2="20" y2="4" stroke-width="2.2" stroke-linecap="round"/>' : ''}</svg>`;
-        const maxStars = Math.max(1, ds.max_rounds || 5);
-        const results = Array.isArray(ds.round_results) ? ds.round_results : [];
-        const liveRound = (ds.subphase === 'WAIT' || ds.subphase === 'DRAW') ? ds.round : 0;
-        const rivalName = rival ? (rival.name || `Player ${rival.gun_num}`) : 'Rival';
-        document.getElementById('hudDuelChips').innerHTML =
-          `<div class="duel-stars">${Array.from({ length: maxStars }, (_, i) => {
-            const rNum = i + 1;
-            const entry = results.find((e) => e.round === rNum);
-            if (!entry) {
-              return starSvg(liveRound === rNum ? 'pending live' : 'pending', false, `Round ${rNum}: ${liveRound === rNum ? 'in progress' : 'not played yet'}`, false);
+        const subNoteEl = document.getElementById('hudDuelSubnote');
+        const roundEl = document.getElementById('hudDuelRound');
+        const subEl = document.getElementById('hudDuelSubphase');
+        const tallyEl = document.getElementById('hudDuelTally');
+        const chipsEl = document.getElementById('hudDuelChips');
+
+        const rivalName = duelRival ? (duelRival.name || `Player ${duelRival.gun_num}`) : 'Rival';
+
+        if (duelIsTourn) {
+          const mLabel = `DUEL ${(ds.match_index || 0) + 1} OF ${ds.total_matches || 1}`;
+          if (['WAIT', 'DRAW', 'ROUND_END'].includes(ds.subphase)) {
+            roundEl.textContent = `${mLabel} · ROUND ${Math.max(1, ds.round)} OF ${ds.max_rounds}${ds.subphase === 'WAIT' ? ' · NEW ROUND' : ''}`;
+          } else {
+            const roleText = duelMeActive ? "YOU'RE UP" : (duelMeNext ? 'UP NEXT' : 'SPECTATING');
+            roundEl.textContent = `${mLabel} · ${roleText}`;
+          }
+        } else {
+          const roundTag = ds.subphase === 'WAIT' ? ' · NEW ROUND' : '';
+          roundEl.textContent = `ROUND ${Math.max(1, ds.round)} OF ${ds.max_rounds}${roundTag}`;
+        }
+
+        if (duelMeActive) {
+          const subLabels = {
+            MATCH_INTRO: 'STEP UP TO DUEL',
+            WAIT_TRIGGER: 'PULL TRIGGER WHEN READY',
+            COUNTDOWN: `STARTING IN ${cd}…`,
+            INTRO: cd > 0 ? `ROUND 1 STARTS IN ${cd}…` : 'GET READY…',
+            WAIT: 'WAIT TO HEAR "FIRE!"',
+            DRAW: '🔥 FIRE! SHOOT NOW! 🔥',
+            ROUND_END: ds.last_result_text || 'ROUND OVER',
+            MATCH_END: ds.last_match_result_text || 'DUEL COMPLETE',
+            COMPLETE: duelIsTourn ? 'TOURNAMENT COMPLETE' : 'DUEL COMPLETE',
+          };
+          const endTail = (ds.subphase === 'ROUND_END' && hasMoreRounds)
+            ? (cd > 0 ? ` (Next round starts in ${cd}…)` : (nextSecs > 0 ? ` (Next round in ${nextSecs}s…)` : ''))
+            : '';
+          subEl.textContent = (subLabels[ds.subphase] || ds.subphase || '') + endTail;
+          subEl.className = 'duel-subphase ' + (
+            ds.subphase === 'WAIT' ? 'wait'
+            : ds.subphase === 'DRAW' ? 'draw'
+            : ds.subphase === 'COMPLETE' ? 'complete'
+            : ['MATCH_INTRO', 'WAIT_TRIGGER', 'COUNTDOWN'].includes(ds.subphase) ? 'ready'
+            : 'end'
+          );
+          if (subNoteEl) {
+            if (ds.subphase === 'WAIT') {
+              subNoteEl.textContent = 'T-Blasters along your leg';
+              subNoteEl.style.display = '';
+            } else if (ds.subphase === 'WAIT_TRIGGER') {
+              subNoteEl.textContent = `You or ${rivalName.toUpperCase()}: pull your trigger once in position`;
+              subNoteEl.style.display = '';
+            } else if (ds.subphase === 'MATCH_INTRO') {
+              subNoteEl.textContent = `Matchup: You vs ${rivalName.toUpperCase()}`;
+              subNoteEl.style.display = '';
+            } else {
+              subNoteEl.style.display = 'none';
             }
-            if (!entry.winner_gun_num) return starSvg('draw', false, `Round ${rNum}: draw — no point`, true);
-            return entry.winner_gun_num === me.gun_num
-              ? starSvg('won', true, `Round ${rNum}: you got the point`, false)
-              : starSvg('lost', true, `Round ${rNum}: ${rivalName} got the point`, false);
-          }).join('')}</div>`;
+          }
+          const myWins = scores[me.gun_id] || 0;
+          const rivalWins = duelRival ? (scores[duelRival.gun_id] || 0) : 0;
+          tallyEl.textContent = duelRival
+            ? `YOU ${myWins} — ${rivalWins} ${rivalName.toUpperCase()}`
+            : `YOU ${myWins}`;
+          const STAR_POINTS = '12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2';
+          const starSvg = (cls, filled, tip, strike) =>
+            `<svg class="duel-star ${cls}" viewBox="0 0 24 24" fill="${filled ? 'currentColor' : 'none'}" stroke="currentColor" stroke-width="${filled ? 1.5 : 2}" stroke-linejoin="round" role="img" aria-label="${tip}"><title>${tip}</title><polygon points="${STAR_POINTS}"/>${strike ? '<line x1="4" y1="20" x2="20" y2="4" stroke-width="2.2" stroke-linecap="round"/>' : ''}</svg>`;
+          const maxStars = Math.max(1, ds.max_rounds || 5);
+          const results = Array.isArray(ds.round_results) ? ds.round_results : [];
+          const liveRound = (ds.subphase === 'WAIT' || ds.subphase === 'DRAW') ? ds.round : 0;
+          chipsEl.innerHTML =
+            `<div class="duel-stars">${Array.from({ length: maxStars }, (_, i) => {
+              const rNum = i + 1;
+              const entry = results.find((e) => e.round === rNum);
+              if (!entry) {
+                return starSvg(liveRound === rNum ? 'pending live' : 'pending', false, `Round ${rNum}: ${liveRound === rNum ? 'in progress' : 'not played yet'}`, false);
+              }
+              if (!entry.winner_gun_num) return starSvg('draw', false, `Round ${rNum}: draw — no point`, true);
+              return entry.winner_gun_num === me.gun_num
+                ? starSvg('won', true, `Round ${rNum}: you got the point`, false)
+                : starSvg('lost', true, `Round ${rNum}: ${rivalName} got the point`, false);
+            }).join('')}</div>`;
+        } else {
+          // Spectator phone view (waiting for next duel)
+          const specLabels = {
+            MATCH_INTRO: 'STEPPING UP TO DUEL',
+            WAIT_TRIGGER: 'WAITING FOR DUELISTS',
+            COUNTDOWN: `STARTING IN ${cd}…`,
+            WAIT: 'STANDOFF — WAIT FOR FIRE!',
+            DRAW: '🔥 FIRE! 🔥',
+            ROUND_END: ds.last_result_text || 'ROUND OVER',
+            MATCH_END: ds.last_match_result_text || 'DUEL COMPLETE',
+            COMPLETE: 'TOURNAMENT COMPLETE',
+          };
+          subEl.textContent = specLabels[ds.subphase] || ds.subphase || '';
+          subEl.className = 'duel-subphase ' + (
+            ds.subphase === 'WAIT' ? 'wait'
+            : ds.subphase === 'DRAW' ? 'draw'
+            : ds.subphase === 'COMPLETE' ? 'complete'
+            : ['MATCH_INTRO', 'WAIT_TRIGGER', 'COUNTDOWN'].includes(ds.subphase) ? 'ready'
+            : 'end'
+          );
+          const scoreA = pA ? (scores[pA.gun_id] || 0) : 0;
+          const scoreB = pB ? (scores[pB.gun_id] || 0) : 0;
+          tallyEl.textContent = `${pAName} ${scoreA} — ${scoreB} ${pBName}`;
+
+          if (subNoteEl) {
+            const matchesList = Array.isArray(ds.matches) ? ds.matches : [];
+            const futureIdx = matchesList.slice((ds.match_index || 0) + 1).findIndex((m) => m.includes(me.gun_id));
+            if (duelMeNext) {
+              const np = duelNextPair;
+              const oppGid = np.find((g) => g !== me.gun_id);
+              const opp = allPlayers.find((p) => p.gun_id === oppGid);
+              subNoteEl.textContent = `⚡ YOU ARE UP NEXT (vs ${opp ? (opp.name || `Player ${opp.gun_num}`).toUpperCase() : 'RIVAL'})!`;
+            } else if (futureIdx >= 0) {
+              const pair = matchesList[(ds.match_index || 0) + 1 + futureIdx];
+              const oppGid = pair.find((g) => g !== me.gun_id);
+              const opp = allPlayers.find((p) => p.gun_id === oppGid);
+              const inDuels = futureIdx + 1;
+              subNoteEl.textContent = `Your next duel: vs ${opp ? (opp.name || `Player ${opp.gun_num}`).toUpperCase() : 'RIVAL'} (in ${inDuels} duels)`;
+            } else {
+              subNoteEl.textContent = 'All of your duels are complete — watching remaining matches';
+            }
+            subNoteEl.style.display = '';
+          }
+          const myRec = duelRecordOf(me);
+          chipsEl.innerHTML = myRec
+            ? `<span class="duel-role-pill ${duelMeNext ? 'next' : ''}">${duelMeNext ? 'UP NEXT' : 'SPECTATING'} · RECORD ${myRec}</span>`
+            : `<span class="duel-role-pill ${duelMeNext ? 'next' : ''}">${duelMeNext ? 'UP NEXT' : 'SPECTATING'}</span>`;
+        }
       }
 
       // Race block: my run totals, the turn status, and my course
@@ -2346,11 +2478,14 @@
       // Alert Banner (active match only)
       const alertEl = document.getElementById('hudAlert');
       const { showLife } = modeDisplay(state);
+      const usesTBase = state.mode.id === 'TeamFrag' && !(state.settings && state.settings.tBase === 0);
       if (state.phase === 'PLAYING' && showLife && me.life_points <= 0) {
         alertEl.className = 'alert-banner visible';
         alertEl.textContent = state.mode.id === 'LastManStanding'
           ? '⚠️ ELIMINATED — OUT OF LIVES'
-          : `⚠️ OUT OF ACTION — SCAN ${me.team_short} T-BASE TO RESPAWN!`;
+          : usesTBase
+          ? `⚠️ OUT OF ACTION — SCAN ${me.team_short} T-BASE TO RESPAWN!`
+          : '⚠️ OUT OF ACTION — RESPAWNING SOON';
       } else if (state.phase === 'PLAYING' && me.last_tagged_by && me.last_tagged_by_ago !== null && me.last_tagged_by_ago < 6) {
         alertEl.className = 'alert-banner visible';
         alertEl.textContent = `⚡ TAGGED BY ${(me.last_tagged_by || '').toUpperCase()}`;
@@ -2376,10 +2511,13 @@
 
       const { showAmmo } = modeDisplay(state);
       const showClips = showAmmo && state.mode.id !== 'OldFashionDuel';
-      document.getElementById('hudAmmoText').textContent = showAmmo ? `${me.ammo}/${me.max_ammo}` : '∞';
+      const duelLocked = duelIsTourn && !duelMeActive && state.phase === 'PLAYING';
+      document.getElementById('hudAmmoText').textContent = duelLocked ? 'LOCKED' : (showAmmo ? `${me.ammo}/${me.max_ammo}` : '∞');
       const ammoBar = document.getElementById('hudAmmoBar');
       if (ammoBar) {
-        if (showAmmo) {
+        if (duelLocked) {
+          ammoBar.innerHTML = `<div class="ammo-pill"></div>`;
+        } else if (showAmmo) {
           const cap = Math.min(12, Math.max(1, me.max_ammo));
           const filled = me.max_ammo <= 12 ? me.ammo : Math.round((me.ammo / Math.max(1, me.max_ammo)) * cap);
           ammoBar.innerHTML = Array.from({ length: cap }, (_, i) =>
@@ -2492,9 +2630,11 @@
           const scoreSummary = isLMS
             ? `${rankMe.score} ${rankMe.score === 1 ? 'pt' : 'pts'} · ${rankMe.frags} ${rankMe.frags === 1 ? 'elim' : 'elims'}`
             : `${finalNum} ${finalWord}`;
-          document.getElementById('gameOverRank').textContent = `Final rank #${rank}${lmsHpNote} · ${scoreSummary}`;
+          const myRecText = (isDuel && duelIsTourn) ? duelRecordOf(rankMe) : '';
+          document.getElementById('gameOverRank').textContent = `Final rank #${rank}${lmsHpNote} · ${scoreSummary}${myRecText ? ` · ${myRecText}` : ''}`;
           document.getElementById('gameOverStats').innerHTML = `
           ${isLMS ? `<span class="hud-stat-chip" title="Remaining Hit Points">${rankMe.life_points}/${rankMe.max_life} HP</span>` : ''}
+          ${myRecText ? `<span class="hud-stat-chip" title="Tournament Match Record">${myRecText}</span>` : ''}
           ${isDuel ? `<span class="hud-stat-chip" title="Early Fires (Penalties)">${rankMe.early_fires || 0} early</span>` : ''}
           <span class="hud-stat-chip" title="Hits Landed">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3"/></svg>
@@ -2526,14 +2666,26 @@
       const hintEl = document.getElementById('footHint');
       let hint = '';
       if (state.phase === 'PLAYING') {
-        if (state.mode.id === 'TeamFrag' || state.mode.id === 'FreeForAll') {
-          hint = `Ammo boxes reload · Scan your ${me.team_short} T-Base to respawn`;
+        const hasAmmoBoxes = !(state.settings && state.settings.ammoBox === 0);
+        const ammoHint = hasAmmoBoxes ? 'Ammo boxes reload' : 'Infinite ammo';
+        if (state.mode.id === 'TeamFrag') {
+          hint = usesTBase
+            ? `${ammoHint} · Scan your ${me.team_short} T-Base to respawn`
+            : `${ammoHint} · Automatic timed respawn`;
+        } else if (state.mode.id === 'FreeForAll') {
+          hint = `${ammoHint} · Automatic timed respawn`;
         } else if (state.mode.id === 'LastManStanding') {
-          hint = 'Ammo boxes reload · No respawns — stay alive';
+          hint = `${ammoHint} · No respawns — stay alive`;
         } else if (state.mode.id === 'StarterFrag') {
-          hint = 'Ammo boxes reload your clip';
+          hint = hasAmmoBoxes ? 'Ammo boxes reload your clip' : 'Infinite ammo — fire away';
         } else if (state.mode.id === 'OldFashionDuel') {
-          hint = 'T-Blasters along your leg · Wait to hear "Fire!" — firing early gives the point to your opponent';
+          if (!duelMeActive) {
+            hint = 'Spectating — your blaster stays locked until your duel begins';
+          } else if (ds && ds.subphase === 'WAIT_TRIGGER') {
+            hint = 'Pull your trigger once both duelists are in position to start';
+          } else {
+            hint = 'T-Blasters along your leg · Wait to hear "Fire!" — firing early gives the point to your opponent';
+          }
         } else if (state.mode.id === 'TagThenShoot') {
           // A benched viewer gets no mechanics hint: they are not
           // running, and the one-line sitting-out status says so.
@@ -2551,18 +2703,34 @@
       const simSec = document.getElementById('phoneSimSection');
       if (state.use_simulator) {
         simSec.style.display = 'flex';
-        const enemies = state.players.filter((p) => p.gun_id !== me.gun_id);
-        const baseCode = `RF0${me.team_id + 2}`;
+        const simBtnsEl = document.getElementById('phoneSimBtns');
         const simTargetIcon = `<svg class="ui-icon" style="color:var(--bt-orange-bright);" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="8"/><circle cx="12" cy="12" r="2.2" fill="currentColor" stroke="none"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3"/></svg>`;
         const simAmmoIcon = `<svg class="ui-icon" style="color:#4ADE80;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M7 4h10l1 3v12a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2V7l1-3z" fill="currentColor" fill-opacity="0.18"/><path d="M7 4h10l1 3v12a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2V7l1-3z"/><path d="M9 10h6M9 14h6"/></svg>`;
         const simBaseIcon = `<svg class="ui-icon" style="color:#38BDF8;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3L4 8v8l8 5 8-5V8l-8-5z" fill="currentColor" fill-opacity="0.15"/><path d="M12 3L4 8v8l8 5 8-5V8l-8-5z"/><circle cx="12" cy="12" r="2.5" fill="currentColor" stroke="none"/></svg>`;
-        document.getElementById('phoneSimBtns').innerHTML = [
-          ...enemies.map((e) =>
-            `<button type="button" class="sim-tap-btn" onclick="triggerSim('hit', { shooter_gid: ${me.gun_id}, target_gid: ${e.gun_id} })">${simTargetIcon} Tag P${e.gun_num} · ${(e.name || '').toUpperCase()}</button>`
-          ),
-          `<button type="button" class="sim-tap-btn" onclick="triggerSim('rfid', { gun_id: ${me.gun_id}, rfid_code: 'RF01' })">${simAmmoIcon} Scan Ammo</button>`,
-          `<button type="button" class="sim-tap-btn" onclick="triggerSim('rfid', { gun_id: ${me.gun_id}, rfid_code: '${baseCode}' })">${simBaseIcon} Scan Base (${baseCode})</button>`,
-        ].join('');
+        if (isDuel && state.phase === 'PLAYING') {
+          if (!duelMeActive) {
+            simBtnsEl.innerHTML = `<span style="font-size:0.78rem;font-weight:700;color:#9BA3B5;">Spectating current duel</span>`;
+          } else {
+            const duelBtns = [];
+            if (ds && ds.subphase === 'WAIT_TRIGGER') {
+              duelBtns.push(`<button type="button" class="sim-tap-btn" onclick="fetch('/api/manual-launch/trigger', { method: 'POST' })">${simTargetIcon} Pull Trigger (Ready)</button>`);
+            }
+            if (duelRival) {
+              duelBtns.push(`<button type="button" class="sim-tap-btn" onclick="triggerSim('hit', { shooter_gid: ${me.gun_id}, target_gid: ${duelRival.gun_id} })">${simTargetIcon} Tag P${duelRival.gun_num} · ${(duelRival.name || '').toUpperCase()}</button>`);
+            }
+            simBtnsEl.innerHTML = duelBtns.join('');
+          }
+        } else {
+          const enemies = state.players.filter((p) => p.gun_id !== me.gun_id);
+          const baseCode = `RF0${me.team_id + 2}`;
+          simBtnsEl.innerHTML = [
+            ...enemies.map((e) =>
+              `<button type="button" class="sim-tap-btn" onclick="triggerSim('hit', { shooter_gid: ${me.gun_id}, target_gid: ${e.gun_id} })">${simTargetIcon} Tag P${e.gun_num} · ${(e.name || '').toUpperCase()}</button>`
+            ),
+            `<button type="button" class="sim-tap-btn" onclick="triggerSim('rfid', { gun_id: ${me.gun_id}, rfid_code: 'RF01' })">${simAmmoIcon} Scan Ammo</button>`,
+            `<button type="button" class="sim-tap-btn" onclick="triggerSim('rfid', { gun_id: ${me.gun_id}, rfid_code: '${baseCode}' })">${simBaseIcon} Scan Base (${baseCode})</button>`,
+          ].join('');
+        }
       } else {
         simSec.style.display = 'none';
       }

@@ -14,7 +14,7 @@ from battletag.protocol import DecodedStatus
 if TYPE_CHECKING:
     from battletag.modes.engine import ArenaEngine, PlayerState
 
-ORDER = 2
+ORDER = 5
 
 
 class TeamFragMode(GameMode):
@@ -39,16 +39,18 @@ class TeamFragMode(GameMode):
         "bullets": [
             "Red, Blue, Yellow & Green teams",
             "+1 pt per hit · +3 pt Frag bonus",
-            "Scan team T-Base to respawn",
+            "T-Base or timed respawn · Optional boxes",
         ],
         "defaults": {
             "durationSeconds": 180,
             "countdownSeconds": 10,
             "gameLaunch": 0,
             "lifePoints": 5,
+            "ammoBox": 1,
             "ammunitions": 9,
             "clips": 5,
             "swap": 0,
+            "tBase": 1,
             "respawnTime": 0,
             "teamFrag": 0,
             "assist": 1,
@@ -58,11 +60,13 @@ class TeamFragMode(GameMode):
             {"key": "durationSeconds", "label": "Match Duration", "choices": [120, 180, 300, 600, 900, 1200]},
             {"key": "gameLaunch", "label": "Game Launch", "choices": [0, 1]},
             {"key": "lifePoints", "label": "Life Points", "choices": [3, 5, 7, 9]},
+            {"key": "ammoBox", "label": "Ammo Boxes", "choices": [0, 1]},
             {"key": "ammunitions", "label": "Shots per Clip", "choices": [6, 9, 12, 20]},
             {"key": "clips", "label": "Clips (magazines)", "choices": [1, 3, 5, 6]},
             {"key": "teamFrag", "label": "Friendly Fire", "choices": [0, 1]},
             {"key": "medkit", "label": "Medkit Boxes", "choices": [0, 1]},
             {"key": "swap", "label": "Swap Boxes", "choices": [0, 1]},
+            {"key": "tBase", "label": "T-Bases", "choices": [0, 1]},
             {"key": "respawnTime", "label": "Respawn Delay", "choices": [0, 3, 5, 10]},
         ],
     }

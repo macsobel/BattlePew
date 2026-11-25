@@ -493,6 +493,16 @@ class ArenaEngine:
         self.sync_race_roster()
         self.audio.play_ui("GunDetect.wav", subtitle=f"{self.expected_hardware_guns} T-Blasters configured")
 
+    def add_simulated_gun(self) -> int:
+        """Add one simulated player (up to 8) while in the lobby."""
+        if not self.use_simulator or self.phase != "LOBBY":
+            return len(self.players)
+        if len(self.players) >= 8:
+            return 8
+        next_count = len(self.players) + 1
+        self.set_num_simulated_guns(next_count)
+        return len(self.players)
+
     def sync_race_roster(self) -> dict[str, list[int]]:
         """Reconcile the race roster with the currently paired guns.
 
@@ -962,11 +972,13 @@ class ArenaEngine:
 
     def get_elapsed_seconds(self) -> float:
         if self.mode_name == "OldFashionDuel":
+            if self.duel_state.get("subphase") in ("MATCH_INTRO", "WAIT_TRIGGER", "COUNTDOWN"):
+                return 0.0
             rs = float(self.duel_state.get("round_started_at", 0.0) or 0.0)
             if rs <= 0.0:
                 return 0.0
             end = float(self.duel_state.get("round_ended_at", 0.0) or 0.0)
-            if self.duel_state.get("subphase") in ("ROUND_END", "COMPLETE") and end > 0.0:
+            if self.duel_state.get("subphase") in ("ROUND_END", "COMPLETE", "MATCH_END") and end > 0.0:
                 return max(0.0, end - rs)
             if self.phase == "GAME_OVER" and self.match_end_ts > 0:
                 return max(0.0, self.match_end_ts - rs)
@@ -979,7 +991,7 @@ class ArenaEngine:
     def format_clock(self) -> str:
         if self.mode_name == "OldFashionDuel":
             cd = int(self.duel_state.get("countdown_remaining", 0) or 0)
-            if self.duel_state.get("subphase") in ("INTRO", "ROUND_END") and cd > 0:
+            if self.duel_state.get("subphase") in ("INTRO", "ROUND_END", "COUNTDOWN") and cd > 0:
                 return f"00:{cd:02d}"
         if not self._is_timed_mode():
             elapsed = self.get_elapsed_seconds()
@@ -1037,7 +1049,7 @@ class ArenaEngine:
             return
         for entry in due:
             kind = entry["kind"]
-            if "race_run" in entry and not self._mode.followup_still_live(self, entry):
+            if ("race_run" in entry or "duel_match" in entry) and not self._mode.followup_still_live(self, entry):
                 continue
             if kind == "pool":
                 self.audio.trigger_pool(
@@ -1192,6 +1204,10 @@ class ArenaEngine:
         """Host skip: forfeit the current race run and move on."""
         return self._mode.skip_run(self, now)
 
+    def skip_duel_pairing(self, now: float | None = None) -> tuple[bool, str]:
+        """Host skip: finish the current tournament duel pairing and move on."""
+        return self._mode.skip_pairing(self, now)
+
     def finalize_race_on_stop(self, now: float | None = None) -> bool:
         """Finalize mode state when the match is stopped (the race
         snapshots a live run so its points are not lost)."""
@@ -1297,7 +1313,7 @@ class ArenaEngine:
                 )
             player.ammo = status.ammo
             player.prev_ammo = status.ammo
-            finite_ammo_mode = self._mode.finite_ammo
+            finite_ammo_mode = self._mode.finite_ammo and int(self.settings.get("ammoBox", 1)) != 0
             # The original's low-ammo event fires when ammo reaches
             # exactly 3, once per descent (a separate trigger from the
             # empty-ammo reminder below).

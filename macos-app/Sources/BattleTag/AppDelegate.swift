@@ -436,6 +436,19 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, WKNa
         webView.reload()
     }
 
+    @objc private func handleSelectAll(_ sender: Any?) {
+        if !allowHardware, !webView.isHidden {
+            let js = "typeof window.__battlepewTryAddSimPlayer === 'function' ? window.__battlepewTryAddSimPlayer() : false;"
+            webView.evaluateJavaScript(js) { result, _ in
+                if (result as? Bool) != true {
+                    NSApp.sendAction(#selector(NSText.selectAll(_:)), to: nil, from: sender)
+                }
+            }
+            return
+        }
+        NSApp.sendAction(#selector(NSText.selectAll(_:)), to: nil, from: sender)
+    }
+
     @objc private func showHelpAlert() {
         let version = Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "?"
         let alert = NSAlert()
@@ -484,7 +497,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, WKNa
         editMenu.addItem(NSMenuItem(title: "Cut", action: #selector(NSText.cut(_:)), keyEquivalent: "x"))
         editMenu.addItem(NSMenuItem(title: "Copy", action: #selector(NSText.copy(_:)), keyEquivalent: "c"))
         editMenu.addItem(NSMenuItem(title: "Paste", action: #selector(NSText.paste(_:)), keyEquivalent: "v"))
-        editMenu.addItem(NSMenuItem(title: "Select All", action: #selector(NSText.selectAll(_:)), keyEquivalent: "a"))
+        editMenu.addItem(NSMenuItem(title: "Select All", action: #selector(handleSelectAll(_:)), keyEquivalent: "a"))
         editMenuItem.submenu = editMenu
         mainMenu.addItem(editMenuItem)
 

@@ -695,6 +695,16 @@ async def api_race_skip_run() -> JSONResponse:
     return JSONResponse({"ok": True, "race_state": engine.race_state})
 
 
+@app.post("/api/duel/skip")
+async def api_duel_skip() -> JSONResponse:
+    """Host skip-duel (TV only): finish or skip the current tournament duel pairing."""
+    ok, reason = engine.skip_duel_pairing()
+    if not ok:
+        raise HTTPException(status_code=400, detail=reason)
+    await broadcast_state()
+    return JSONResponse({"ok": True, "duel_state": engine.duel_state})
+
+
 @app.post("/api/match/rematch")
 async def api_match_rematch() -> JSONResponse:
     global _match_task
@@ -726,6 +736,13 @@ async def api_manual_launch_trigger() -> JSONResponse:
         and engine.race_state.get("turn_phase") == "WAIT_TRIGGER"
     ):
         engine._turn_triggered = True
+        return JSONResponse({"ok": True})
+    if (
+        engine.mode_name == "OldFashionDuel"
+        and engine.phase == "PLAYING"
+        and engine.duel_state.get("subphase") == "WAIT_TRIGGER"
+    ):
+        engine._duel_round_triggered = True
         return JSONResponse({"ok": True})
     return JSONResponse({"ok": False, "reason": "Not waiting for trigger"}, status_code=400)
 
@@ -994,6 +1011,10 @@ async def api_sim_action(req: SimActionRequest) -> JSONResponse:
         engine.set_num_simulated_guns(req.num_guns)
         await broadcast_state()
         return JSONResponse({"ok": True})
+    if req.action == "add_gun":
+        count = engine.add_simulated_gun()
+        await broadcast_state()
+        return JSONResponse({"ok": True, "count": count})
     if req.action == "toggle_bots":
         _bot_demo_enabled = bool(req.enable_bots) if req.enable_bots is not None else not _bot_demo_enabled
         return JSONResponse({"ok": True, "bot_demo_enabled": _bot_demo_enabled})
@@ -1426,15 +1447,17 @@ async def _run_match_lifecycle() -> None:
         engine.reset_stats_for_new_match()
 
         # Manual Launch: Player 1 pulls their trigger to begin the countdown.
-        # OldFashionDuel always starts in manual launch mode; other modes
-        # honor the global gameLaunch setting (TagThenShoot handles per-turn
-        # trigger waits inside PLAYING).
+        # 2-player OldFashionDuel always starts in manual launch mode; 3–8
+        # player duel tournaments and TagThenShoot run per-pairing / per-turn
+        # trigger waits and countdowns inside PLAYING.
         cd_secs = int(engine.settings.get("countdownSeconds", 10))
+        is_duel_tournament = engine.mode_name == "OldFashionDuel" and len(engine.players) > 2
+        per_turn_flow = engine.mode_name == "TagThenShoot" or is_duel_tournament
         manual_start = (
             int(engine.settings.get("gameLaunch", 0)) == 1
             or engine.mode_name == "OldFashionDuel"
         )
-        if manual_start and engine.players and engine.mode_name != "TagThenShoot":
+        if manual_start and engine.players and not per_turn_flow:
             p1 = min(engine.players.values(), key=lambda p: p.gun_num)
             engine.phase = "WAIT_TRIGGER"
             engine._manual_launch_triggered = False
@@ -1455,11 +1478,9 @@ async def _run_match_lifecycle() -> None:
                 return
             cd_secs = max(1, cd_secs // 2)
 
-        # Phase 2: Countdown. TagThenShoot skips the match-level
-        # countdown: each timed turn runs its own countdown — after
-        # its player's trigger pull in Manual, straight away in
-        # Auto — driven by tick_race_turns.
-        if engine.mode_name != "TagThenShoot":
+        # Phase 2: Countdown. TagThenShoot and 3+ player duel tournaments
+        # skip the match-level countdown and run per-turn/per-pairing waits inside PLAYING.
+        if not per_turn_flow:
             engine.phase = "COUNTDOWN"
             engine.countdown_remaining = cd_secs
             engine.audio.trigger_pool("countdown_intro", force=True)
@@ -1487,15 +1508,15 @@ async def _run_match_lifecycle() -> None:
         engine.countdown_remaining = 0
         engine.match_start_ts = time.time()
         engine.audio.play_music("musicingame.wav")
-        # The race plays game_start at each run's start instead: the
-        # match opens on turn 1's trigger wait, not on a run.
-        if engine.mode_name != "TagThenShoot":
+        # TagThenShoot and duel tournaments announce their own opening turns/pairings.
+        if not per_turn_flow:
             engine.audio.trigger_pool("game_start", force=True)
         engine.add_event("system", f"{MODE_CATALOG[engine.mode_name]['title']} match started!")
         await broadcast_state()
 
         last_bot_step = time.time()
         race_prompt_tick = 0
+        duel_prompt_tick = 0
         while engine.phase == "PLAYING":
             engine.tick_mode_timers()
             engine.tick_race_turns()
@@ -1534,7 +1555,54 @@ async def _run_match_lifecycle() -> None:
                         )
                     else:
                         await asyncio.to_thread(engine.hw.drain_stale_echoes, 0.4)
-            for gid in sorted(engine.players.keys()):
+            elif engine.mode_name == "OldFashionDuel" and engine.duel_state.get("is_tournament"):
+                ds = engine.duel_state
+                pending_go = ds.get("pairing_gameover_pending")
+                if pending_go:
+                    ds["pairing_gameover_pending"] = None
+                    if not engine.use_simulator and engine.hw and engine.hardware_write_confirmed:
+                        await asyncio.to_thread(engine.hw.send_game_over, pending_go, engine.mode_name)
+                if not engine.use_simulator and engine.hw:
+                    active_pair = [g for g in (ds.get("active_pair") or []) if g in engine.players]
+                    duel_prompt_tick += 1
+                    if ds.get("subphase") == "WAIT_TRIGGER" and active_pair:
+                        if duel_prompt_tick % 100 == 0:
+                            prompt_gid = active_pair[(duel_prompt_tick // 100) % len(active_pair)]
+                            await asyncio.to_thread(engine.hw.send_manual_launch_prompt, prompt_gid)
+                        if duel_prompt_tick % 5 == 0:
+                            armed = ds.setdefault("trigger_armed", {})
+                            if not isinstance(armed, dict):
+                                armed = {}
+                                ds["trigger_armed"] = armed
+                            for gid in active_pair:
+                                pulled = await asyncio.to_thread(engine.hw.poll_manual_trigger, gid)
+                                if not pulled:
+                                    armed[gid] = True
+                                elif armed.get(gid, False):
+                                    engine._duel_round_triggered = True
+                                    break
+                    elif ds.get("subphase") == "COUNTDOWN" and not ds.get("countdown_sent", True) and active_pair:
+                        ds["countdown_sent"] = True
+                        cd_pair = int(ds.get("countdown_seconds", 5))
+                        ok = await asyncio.to_thread(engine.hw.start_countdown, active_pair, cd_pair)
+                        if not ok:
+                            ok = await asyncio.to_thread(engine.hw.start_countdown, active_pair, cd_pair)
+                        if ok:
+                            await asyncio.to_thread(engine.hw.drain_stale_echoes, 0.4)
+                        else:
+                            await _broadcast_toast(
+                                "Countdown echo failed — continuing without the gun countdown.",
+                                kind="countdown_echo_failed",
+                            )
+            if engine.mode_name == "OldFashionDuel" and engine.duel_state.get("is_tournament"):
+                ds = engine.duel_state
+                if ds.get("subphase") in ("INTRO", "WAIT", "DRAW", "ROUND_END"):
+                    poll_gids = [g for g in (ds.get("active_pair") or []) if g in engine.players]
+                else:
+                    poll_gids = []
+            else:
+                poll_gids = sorted(engine.players.keys())
+            for gid in poll_gids:
                 player = engine.players[gid]
                 downlink = None
                 if engine.mode_name == "OldFashionDuel":
@@ -1610,6 +1678,23 @@ def _run_simulator_bot_step() -> None:
             engine.sim.sim_scan_rfid(shooter, f"RF0{sg.tag_stage + 3}")
         else:
             engine.sim.sim_fire_shot(shooter, shooter)
+        return
+    if engine.mode_name == "OldFashionDuel":
+        ds = engine.duel_state
+        if ds.get("subphase") == "WAIT_TRIGGER":
+            engine._duel_round_triggered = True
+            return
+        if ds.get("subphase") != "DRAW" or not ds.get("can_shoot"):
+            return
+        pair = [g for g in (ds.get("active_pair") or gids) if g in engine.players]
+        if len(pair) < 2:
+            return
+        d_shooter = random.choice(pair)
+        d_target = next(g for g in pair if g != d_shooter)
+        if random.random() < 0.75:
+            engine.sim.sim_fire_shot(d_shooter, d_target)
+        else:
+            engine.sim.sim_fire_shot(d_shooter, None)
         return
 
     enemies = [

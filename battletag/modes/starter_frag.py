@@ -11,7 +11,7 @@ from typing import Any
 
 from battletag.modes.base import GameMode
 
-ORDER = 6
+ORDER = 2
 
 
 class StarterFragMode(GameMode):
@@ -35,7 +35,7 @@ class StarterFragMode(GameMode):
         "description": "Bridges Free Frag and full tactical modes: players have infinite Life Points, but limited ammunition that must be reloaded by scanning physical Ammo Boxes!",
         "bullets": [
             "Infinite Life Points",
-            "Limited ammo · Scan Ammo Box to reload",
+            "Optional Ammo Boxes · Infinite if off",
             "+1 pt per hit · Highest score wins",
         ],
         # The original fixes all three settings (playtime 5 min, ammo
@@ -44,11 +44,18 @@ class StarterFragMode(GameMode):
             "durationSeconds": 300,
             "countdownSeconds": 10,
             "gameLaunch": 0,
+            "ammoBox": 1,
             "ammunitions": 12,
             "clips": 3,
+            "swap": 0,
             "assist": 1,
         },
         "options": [
+            {"key": "durationSeconds", "label": "Match Duration", "choices": [120, 180, 300, 600, 900, 1200]},
+            {"key": "ammoBox", "label": "Ammo Boxes", "choices": [0, 1]},
+            {"key": "ammunitions", "label": "Shots per Clip", "choices": [6, 9, 12, 20]},
+            {"key": "clips", "label": "Clips (magazines)", "choices": [1, 2, 3, 4, 5]},
+            {"key": "swap", "label": "Swap Boxes", "choices": [0, 1]},
             {"key": "gameLaunch", "label": "Game Launch", "choices": [0, 1]},
         ],
     }

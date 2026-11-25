@@ -236,3 +236,68 @@ def test_eight_player_support_and_duel_tagnshoot() -> None:
     assert eng.players[2].frags == 3
 
 
+def test_add_simulated_gun_increments_and_guards() -> None:
+    eng = ArenaEngine()
+    eng.players.clear()
+    for expected in range(1, 9):
+        assert eng.add_simulated_gun() == expected
+        assert len(eng.players) == expected
+    # Capped at 8
+    assert eng.add_simulated_gun() == 8
+    assert len(eng.players) == 8
+
+    # Guarded outside LOBBY or in hardware mode
+    eng.players.clear()
+    eng.phase = "PLAYING"
+    assert eng.add_simulated_gun() == 0
+    eng.phase = "LOBBY"
+    eng.use_simulator = False
+    assert eng.add_simulated_gun() == 0
+
+
+def test_mode_duration_ammobox_and_tbase_options() -> None:
+    from battletag.protocol import build_config_packet
+
+    sf_opts = {o["key"]: o for o in MODE_CATALOG["StarterFrag"]["options"]}
+    assert sf_opts["durationSeconds"]["choices"] == [120, 180, 300, 600, 900, 1200]
+    assert sf_opts["ammoBox"]["choices"] == [0, 1]
+    assert sf_opts["ammunitions"]["choices"] == [6, 9, 12, 20]
+    assert sf_opts["clips"]["choices"] == [1, 2, 3, 4, 5]
+    assert sf_opts["swap"]["choices"] == [0, 1]
+
+    assert "tbase" not in MODE_CATALOG["FreeForAll"]["accessories"]
+    assert MODE_CATALOG["FreeForAll"]["accessories"] == ["ammo", "medkit"]
+
+    for mode_id in ("TeamFrag", "FreeForAll", "LastManStanding", "StarterFrag"):
+        assert MODE_CATALOG[mode_id]["defaults"]["ammoBox"] == 1
+        opts = {o["key"]: o for o in MODE_CATALOG[mode_id]["options"]}
+        assert opts["ammoBox"]["choices"] == [0, 1]
+        pkt = build_config_packet(2, mode_id, {"ammoBox": 0, "ammunitions": 9, "clips": 3})
+        # Infinite ammo config sends 999 ammo and 99 clips in 0x92 BE16 words.
+        assert b"\x03\xe7\x00\x63" in pkt  # 999 (0x03E7), 99 (0x0063)
+
+    # Simulator infinite ammo when ammoBox == 0
+    eng = ArenaEngine()
+    eng.select_mode("StarterFrag", {"ammoBox": 0})
+    eng.reset_stats_for_new_match()
+    eng.phase = "PLAYING"
+    before_ammo = eng.sim.guns[2].ammo
+    res = eng.sim.sim_fire_shot(2, 3)
+    assert res["ok"] is True
+    assert eng.sim.guns[2].ammo == before_ammo
+
+    # TeamFrag tBase == 0 auto-respawns after respawnTime without T-Base scan
+    tf_opts = {o["key"]: o for o in MODE_CATALOG["TeamFrag"]["options"]}
+    assert tf_opts["tBase"]["choices"] == [0, 1]
+    eng.select_mode("TeamFrag", {"tBase": 0, "lifePoints": 1, "respawnTime": 0})
+    eng.reset_stats_for_new_match()
+    eng.phase = "PLAYING"
+    eng.sim.sim_fire_shot(2, 3)
+    assert eng.sim.guns[3].life_points == 0
+    st = eng.sim.poll_gun(3, "TeamFrag")
+    assert st is not None
+    assert eng.sim.guns[3].life_points == 1
+
+
+
+

@@ -359,11 +359,11 @@ ANNOUNCER_POOLS: dict[str, dict[str, Any]] = {
         # A single clear "Fire!" (GLOBAL_83, 0.87 s): the original's
         # DUEL_06 ("Ready? Fire!") says the word at the very end of a
         # 2 s line and DUEL_07 is just "Quick draw!", both too easy to
-        # misjudge against the shooting window. Boosted 2x over default 0.9.
+        # misjudge against the shooting window. Boosted 2x again (4.0).
         "files": ["DLG_GM_GLOBAL_83.wav"],
         "priority": 0,
         "proba": 1.0,
-        "volume": 2.0,
+        "volume": 4.0,
         "subtitle": "FIRE!",
     },
     "duel_cheat": {

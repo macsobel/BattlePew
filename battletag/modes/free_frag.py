@@ -35,7 +35,7 @@ class FreeFragMode(GameMode):
         "bullets": [
             "Infinite life & infinite ammo",
             "No setup boxes required",
-            "+1 pt per hit · Highest score wins",
+            "+1 pt per hit · Timed or hit limit",
         ],
         "defaults": {
             "durationSeconds": 180,

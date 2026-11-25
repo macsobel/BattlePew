@@ -229,7 +229,10 @@ class SimulatorTransport:
 
         if self.mode_name in ("TeamFrag", "FreeForAll", "LastManStanding") and shooter.life_points <= 0:
             return {"ok": False, "error": "Shooter is out of life points (needs respawn/medkit)"}
-        if self.mode_name in ("TeamFrag", "FreeForAll", "LastManStanding", "StarterFrag", "OldFashionDuel"):
+        if self.mode_name == "OldFashionDuel" or (
+            self.mode_name in ("TeamFrag", "FreeForAll", "LastManStanding", "StarterFrag")
+            and int(self.settings.get("ammoBox", 1)) != 0
+        ):
             if shooter.ammo <= 0:
                 if shooter.auto_reload_pending:
                     return {"ok": False, "error": "Reloading — the next tick refills the ammo."}
@@ -267,7 +270,10 @@ class SimulatorTransport:
             if self.mode_name in ("TeamFrag", "FreeForAll", "LastManStanding"):
                 if target.life_points > 0:
                     target.life_points = max(0, target.life_points - 1)
-                    if target.life_points == 0 and self.mode_name == "FreeForAll":
+                    if target.life_points == 0 and (
+                        self.mode_name == "FreeForAll"
+                        or (self.mode_name == "TeamFrag" and int(self.settings.get("tBase", 1)) == 0)
+                    ):
                         # The timer-only respawn clock starts at death.
                         target.dead_at = time.time()
             return {"ok": True, "shot": True, "hit": True, "shooter": shooter_gid, "target": target_gid}
@@ -339,10 +345,13 @@ class SimulatorTransport:
                 g.clips -= 1
                 g.ammo = g.max_ammo
             g.auto_reload_pending = False
-        # FreeForAll timer-only respawn: the dead gun returns with full
-        # life/ammo once respawn_time has elapsed. No scan can shorten
-        # it, and the original has no T-Base respawn in this mode.
-        if mode_name == "FreeForAll" and g.life_points <= 0 and g.dead_at is not None:
+        # Timer-only respawn: the dead gun returns with full life/ammo once
+        # respawn_time has elapsed (FreeForAll, or TeamFrag with T-Bases off).
+        if (
+            (mode_name == "FreeForAll" or (mode_name == "TeamFrag" and int(self.settings.get("tBase", 1)) == 0))
+            and g.life_points <= 0
+            and g.dead_at is not None
+        ):
             if now - g.dead_at >= float(self.settings.get("respawnTime", 0)):
                 g.life_points = g.max_life
                 g.ammo = g.max_ammo

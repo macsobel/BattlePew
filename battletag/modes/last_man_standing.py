@@ -45,7 +45,7 @@ class LastManStandingMode(GameMode):
         "description": "High-stakes survival! Players have limited Life Points and NO T-Base respawns. Earn +1 pt per hit and +3 bonus per elimination — the last player standing takes victory!",
         "bullets": [
             "+1 pt per hit · +3 pt Elimination bonus",
-            "No T-Base respawns · limited Life & Ammo",
+            "No respawns · Limited life · Optional ammo",
             "Last player standing wins",
         ],
         "defaults": {
@@ -53,6 +53,7 @@ class LastManStandingMode(GameMode):
             "countdownSeconds": 10,
             "gameLaunch": 0,
             "lifePoints": 25,
+            "ammoBox": 1,
             "ammunitions": 9,
             "clips": 3,
             "swap": 0,
@@ -63,6 +64,7 @@ class LastManStandingMode(GameMode):
             {"key": "durationSeconds", "label": "Maximum Game Time", "choices": [300, 600, 900, 1200]},
             {"key": "gameLaunch", "label": "Game Launch", "choices": [0, 1]},
             {"key": "lifePoints", "label": "Player Hit Points", "choices": [5, 10, 25, 50, 75, 100]},
+            {"key": "ammoBox", "label": "Ammo Boxes", "choices": [0, 1]},
             {"key": "ammunitions", "label": "Shots per Clip", "choices": [6, 9, 12, 20]},
             {"key": "clips", "label": "Clips (magazines)", "choices": [1, 2, 3, 4, 5]},
             {"key": "swap", "label": "Swap Boxes", "choices": [0, 1]},

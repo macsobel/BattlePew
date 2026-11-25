@@ -43,9 +43,9 @@ class TagThenShootMode(GameMode):
         "ranking_bg": "/static/assets/textures/Ui/Ranking_Bg_TagNShoot.png",
         "description": "Solo timed turns! Each player runs the course in turn — pull the trigger to start (Manual) or wait for the countdown (Auto) — scans the T-Bases in order, and shoots the UbiConnect tower after each one. Best finished time wins across the rounds; points still count if the 60-second cap runs out!",
         "bullets": [
-            "Each player runs the course solo, in turn",
+            "Solo timed turns · 2 or 4 T-Base course",
             "Best finished time wins (60 s cap per run)",
-            "Every racer runs each round, in race order",
+            "Auto or per-racer trigger launch · 1+ rounds",
         ],
         "defaults": {
             "durationSeconds": 60,

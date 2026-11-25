@@ -672,6 +672,107 @@
     /* ==========================================================================
        SCREEN 1: LOBBY / SETUP
        ========================================================================== */
+    .modes-filter-bar {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 10px 18px;
+      padding: 10px 12px;
+      margin-bottom: 12px;
+      background: #F6F8FB;
+      border: 1px solid var(--border-steel);
+      border-radius: 8px;
+    }
+
+    .modes-filter-group {
+      display: flex;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 6px;
+    }
+
+    .modes-filter-label {
+      font-family: var(--font-display);
+      font-size: 0.72rem;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      color: var(--text-muted);
+      margin-right: 2px;
+    }
+
+    .mode-filter-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      padding: 4px 10px;
+      border-radius: 999px;
+      border: 1.5px solid var(--border-steel);
+      background: #FFFFFF;
+      color: var(--text-dark);
+      font-size: 0.78rem;
+      font-weight: 700;
+      cursor: pointer;
+      transition: all 0.14s ease;
+    }
+
+    .mode-filter-pill:hover:not(:disabled) {
+      border-color: var(--bt-orange);
+      color: var(--bt-orange);
+    }
+
+    .mode-filter-pill.active {
+      background: #FFF3EB;
+      border-color: var(--bt-orange);
+      color: var(--bt-orange);
+      box-shadow: 0 1px 4px rgba(242, 99, 20, 0.14);
+    }
+
+    .mode-filter-pill:disabled {
+      opacity: 0.45;
+      cursor: not-allowed;
+    }
+
+    .mode-filter-pill img {
+      width: 16px;
+      height: 16px;
+      object-fit: contain;
+    }
+
+    .modes-filter-status {
+      margin-left: auto;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 0.78rem;
+      font-weight: 600;
+      color: var(--text-muted);
+    }
+
+    .modes-filter-clear {
+      border: none;
+      background: transparent;
+      color: var(--bt-orange);
+      font-size: 0.78rem;
+      font-weight: 800;
+      cursor: pointer;
+      padding: 2px 4px;
+      text-decoration: underline;
+    }
+
+    .modes-empty-state {
+      grid-column: 1 / -1;
+      text-align: center;
+      padding: 28px 16px;
+      border: 1.5px dashed var(--border-steel);
+      border-radius: 9px;
+      background: #FAFBFD;
+      color: var(--text-muted);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 10px;
+    }
+
     .modes-grid {
       display: grid;
       grid-template-columns: repeat(auto-fill, minmax(210px, 1fr));
@@ -877,6 +978,15 @@
       text-transform: uppercase;
       letter-spacing: 0.04em;
       color: var(--text-dark);
+    }
+
+    .setting-item.is-disabled {
+      opacity: 0.45;
+      filter: grayscale(0.4);
+    }
+
+    .setting-item.is-disabled .segmented {
+      pointer-events: none;
     }
 
     .select-field, .input-field {
@@ -1315,6 +1425,94 @@
       color: #F59E0B;
       filter: drop-shadow(0 1px 4px rgba(245, 158, 11, 0.45));
       transform: scale(1.06);
+    }
+
+    .tv-duel-strip.phase-ready {
+      background: linear-gradient(180deg, #FFF7ED 0%, #FFEDD5 100%);
+      border: 3px solid var(--bt-orange);
+      box-shadow: 0 10px 30px rgba(242, 99, 20, 0.2);
+    }
+
+    .tv-duel-strip.phase-ready .tv-duel-badge { background: var(--bt-orange); }
+
+    .tv-duel-matchup {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 12px;
+      margin: 6px 0 8px;
+      flex-wrap: wrap;
+    }
+
+    .tv-duel-fighter {
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+      background: rgba(255, 255, 255, 0.9);
+      border: 1.5px solid var(--border-steel);
+      border-radius: 999px;
+      padding: 4px 12px 4px 6px;
+      font-family: var(--font-display);
+      font-size: 0.95rem;
+      color: var(--text-dark);
+    }
+
+    .tv-duel-fighter img {
+      width: 26px;
+      height: 26px;
+      object-fit: contain;
+    }
+
+    .tv-duel-fighter-pts {
+      color: var(--bt-orange);
+      font-weight: 900;
+    }
+
+    .tv-duel-vs {
+      font-family: var(--font-display);
+      font-size: 0.9rem;
+      font-weight: 900;
+      color: var(--bt-orange);
+      letter-spacing: 0.08em;
+    }
+
+    .tv-duel-actions {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-top: 6px;
+    }
+
+    .tv-duel-queue {
+      margin-top: 8px;
+      padding-top: 8px;
+      border-top: 1px dashed rgba(100, 116, 139, 0.3);
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      align-items: center;
+      gap: 6px;
+      font-size: 0.72rem;
+      font-weight: 700;
+      color: var(--text-muted);
+    }
+
+    .tv-duel-queue-label {
+      font-family: var(--font-display);
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      color: var(--text-dark);
+    }
+
+    .tv-duel-record {
+      font-size: 0.75rem;
+      font-weight: 800;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+      color: var(--text-muted);
+      margin-top: 2px;
     }
 
     /* TagThenShoot timed-turn strip: who's up, the live run clock,
@@ -3881,15 +4079,33 @@
             <span class="panel-caption">Choose a game mode to configure</span>
           </div>
           <div class="bt-panel-body">
+            <div class="modes-filter-bar" id="modesFilterBar">
+              <div class="modes-filter-group">
+                <span class="modes-filter-label">Players</span>
+                <button type="button" class="mode-filter-pill active" data-player-filter="all" onclick="setPlayerFilter('all')">All</button>
+                <button type="button" class="mode-filter-pill" data-player-filter="1" onclick="setPlayerFilter('1')">1</button>
+                <button type="button" class="mode-filter-pill" data-player-filter="2-8" onclick="setPlayerFilter('2-8')">2–8</button>
+              </div>
+              <div class="modes-filter-group">
+                <span class="modes-filter-label">Boxes</span>
+                <button type="button" class="mode-filter-pill active" data-box-filter="all" onclick="toggleBoxFilter('all')">All</button>
+                <button type="button" class="mode-filter-pill" data-box-filter="none" onclick="toggleBoxFilter('none')">No Boxes</button>
+                <button type="button" class="mode-filter-pill" data-box-filter="ammo" onclick="toggleBoxFilter('ammo')">
+                  <img src="/static/assets/textures/Ui/Pictograms/64x/RF01.png" alt="" /> Ammo Box
+                </button>
+                <button type="button" class="mode-filter-pill" data-box-filter="tbase" onclick="toggleBoxFilter('tbase')">
+                  <img src="/static/assets/textures/Ui/Pictograms/64x/RF03.png" alt="" /> T-Base
+                </button>
+                <button type="button" class="mode-filter-pill" data-box-filter="medkit" onclick="toggleBoxFilter('medkit')">
+                  <img src="/static/assets/textures/Ui/Pictograms/64x/RF07.png" alt="" /> Medkit
+                </button>
+              </div>
+              <div class="modes-filter-status">
+                <span id="modesFilterCount"></span>
+                <button type="button" class="modes-filter-clear" id="modesFilterClear" onclick="resetModeFilters()" style="display: none;">Clear</button>
+              </div>
+            </div>
             <div class="modes-grid" id="modesGrid"></div>
-
-            <!-- Coming Soon Expandable Tray -->
-            <details style="margin-top: 14px; border-top: 1px solid var(--border-steel); padding-top: 10px;">
-              <summary style="font-size: 0.78rem; font-weight: 700; color: var(--text-muted); cursor: pointer; text-transform: uppercase;">
-                ▶ Coming soon (Tier 2 Modes)
-              </summary>
-              <div id="tier2Tray" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 10px; margin-top: 10px;"></div>
-            </details>
           </div>
         </section>
 
@@ -4580,6 +4796,16 @@
       playAudioFile(path, vol);
     }
 
+    function duelRecordText(p, ds) {
+      if (!ds || !ds.match_records || !p) return '';
+      const rec = ds.match_records[String(p.gun_num)];
+      if (!rec) return '';
+      const w = rec.wins || 0;
+      const l = rec.losses || 0;
+      const d = rec.draws || 0;
+      return d > 0 ? `${w}W–${l}L–${d}D` : `${w}W–${l}L`;
+    }
+
     function renderDuelStarsHtml(p, state) {
       if (!state || !state.duel_state) return '';
       const maxR = Math.max(1, state.duel_state.max_rounds || (state.settings && state.settings.rounds) || 5);
@@ -4612,7 +4838,8 @@
         isLMS,
         isRace,
         showLife: ['TeamFrag', 'FreeForAll', 'LastManStanding'].includes(id),
-        showAmmo: ['TeamFrag', 'FreeForAll', 'LastManStanding', 'StarterFrag', 'OldFashionDuel'].includes(id),
+        showAmmo: ['TeamFrag', 'FreeForAll', 'LastManStanding', 'StarterFrag', 'OldFashionDuel'].includes(id)
+          && (id === 'OldFashionDuel' || !(state.settings && state.settings.ammoBox === 0)),
         showDuelStrip: isDuel && !!state.duel_state && ['COUNTDOWN', 'PLAYING', 'GAME_OVER'].includes(state.phase),
         showRaceStrip: isRace && !!state.race_state && ['PLAYING', 'GAME_OVER'].includes(state.phase),
       };
@@ -5238,7 +5465,63 @@
     /* -------------------------------------------------------------------------
        LOBBY VIEW RENDERING
        ------------------------------------------------------------------------- */
+    let lastLobbyState = null;
+    const modeFilters = { players: 'all', boxes: new Set() };
+
+    function setPlayerFilter(val) {
+      modeFilters.players = val;
+      if (lastLobbyState) renderLobbyView(lastLobbyState);
+    }
+
+    function toggleBoxFilter(boxKey) {
+      if (boxKey === 'all') {
+        modeFilters.boxes.clear();
+      } else if (boxKey === 'none') {
+        if (modeFilters.boxes.has('none')) {
+          modeFilters.boxes.delete('none');
+        } else {
+          modeFilters.boxes.clear();
+          modeFilters.boxes.add('none');
+        }
+      } else {
+        modeFilters.boxes.delete('none');
+        if (modeFilters.boxes.has(boxKey)) {
+          modeFilters.boxes.delete(boxKey);
+        } else {
+          modeFilters.boxes.add(boxKey);
+        }
+      }
+      if (lastLobbyState) renderLobbyView(lastLobbyState);
+    }
+
+    function resetModeFilters() {
+      modeFilters.players = 'all';
+      modeFilters.boxes.clear();
+      if (lastLobbyState) renderLobbyView(lastLobbyState);
+    }
+
+    function modeMatchesFilters(m) {
+      const pf = modeFilters.players;
+      if (pf === '1') {
+        if (m.min_players > 1 || m.max_players < 1) return false;
+      } else if (pf === '2-8') {
+        if (m.max_players < 2) return false;
+      }
+
+      if (modeFilters.boxes.size > 0) {
+        const acc = m.accessories || [];
+        let boxMatch = false;
+        if (modeFilters.boxes.has('none') && acc.length === 0) boxMatch = true;
+        for (const key of ['ammo', 'tbase', 'medkit']) {
+          if (modeFilters.boxes.has(key) && acc.includes(key)) boxMatch = true;
+        }
+        if (!boxMatch) return false;
+      }
+      return true;
+    }
+
     function renderLobbyView(state) {
+      lastLobbyState = state;
       const rosterCount = (state.players || []).length;
       const ACC_ICONS = {
         ammo: { src: '/static/assets/textures/Ui/Pictograms/64x/RF01.png', title: 'Uses Ammo Boxes' },
@@ -5248,9 +5531,35 @@
       const SOLO_SVG = `<svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor" aria-label="Solo"><circle cx="12" cy="7" r="4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7z"/></svg>`;
       const TEAMS_SVG = `<svg width="28" height="22" viewBox="0 0 28 24" fill="currentColor" aria-label="Teams"><circle cx="9" cy="8" r="3.5"/><path d="M2 20c0-3.3 3.1-6 7-6s7 2.7 7 6z"/><circle cx="19" cy="8" r="3.5"/><path d="M15 14.3c1-.2 2-.3 4-.3 3.9 0 7 2.7 7 6h-8.5c0-2.1-.9-4.1-2.5-5.7z"/></svg>`;
 
+      // Sync filter bar pills
+      document.querySelectorAll('#modesFilterBar [data-player-filter]').forEach((btn) => {
+        btn.classList.toggle('active', btn.dataset.playerFilter === modeFilters.players);
+      });
+      document.querySelectorAll('#modesFilterBar [data-box-filter]').forEach((btn) => {
+        const key = btn.dataset.boxFilter;
+        const isActive = key === 'all' ? modeFilters.boxes.size === 0 : modeFilters.boxes.has(key);
+        btn.classList.toggle('active', isActive);
+      });
+
+      const filteredCatalog = state.mode_catalog.filter((m) => modeMatchesFilters(m));
+      const isFiltered = modeFilters.players !== 'all' || modeFilters.boxes.size > 0;
+      const filterCountEl = document.getElementById('modesFilterCount');
+      const filterClearEl = document.getElementById('modesFilterClear');
+      if (filterCountEl) {
+        filterCountEl.textContent = isFiltered ? `Showing ${filteredCatalog.length} of ${state.mode_catalog.length}` : '';
+      }
+      if (filterClearEl) {
+        filterClearEl.style.display = isFiltered ? 'inline' : 'none';
+      }
+
       // 1. Mode cards: gray out incompatible modes and show hover explanation
       const modesGrid = document.getElementById('modesGrid');
-      modesGrid.innerHTML = state.mode_catalog.map((m) => {
+      modesGrid.innerHTML = filteredCatalog.length === 0
+        ? `<div class="modes-empty-state">
+             <div>No game modes match the selected filters.</div>
+             <button type="button" class="btn btn-secondary" onclick="resetModeFilters()">Clear Filters</button>
+           </div>`
+        : filteredCatalog.map((m) => {
         let incompatible = false;
         let incompatReason = '';
         if (rosterCount > 0) {
@@ -5301,17 +5610,14 @@
         </div>`;
       }).join('');
 
-      // 2. Coming soon preview
-      const t2Tray = document.getElementById('tier2Tray');
-      t2Tray.innerHTML = (state.tier2_preview || []).map((t2) => `
-        <div style="background: #F4F5F8; border: 1px solid var(--border-steel); border-radius: 6px; padding: 8px 10px;">
-          <div style="font-family: var(--font-display); font-size: 0.82rem; text-transform: uppercase;">${t2.title}</div>
-          <div style="font-size: 0.72rem; color: var(--text-muted);">${t2.summary}</div>
-        </div>
-      `).join('');
-
-      // 3. Settings Grid: horizontal segmented controls with sliding swish indicator
+      // 2. Settings Grid: horizontal segmented controls with sliding swish indicator
       const isRaceSettings = state.mode.id === 'TagThenShoot';
+      const isDuelSettings = state.mode.id === 'OldFashionDuel';
+      const roundsExplainText = isRaceSettings
+        ? 'How many times every racer runs the course. Each racer runs once per round, in race order; the best finished time wins.'
+        : isDuelSettings && rosterCount > 2
+        ? `With ${rosterCount} players, everyone plays 1v1 round-robin (${(rosterCount * (rosterCount - 1)) / 2} duels, ${state.settings && state.settings.rounds ? state.settings.rounds : 5} round${state.settings && state.settings.rounds === 1 ? '' : 's'} each). Either duelist pulls their trigger when ready to start each duel.`
+        : 'How many quickdraw rounds the duel lasts (1, 3, 5, or 7).';
       const SETTING_EXPLAIN = {
         durationSeconds: 'How long the match lasts. The timer runs on the Arena Master.',
         gameLaunch: isRaceSettings
@@ -5322,20 +5628,20 @@
         ammunitions: 'Shots in each clip.',
         clips: 'Spare clips. Scan an ammo box to reload.',
         teamFrag: 'When on, teammates’ shots hurt each other.',
-        rounds: isRaceSettings
-          ? 'How many times every racer runs the course. Each racer runs once per round, in race order; the best finished time wins.'
-          : 'How many quickdraw rounds the duel lasts.',
+        rounds: roundsExplainText,
         numberOfBase: 'T-Bases on the course. Each base must be tagged, then the tower shot, in order.',
+        ammoBox: 'Ammo boxes required to reload clips. When No, players have infinite ammo.',
+        tBase: 'When Yes, eliminated players scan their team T-Base to respawn. When No, players respawn automatically after the Respawn Delay.',
         medkit: 'Medkit boxes available to heal during combat.',
         swap: 'When on, you must alternate between the two different Ammo/Medkit boxes to reload or heal.',
-        respawnTime: 'Delay after scanning a T-Base before returning to the game (cannot shoot or be hit during this time).',
+        respawnTime: 'Delay before returning to the game after being knocked out (cannot shoot or be hit during this time).',
       };
       const segLabel = (key, c) => {
         if (key === 'durationSeconds') return `${Math.round(c / 60)}m`;
         if (key === 'gameLaunch') return c === 0 ? 'Auto' : (isRaceSettings ? 'Manual (Each Player)' : 'Manual (P1 Trigger)');
         if (key === 'scoreLimit') return c === 0 ? 'Timed' : `${c}`;
         if (key === 'teamFrag' || key === 'swap') return c === 1 ? 'On' : 'Off';
-        if (key === 'medkit') return c === 1 ? 'Yes' : 'No';
+        if (key === 'medkit' || key === 'ammoBox' || key === 'tBase') return c === 1 ? 'Yes' : 'No';
         if (key === 'respawnTime') return c === 0 ? 'Instant' : `${c}s`;
         return `${c}`;
       };
@@ -5345,6 +5651,12 @@
 
       const modeId = state.mode.id;
       const options = state.mode.options || [];
+      const noAmmoBoxes = state.settings && state.settings.ammoBox === 0;
+      const isOptionDisabled = (optKey) => {
+        if (optKey === 'ammunitions' || optKey === 'clips') return noAmmoBoxes;
+        if (optKey === 'swap') return noAmmoBoxes && (modeId === 'StarterFrag' || !state.settings || !state.settings.medkit);
+        return false;
+      };
 
       // Re-render when mode changes; smoothly sync swish pill when state updates within the same mode
       if (sGrid.dataset.modeId !== modeId) {
@@ -5353,14 +5665,15 @@
           const curVal = state.settings[opt.key];
           const choices = opt.choices || [];
           const activeIdx = Math.max(0, choices.indexOf(curVal));
+          const isOptDisabled = isOptionDisabled(opt.key);
           const explain = SETTING_EXPLAIN[opt.key] ? `<p class="setting-explain">${SETTING_EXPLAIN[opt.key]}</p>` : '';
           return `
-            <div class="setting-item">
+            <div class="setting-item${isOptDisabled ? ' is-disabled' : ''}">
               <label>${opt.label}</label>
               <div class="segmented horizontal" role="radiogroup" aria-label="${opt.label}" data-setting-key="${opt.key}" style="--active-index: ${activeIdx}; --total-items: ${choices.length};">
                 <div class="segmented-swish" aria-hidden="true"></div>
                 ${choices.map((c, idx) => `
-                  <button type="button" role="radio" aria-checked="${idx === activeIdx}" class="segmented-btn ${idx === activeIdx ? 'active' : ''}" onclick="selectSettingOption(this, '${opt.key}', ${c}, ${idx})">${segLabel(opt.key, c)}</button>
+                  <button type="button" role="radio" aria-checked="${idx === activeIdx}" class="segmented-btn ${idx === activeIdx ? 'active' : ''}"${isOptDisabled ? ' disabled' : ''} onclick="selectSettingOption(this, '${opt.key}', ${c}, ${idx})">${segLabel(opt.key, c)}</button>
                 `).join('')}
               </div>
               ${explain}
@@ -5371,6 +5684,14 @@
           const curVal = state.settings[opt.key];
           const seg = sGrid.querySelector(`.segmented.horizontal[data-setting-key="${opt.key}"]`);
           if (!seg) return;
+          const isOptDisabled = isOptionDisabled(opt.key);
+          const itemEl = seg.closest('.setting-item');
+          if (itemEl) {
+            itemEl.classList.toggle('is-disabled', isOptDisabled);
+            const explainEl = itemEl.querySelector('.setting-explain');
+            if (explainEl && SETTING_EXPLAIN[opt.key]) explainEl.textContent = SETTING_EXPLAIN[opt.key];
+          }
+          seg.querySelectorAll('.segmented-btn').forEach((b) => { b.disabled = isOptDisabled; });
           const choices = opt.choices || [];
           const activeIdx = Math.max(0, choices.indexOf(curVal));
           const currentIdx = parseInt(seg.style.getPropertyValue('--active-index') || '0', 10);
@@ -5715,6 +6036,18 @@
       }
     }
 
+    async function skipDuelPairing() {
+      try {
+        const res = await fetch('/api/duel/skip', { method: 'POST' });
+        if (!res.ok) {
+          const err = await res.json().catch(() => ({}));
+          await showAppAlert(err.detail || 'Could not skip this duel right now.', { title: 'Skip Duel' });
+        }
+      } catch (err) {
+        console.error(err);
+      }
+    }
+
     function formatEventText(text, players) {
       if (!text) return '';
       let out = text;
@@ -5847,43 +6180,90 @@
         }
         clockDigits.classList.toggle('urgent', rs.turn_phase === 'RUNNING' && state.remaining_seconds != null && state.remaining_seconds <= 15);
       } else {
-        clockDigits.textContent = state.clock;
+        const ds = state.duel_state;
+        const isDuelMode = state.mode && state.mode.id === 'OldFashionDuel' && !!ds;
+        const isDuelTriggerWait = isDuelMode && ['MATCH_INTRO', 'WAIT_TRIGGER'].includes(ds.subphase);
+        clockDigits.textContent = isDuelTriggerWait ? 'READY' : state.clock;
         // Timerless modes (duel, LMS) count up: remaining_seconds is
         // null and the clock shows elapsed time, never urgent.
         const untimed = state.mode && state.mode.timed === false;
         const scoreTarget = state.mode && state.mode.id === 'FreeFrag' && state.settings && state.settings.scoreLimit > 0
           ? ` · First to ${state.settings.scoreLimit}` : '';
-        const isDuelCountdown = state.mode && state.mode.id === 'OldFashionDuel'
-          && state.duel_state
-          && ['INTRO', 'ROUND_END'].includes(state.duel_state.subphase)
-          && (state.duel_state.countdown_remaining || 0) > 0;
-        const elapsedLabel = isDuelCountdown
-          ? ((state.duel_state.round || 0) === 0 ? 'Round 1 Starts In...' : 'Next Round Starts In...')
-          : (state.mode && state.mode.id === 'OldFashionDuel'
-            ? `Round ${Math.max(1, (state.duel_state && state.duel_state.round) || 1)} Time`
-            : 'Elapsed Time');
+        const isDuelCountdown = isDuelMode
+          && ['INTRO', 'ROUND_END', 'COUNTDOWN'].includes(ds.subphase)
+          && (ds.countdown_remaining || 0) > 0;
+        let elapsedLabel = 'Elapsed Time';
+        if (isDuelMode) {
+          if (ds.subphase === 'COUNTDOWN') elapsedLabel = 'Duel Starts In...';
+          else if (isDuelTriggerWait) elapsedLabel = 'Waiting for Duelists';
+          else if (ds.subphase === 'MATCH_END') elapsedLabel = 'Duel Complete';
+          else if (isDuelCountdown) elapsedLabel = (ds.round || 0) === 0 ? 'Round 1 Starts In...' : 'Next Round Starts In...';
+          else elapsedLabel = `Round ${Math.max(1, ds.round || 1)} Time`;
+        }
         clockSub.textContent = (untimed ? elapsedLabel : 'Time Remaining') + scoreTarget;
         clockDigits.classList.toggle('urgent', isDuelCountdown || (!untimed && state.remaining_seconds != null && state.remaining_seconds <= 15));
       }
 
-      // Duel round display: current round, subphase, round winner, per-round results.
+      // Duel round display: current pairing/round, subphase, round winner, upcoming queue.
       // Hidden during the GAME_OVER "See Results" gate so round chips don't spoil the winner.
       const duelStrip = document.getElementById('duelStrip');
       if (duelStrip) {
         const ds = state.duel_state;
         const showDuel = modeDisplay(state).showDuelStrip && !isGameOverGate;
         if (showDuel) {
+          const playersByGid = {};
+          (state.players || []).forEach((p) => { playersByGid[p.gun_id] = p; });
+          const isTourn = Boolean(ds.is_tournament);
+          const activePair = Array.isArray(ds.active_pair) ? ds.active_pair : [];
+          const pa = activePair[0] != null ? playersByGid[activePair[0]] : null;
+          const pb = activePair[1] != null ? playersByGid[activePair[1]] : null;
+          const paName = pa ? esc((pa.name || `P${pa.gun_num}`).toUpperCase()) : 'PLAYER A';
+          const pbName = pb ? esc((pb.name || `P${pb.gun_num}`).toUpperCase()) : 'PLAYER B';
+          const roundScores = ds.round_scores || {};
+          const scoreA = pa ? (roundScores[pa.gun_id] || 0) : 0;
+          const scoreB = pb ? (roundScores[pb.gun_id] || 0) : 0;
+
           const rndNum = Math.max(1, ds.round || 0);
-          const roundLabel = ds.subphase === 'WAIT'
-            ? `ROUND ${rndNum} OF ${ds.max_rounds} · NEW ROUND`
-            : `ROUND ${rndNum} OF ${ds.max_rounds}`;
+          let badgeText;
+          if (isTourn) {
+            const mLabel = `DUEL ${(ds.match_index || 0) + 1} OF ${ds.total_matches || 1}`;
+            if (['MATCH_INTRO', 'WAIT_TRIGGER', 'COUNTDOWN'].includes(ds.subphase)) {
+              badgeText = `${mLabel} · GET READY`;
+            } else if (['MATCH_END', 'COMPLETE'].includes(ds.subphase)) {
+              badgeText = `${mLabel} · COMPLETE`;
+            } else {
+              badgeText = `${mLabel} · ROUND ${rndNum} OF ${ds.max_rounds}`;
+            }
+          } else {
+            badgeText = ds.subphase === 'WAIT'
+              ? `ROUND ${rndNum} OF ${ds.max_rounds} · NEW ROUND`
+              : `ROUND ${rndNum} OF ${ds.max_rounds}`;
+          }
+
           const nextSecs = ds.next_transition_at
             ? Math.max(0, Math.ceil(ds.next_transition_at - Date.now() / 1000))
             : 0;
           let headText = '';
           let subText = '';
           let phaseCls = '';
-          if (ds.subphase === 'WAIT') {
+          let actionBtns = '';
+
+          if (ds.subphase === 'MATCH_INTRO') {
+            phaseCls = 'phase-ready';
+            headText = `NEXT DUEL: ${paName} VS ${pbName}`;
+            subText = 'Step up to your positions…';
+          } else if (ds.subphase === 'WAIT_TRIGGER') {
+            phaseCls = 'phase-ready';
+            headText = 'PULL TRIGGER WHEN READY';
+            subText = `Either ${paName} or ${pbName}: pull your T-Blaster trigger once in position`;
+            actionBtns += state.use_simulator
+              ? `<button class="tv-race-trigger-btn" style="margin-top:0;" onclick="triggerManualLaunchSim()">Pull Trigger (Simulator)</button>`
+              : `<button class="tv-race-trigger-btn" style="margin-top:0;" onclick="triggerManualLaunchSim()">Start Duel Now</button>`;
+          } else if (ds.subphase === 'COUNTDOWN') {
+            phaseCls = 'phase-wait';
+            headText = `GET READY — ${ds.countdown_remaining || 0}…`;
+            subText = 'Countdown running on both duelists’ blasters';
+          } else if (ds.subphase === 'WAIT') {
             phaseCls = 'phase-wait';
             headText = 'Wait to hear "Fire!"';
             subText = 'T-Blasters along your leg';
@@ -5898,21 +6278,69 @@
             const cd = ds.countdown_remaining || 0;
             subText = hasMore
               ? (cd > 0 ? `Next round starts in ${cd}…` : (nextSecs > 0 ? `Next round starting in ${nextSecs}s…` : 'Starting next round…'))
-              : 'Final round complete — finishing duel…';
+              : (isTourn && ((ds.match_index || 0) + 1 < (ds.total_matches || 1))
+                ? 'Final round complete — wrapping up duel…'
+                : 'Final round complete — finishing duel…');
+          } else if (ds.subphase === 'MATCH_END') {
+            phaseCls = 'phase-end';
+            headText = ds.last_match_result_text || 'DUEL COMPLETE';
+            const nextPair = Array.isArray(ds.next_pair) ? ds.next_pair : [];
+            const npA = nextPair[0] != null ? playersByGid[nextPair[0]] : null;
+            const npB = nextPair[1] != null ? playersByGid[nextPair[1]] : null;
+            subText = (npA && npB)
+              ? `Up Next: ${(npA.name || `P${npA.gun_num}`).toUpperCase()} vs ${(npB.name || `P${npB.gun_num}`).toUpperCase()}…`
+              : 'Preparing final results…';
           } else if (ds.subphase === 'COMPLETE') {
             phaseCls = 'phase-end';
-            headText = 'DUEL COMPLETE';
-            subText = 'All rounds finished!';
+            headText = isTourn ? 'TOURNAMENT COMPLETE' : 'DUEL COMPLETE';
+            subText = isTourn ? 'All duels finished!' : 'All rounds finished!';
           } else {
             const cd = ds.countdown_remaining || 0;
             headText = cd > 0 ? `ROUND 1 STARTS IN ${cd}…` : 'GET READY FOR ROUND 1…';
             subText = 'Duelists take your positions';
           }
+
+          if (isTourn && state.phase === 'PLAYING' && ds.subphase !== 'COMPLETE') {
+            actionBtns += `<button class="tv-race-skip-btn" style="margin-top:0;margin-left:0;" onclick="skipDuelPairing()" title="Skip this pairing and move to the next duel">Skip Duel</button>`;
+          }
+
+          const matchupHtml = (isTourn && pa && pb && ds.subphase !== 'COMPLETE')
+            ? `<div class="tv-duel-matchup">
+                 <span class="tv-duel-fighter">
+                   <img src="${pa.avatar_url}" alt="" />
+                   <span>${paName}</span>
+                   <span class="tv-duel-fighter-pts">${scoreA}</span>
+                 </span>
+                 <span class="tv-duel-vs">VS</span>
+                 <span class="tv-duel-fighter">
+                   <img src="${pb.avatar_url}" alt="" />
+                   <span>${pbName}</span>
+                   <span class="tv-duel-fighter-pts">${scoreB}</span>
+                 </span>
+               </div>`
+            : '';
+
+          const upcomingList = isTourn && Array.isArray(ds.upcoming_matches) ? ds.upcoming_matches : [];
+          const queueHtml = upcomingList.length > 0 && ds.subphase !== 'COMPLETE'
+            ? `<div class="tv-duel-queue">
+                 <span class="tv-duel-queue-label">Up Next:</span>
+                 ${upcomingList.map((pair) => {
+                   const uA = playersByGid[pair[0]];
+                   const uB = playersByGid[pair[1]];
+                   if (!uA || !uB) return '';
+                   return `<span class="tv-duel-chip">${esc((uA.name || `P${uA.gun_num}`).toUpperCase())} vs ${esc((uB.name || `P${uB.gun_num}`).toUpperCase())}</span>`;
+                 }).join('')}
+               </div>`
+            : '';
+
           duelStrip.className = 'tv-duel-strip' + (phaseCls ? ` ${phaseCls}` : '');
           duelStrip.innerHTML =
-            `<div class="tv-duel-badge">${esc(roundLabel)}</div>`
+            `<div class="tv-duel-badge">${esc(badgeText)}</div>`
+            + matchupHtml
             + `<div class="tv-duel-head">${esc(headText)}</div>`
-            + (subText ? `<div class="tv-duel-sub">${esc(subText)}</div>` : '');
+            + (subText ? `<div class="tv-duel-sub">${esc(subText)}</div>` : '')
+            + (actionBtns ? `<div class="tv-duel-actions">${actionBtns}</div>` : '')
+            + queueHtml;
           duelStrip.style.display = '';
         } else {
           duelStrip.className = 'tv-duel-strip';
@@ -6083,15 +6511,19 @@
         // the next action is the tower shot, not the next base.
         // Cards never fade in this mode.
         const rs = state.race_state;
+        const ds = state.duel_state;
+        const isDuelTourn = isDuel && ds && ds.is_tournament;
+        const isDuelActive = isDuelTourn && (ds.active_pair || []).includes(p.gun_id) && ds.subphase !== 'COMPLETE';
+        const isDuelNext = isDuelTourn && !isDuelActive && (ds.next_pair || []).includes(p.gun_id) && ds.subphase !== 'COMPLETE';
+        const duelRecText = isDuelTourn ? duelRecordText(p, ds) : '';
         const raceBases = Math.max(1, parseInt(state.settings?.numberOfBase ?? 4, 10) || 4);
         const raceMaxRounds = Math.max(1, (rs && rs.max_rounds) || 1);
         const raceRound = Math.max(1, (rs && rs.round_index) || 1);
-        const isUpNow = isRace && rs && rs.active_gun_id === p.gun_id && ['PLAYER_INTRO', 'WAIT_TRIGGER', 'COUNTDOWN', 'RUNNING'].includes(rs.turn_phase);
+        const isUpNow = (isRace && rs && rs.active_gun_id === p.gun_id && ['PLAYER_INTRO', 'WAIT_TRIGGER', 'COUNTDOWN', 'RUNNING'].includes(rs.turn_phase))
+          || isDuelActive;
         // UP NEXT comes from the server's single derivation
-        // (race_state.next_gun_id): the following racer in frozen
-        // order, wrapping across rounds; absent on the final run and
-        // in solo races, so the two pills can never share a card.
-        const isUpNext = isRace && rs && rs.next_gun_id === p.gun_id;
+        // (race_state.next_gun_id or duel_state.next_pair), so the two pills can never share a card.
+        const isUpNext = (isRace && rs && rs.next_gun_id === p.gun_id) || isDuelNext;
         const history = Array.isArray(p.run_history) ? p.run_history : [];
         const entryForRound = (r) => history.find((e) => e.round === r);
         const raceChipsHtml = () => {
@@ -6132,7 +6564,10 @@
           }
         }
 
-        const vitalsHtml = isRace ? raceVitalsHtml : ((!showLife && !showAmmo)
+        const isDuelCardActive = !isDuel || !(ds && ds.is_tournament) || isDuelActive;
+        const vitalsHtml = isRace ? raceVitalsHtml : (isDuel && ds && ds.is_tournament && !isDuelCardActive)
+          ? `<div class="tv-duel-record">${esc(duelRecText || 'WAITING FOR DUEL')}</div>`
+          : ((!showLife && !showAmmo)
           ? `<div class="tv-inf-row">
                <span style="color: var(--team-green); display:inline-flex; align-items:center; gap:4px;">${iconHeart} ∞</span>
                <span style="color: var(--team-blue); display:inline-flex; align-items:center; gap:4px;">${iconBlaster} ∞</span>
@@ -6167,7 +6602,7 @@
                 ${isLeader ? '<span class="tv-leader-crown">👑</span>' : ''}<span style="overflow: hidden; text-overflow: ellipsis;">${esc((p.name || '').toUpperCase())}</span>
               </div>
               ${isLMS && p.life_points === 0 ? `<div><span class="tv-elim-badge">ELIMINATED</span></div>` : ''}
-              ${isUpNow ? `<div><span class="tv-up-badge">UP NOW</span></div>` : ''}
+              ${isUpNow ? `<div><span class="tv-up-badge">${isDuel ? 'DUELING NOW' : 'UP NOW'}</span></div>` : ''}
               ${isUpNext ? `<div><span class="tv-next-badge">UP NEXT</span></div>` : ''}
               ${vitalsHtml}
               ${isRace && isUpNow ? `<div class="tv-tag-line">Tags ${p.tags} · Tower ${p.tower_hits}</div>` : ''}
@@ -6177,6 +6612,7 @@
               <div class="tv-score-num ${scorePopped ? 'score-pop' : ''}" style="color: ${scoreColor};">${displayScore}</div>
               <div class="tv-score-label">${scoreLabel}</div>
               ${isLMS ? `<div class="tv-score-sub">${p.frags} ${p.frags === 1 ? 'Elim' : 'Elims'}</div>` : ''}
+              ${isDuelTourn && duelRecText ? `<div class="tv-score-sub">${esc(duelRecText)}</div>` : ''}
             </div>
           </div>
         `;
@@ -6190,7 +6626,15 @@
       const gridSignature = JSON.stringify([
         state.mode.id,
         state.phase,
-        state.duel_state ? [state.duel_state.max_rounds, state.duel_state.round_results] : null,
+        state.duel_state ? [
+          state.duel_state.max_rounds,
+          state.duel_state.round_results,
+          state.duel_state.match_index,
+          state.duel_state.subphase,
+          state.duel_state.active_pair,
+          state.duel_state.next_pair,
+          state.duel_state.match_records,
+        ] : null,
         state.race_state ? [state.race_state.turn_phase, state.race_state.active_gun_id, state.race_state.next_gun_id, state.race_state.turn_index, state.race_state.round_index, state.race_state.max_rounds, state.race_state.launch_mode] : null,
         state.race_roster || null,
         gridPlayers.map((p) => [p.gun_id, p.name, p.avatar, p.score, p.frags, p.life_points, p.max_life, p.ammo, p.max_ammo, p.clips, p.team_id, p.team_color, p.tags, p.tower_hits, p.run_history, p.best_run_time]),
@@ -6702,7 +7146,7 @@
               ${raceRoundChips(p)}
               <span class="results-stat-chip" title="Total points across all runs">${p.score} pts total</span>
             </div>` : isDuel ? `<div class="results-rank-stats">
-              ${renderDuelStarsHtml(p, state)}
+              ${state.duel_state && state.duel_state.is_tournament ? `<span class="results-stat-chip" title="Duel Match Record">${esc(duelRecordText(p, state.duel_state))}</span>` : renderDuelStarsHtml(p, state)}
               <span class="results-stat-chip" title="Hits Landed">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3"/></svg>
                 ${p.hits_landed}
@@ -7255,8 +7699,8 @@
           </div>
           <div style="flex: 1;">
             <div style="font-family: var(--font-display); font-size: 1.1rem; color: var(--text-dark);">${esc((p.name || '').toUpperCase())}</div>
-            <div style="font-size: 0.8rem; font-weight: 700; color: var(--text-muted);">${p.score} pts · ${p.accuracy}% accuracy · ${p.shots_fired} shots fired${appState.mode && appState.mode.id === 'OldFashionDuel' ? ` · ${p.early_fires || 0} early fire${(p.early_fires || 0) === 1 ? '' : 's'}` : ''}</div>
-            ${appState.mode && appState.mode.id === 'OldFashionDuel' ? `<div style="margin-top: 6px;">${renderDuelStarsHtml(p, appState)}</div>` : ''}
+            <div style="font-size: 0.8rem; font-weight: 700; color: var(--text-muted);">${p.score} pts · ${p.accuracy}% accuracy · ${p.shots_fired} shots fired${appState.mode && appState.mode.id === 'OldFashionDuel' ? ` · ${p.early_fires || 0} early fire${(p.early_fires || 0) === 1 ? '' : 's'}${appState.duel_state && appState.duel_state.is_tournament ? ` · ${duelRecordText(p, appState.duel_state)}` : ''}` : ''}</div>
+            ${appState.mode && appState.mode.id === 'OldFashionDuel' && !(appState.duel_state && appState.duel_state.is_tournament) ? `<div style="margin-top: 6px;">${renderDuelStarsHtml(p, appState)}</div>` : ''}
           </div>
         </div>
         <div class="pstats-highlights">
@@ -8010,6 +8454,23 @@
           b.setAttribute('aria-checked', i === idx);
         });
       }
+      if (key === 'ammoBox' || key === 'medkit') {
+        const curAmmo = key === 'ammoBox' ? val : (appState && appState.settings ? appState.settings.ammoBox : 1);
+        const curMed = key === 'medkit' ? val : (appState && appState.settings ? appState.settings.medkit : 0);
+        const noAmmo = curAmmo === 0;
+        const curModeId = appState && appState.mode ? appState.mode.id : '';
+        [
+          ['ammunitions', noAmmo],
+          ['clips', noAmmo],
+          ['swap', noAmmo && (curModeId === 'StarterFrag' || !curMed)],
+        ].forEach(([depKey, disabled]) => {
+          const depSeg = document.querySelector(`#settingsGrid .segmented.horizontal[data-setting-key="${depKey}"]`);
+          if (!depSeg) return;
+          const itemEl = depSeg.closest('.setting-item');
+          if (itemEl) itemEl.classList.toggle('is-disabled', disabled);
+          depSeg.querySelectorAll('.segmented-btn').forEach((b) => { b.disabled = disabled; });
+        });
+      }
       updateSetting(key, val);
     }
 
@@ -8333,6 +8794,43 @@
         body: JSON.stringify({ action: 'set_guns', num_guns: parseInt(num, 10) })
       });
     }
+
+    async function addSimGun() {
+      if (!appState || !appState.use_simulator || appState.phase !== 'LOBBY') return;
+      await fetch('/api/sim/action', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'add_gun' }),
+      });
+    }
+
+    window.__battlepewTryAddSimPlayer = function () {
+      const el = document.activeElement;
+      const tag = el && el.tagName ? el.tagName.toUpperCase() : '';
+      if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT' || (el && el.isContentEditable)) {
+        return false;
+      }
+      if (!appState || !appState.use_simulator || appState.phase !== 'LOBBY') {
+        return false;
+      }
+      addSimGun();
+      return true;
+    };
+
+    (function wireSimAddPlayerShortcut() {
+      const isMac = /Mac|iPhone|iPad|iPod/i.test(navigator.platform || navigator.userAgent || '');
+      window.addEventListener('keydown', (e) => {
+        if (e.repeat) return;
+        const primaryMod = isMac
+          ? (e.metaKey && !e.ctrlKey)
+          : (e.ctrlKey && !e.metaKey);
+        if (!primaryMod || e.altKey || e.shiftKey) return;
+        if ((e.key || '').toLowerCase() !== 'a') return;
+        if (window.__battlepewTryAddSimPlayer()) {
+          e.preventDefault();
+        }
+      });
+    })();
 
     async function toggleBots() {
       await fetch('/api/sim/action', {
