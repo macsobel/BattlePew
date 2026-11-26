@@ -169,10 +169,12 @@ def extract_assets_from_installer(
             if res.returncode != 0:
                 raise RuntimeError(f"afconvert failed for {ogg_name}: {res.stderr.strip()}")
         elif ffmpeg:
+            run_kwargs: dict[str, object] = {"capture_output": True, "text": True}
+            if sys.platform == "win32":
+                run_kwargs["creationflags"] = getattr(subprocess, "CREATE_NO_WINDOW", 0)
             res = subprocess.run(
                 [ffmpeg, "-y", "-i", str(ogg_path), str(wav_path)],
-                capture_output=True,
-                text=True,
+                **run_kwargs,
             )
             if res.returncode != 0:
                 raise RuntimeError(f"ffmpeg failed for {ogg_name}: {res.stderr.strip()}")

@@ -75,6 +75,27 @@ class DesktopApi:
         if self._window is not None:
             self._window.destroy()
 
+    def select_installer(self) -> str | None:
+        if self._window is None:
+            return None
+        import webview
+
+        dialog_type = getattr(
+            getattr(webview, "FileDialog", None),
+            "OPEN",
+            getattr(webview, "OPEN_DIALOG", 10),
+        )
+        selection = self._window.create_file_dialog(
+            dialog_type,
+            allow_multiple=False,
+            file_types=("BattleTag Installer (*.zip;*.cab)", "All files (*.*)"),
+        )
+        if not selection:
+            return None
+        if isinstance(selection, (list, tuple)):
+            return str(selection[0]) if selection else None
+        return str(selection)
+
 
 _KEYBIND_JS = """
 (() => {

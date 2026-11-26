@@ -522,9 +522,39 @@ class RealHIDTransport:
             raise RuntimeError(
                 f"No device found for VID=0x{VID:04X} PID=0x{PID:04X}. Check USB cable."
             )
-        self.dev = hid.device()
-        self.dev.open_path(devices[0]["path"])
-        self.log(f"Opened UbiConnect device: {devices[0].get('product_string', 'UbiConnect')}")
+        # Prefer vendor-defined HID collections (usage_page >= 0xFF00) first so
+        # Windows composite/multi-collection devices don't pick a non-writable path.
+        ordered = sorted(
+            devices,
+            key=lambda d: (0 if int(d.get("usage_page", 0) or 0) >= 0xFF00 else 1),
+        )
+        last_exc: Exception | None = None
+        for info in ordered:
+            dev = hid.device()
+            try:
+                dev.open_path(info["path"])
+                self.dev = dev
+                self.log(
+                    f"Opened UbiConnect device: {info.get('product_string', 'UbiConnect')} "
+                    f"(usage_page=0x{int(info.get('usage_page', 0) or 0):04X})"
+                )
+                return
+            except Exception as exc:
+                last_exc = exc
+                try:
+                    dev.close()
+                except Exception:
+                    pass
+        hint = ""
+        if sys.platform.startswith("linux"):
+            hint = (
+                " On Linux, grant USB HID access with a udev rule: "
+                'SUBSYSTEM=="hidraw", ATTRS{idVendor}=="044f", ATTRS{idProduct}=="b365", MODE="0666"'
+            )
+        raise RuntimeError(
+            f"Found UbiConnect (VID=0x{VID:04X} PID=0x{PID:04X}) but could not open HID interface: "
+            f"{last_exc}.{hint}"
+        ) from last_exc
 
     @_serialized
     def close(self) -> None:
