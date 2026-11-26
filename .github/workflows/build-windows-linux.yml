@@ -154,7 +154,7 @@ jobs:
           Terminal=false
           EOF
           desktop-file-validate AppDir/battlepew.desktop
-          python -c "from PIL import Image; img = Image.open('macos-app/Resources/AppIcon-1024.png').convert('RGBA').resize((256, 256), Image.LANCZOS); img.save('AppDir/battlepew.png'); img.save('AppDir/.DirIcon'); img.save('AppDir/usr/share/icons/hicolor/256x256/apps/battlepew.png')"
+          python -c "from PIL import Image; img = Image.open('macos-app/Resources/AppIcon-1024.png').convert('RGBA').resize((256, 256), Image.LANCZOS); img.save('AppDir/battlepew.png', format='PNG'); img.save('AppDir/.DirIcon', format='PNG'); img.save('AppDir/usr/share/icons/hicolor/256x256/apps/battlepew.png', format='PNG')"
           curl -fsSL -o appimagetool.AppImage https://github.com/AppImage/appimagetool/releases/download/continuous/appimagetool-x86_64.AppImage
           chmod +x appimagetool.AppImage
           ./appimagetool.AppImage --appimage-extract >/dev/null
