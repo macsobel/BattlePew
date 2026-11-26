@@ -571,13 +571,25 @@ class RealHIDTransport:
                 pass
             self._log_file = None
 
+    def _hid_write(self, payload64: bytes) -> int:
+        if self.dev is None:
+            raise RuntimeError("UbiConnect device is not open.")
+        n = self.dev.write(bytes([0x00]) + payload64)
+        if n < 0:
+            try:
+                err = self.dev.error()
+            except Exception:
+                err = "unknown"
+            self.log(f"  WARN: hid.write returned {n} (error={err!r})")
+        return int(n)
+
     @_serialized
     def write_packet(self, raw: bytes) -> None:
         self._require_write_permission()
         if self.dev is None:
             raise RuntimeError("UbiConnect device is not open.")
         pkt = pad64(raw)
-        self.dev.write(bytes([0x00]) + pkt)
+        self._hid_write(pkt)
 
     @_serialized
     def read_one(self, timeout_ms: int = 100) -> bytes | None:
@@ -692,7 +704,7 @@ class RealHIDTransport:
                 last_ack_b = payload
 
             self.log(f"  OUT {payload.hex().upper()}")
-            self.dev.write(bytes([0x00]) + payload)
+            self._hid_write(payload)
 
             expect = step.get("expect_prefix")
             wait_ms = step.get("wait_ms", 1000)
@@ -704,6 +716,7 @@ class RealHIDTransport:
             deadline = time.monotonic() + wait_ms / 1000.0
             matched = None
             re_acks = 0
+            unmatched_logged = 0
             while time.monotonic() < deadline:
                 reply = self.read_one(100)
                 if reply is None:
@@ -712,18 +725,28 @@ class RealHIDTransport:
                 if payload_reply[: len(want)] == want:
                     matched = payload_reply
                     break
+                if unmatched_logged < 5:
+                    self.log(
+                        f"  IN (unmatched, len={len(reply)}): {payload_reply[:20].hex().upper()}"
+                    )
+                    unmatched_logged += 1
                 if (
                     last_ack_b is not None
                     and re_acks < 2
                     and self._matches_pairing_beacon_ref(payload_reply, ref)
                 ):
-                    self.dev.write(bytes([0x00]) + last_ack_b)
+                    self._hid_write(last_ack_b)
                     re_acks += 1
 
             if matched is None:
                 self.log(f"  FAIL: no reply starting with {expect} within {wait_ms} ms")
                 return False
             self.log(f"  IN  {matched.hex().upper()}")
+            if "capture_ref_bytes" in step and not seq.get("lock_ref"):
+                a, b = step["capture_ref_bytes"]
+                if len(matched) >= b:
+                    ref = matched[a:b].hex().upper()
+                    self.log(f"  captured ref: {ref}")
             if len(matched) >= 3 and matched[2] == 0x84:
                 self.last_profile_replies[matched[1]] = matched
 

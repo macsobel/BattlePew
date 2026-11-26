@@ -1144,14 +1144,16 @@ async def _lobby_auto_pairing_loop() -> None:
                 and engine.hardware_write_confirmed
                 and engine.auto_pair_active
             ):
-                if engine.hw is None:
+                if engine.hw is None or engine.hw.dev is None:
                     try:
-                        engine.hw = _new_hardware_transport()
+                        if engine.hw is None:
+                            engine.hw = _new_hardware_transport()
                         await asyncio.to_thread(engine.hw.open)
                         await asyncio.to_thread(engine.hw.ensure_initialized)
                     except Exception:
-                        pass
-                if engine.hw is not None:
+                        if engine.hw is not None and engine.hw.dev is None:
+                            engine.hw = None
+                if engine.hw is not None and engine.hw.dev is not None:
                     new_guns = await asyncio.to_thread(engine.hw.check_for_new_guns_in_pairing, 120)
                     if new_guns:
                         all_paired = sorted(list(engine.hw.paired_by_ref.values()), key=lambda g: g["gun_num"])
@@ -1192,6 +1194,8 @@ async def on_startup() -> None:
             await asyncio.to_thread(engine.hw.open)
             await asyncio.to_thread(engine.hw.ensure_initialized)
         except Exception as exc:
+            if engine.hw is not None and engine.hw.dev is None:
+                engine.hw = None
             print(f"Hardware init note: {exc}")
     asyncio.create_task(_lobby_auto_pairing_loop())
     asyncio.create_task(_profile_write_worker())

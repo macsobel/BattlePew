@@ -5,18 +5,22 @@
     "steps": [
       {
         "send": "010001FFFA8A7FFAFA8A7FFAFA8A7FFAFA8A7FFAFA8A7FFAFA8A7FFAFA8A7FFAFA8A7FFAFA8A7FFAFA8A7FFAFA8A7FFAFA8A7FFAFA8A7FFAFA8A7FFAFA8A7FFA",
-        "expect_prefix": "0A0001FF000000386D01000010",
+        "expect_prefix": "0A0001FF",
+        "capture_ref_bytes": [
+          5,
+          13
+        ],
         "wait_ms": 2000,
-        "note": "Pair poll 01 00 01 FF; expect the UbiConnect 0x01 init reply."
+        "note": "Pair poll 01 00 01 FF; expect the UbiConnect 0x01 init reply and capture its 8-byte proxy ref."
       },
       {
-        "send": "0A001201010000386D010000108A7FFAFA8A7FFAFA8A7FFAFA8A7FFAFA8A7FFAFA8A7FFAFA8A7FFAFA8A7FFAFA8A7FFAFA8A7FFAFA8A7FFAFA8A7FFAFA8A7FFA",
+        "send": "0A00120101{{ref}}8A7FFAFA8A7FFAFA8A7FFAFA8A7FFAFA8A7FFAFA8A7FFAFA8A7FFAFA8A7FFAFA8A7FFAFA8A7FFAFA8A7FFAFA8A7FFAFA8A7FFA",
         "expect_prefix": null,
         "wait_ms": 300,
-        "note": "Init ack 0A 00 12 ...; no device reply expected \u2014 the host speaks next."
+        "note": "Init ack 0A 00 12 01 01 + live proxy ref; no device reply expected \u2014 the host speaks next."
       },
       {
-        "send": "00010401010000386D010000108A7FFAFA8A7FFAFA8A7FFAFA8A7FFAFA8A7FFAFA8A7FFAFA8A7FFAFA8A7FFAFA8A7FFAFA8A7FFAFA8A7FFAFA8A7FFAFA8A7FFA",
+        "send": "0001040101{{ref}}8A7FFAFA8A7FFAFA8A7FFAFA8A7FFAFA8A7FFAFA8A7FFAFA8A7FFAFA8A7FFAFA8A7FFAFA8A7FFAFA8A7FFAFA8A7FFAFA8A7FFA",
         "expect_prefix": "04010400010000",
         "wait_ms": 2000,
         "note": "Revision request 00 01 04; expect the UbiConnect revision reply (BE revision 0x00010000)."
