@@ -714,3 +714,131 @@ def test_drain_queue_reacks_only_target_ref() -> None:
     assert drained == 3
     assert re_acks == 1
     assert len(fake.writes) == 1
+
+
+class _InitFakeHIDDevice:
+    """Fake HID device simulating UbiConnect init with configurable proxy ref and revision."""
+
+    def __init__(self, proxy_ref_hex: str, rev_hex: str) -> None:
+        self.proxy_ref_hex = proxy_ref_hex
+        self.rev_hex = rev_hex
+        self.writes: list[bytes] = []
+        self.inbox: list[bytes] = []
+
+    def set_nonblocking(self, _flag: bool) -> None:
+        pass
+
+    @staticmethod
+    def _pad64(prefix_hex: str) -> bytes:
+        raw = bytes.fromhex(prefix_hex)
+        return bytes([0x00]) + raw.ljust(64, b"\x00")
+
+    def write(self, data: bytes) -> int:
+        payload = bytes(data[1:]) if len(data) == 65 else bytes(data)
+        self.writes.append(payload)
+        head = payload[:4].hex().upper()
+        if head == "010001FF":
+            self.inbox.append(self._pad64(f"0A0001FF00{self.proxy_ref_hex}"))
+        elif head == "00010401":
+            self.inbox.append(self._pad64(f"040104{self.rev_hex}{self.proxy_ref_hex}"))
+        return len(data)
+
+    def read(self, _size: int, timeout_ms: int = 100) -> bytes:
+        if self.inbox:
+            return self.inbox.pop(0)
+        return b""
+
+
+@pytest.mark.parametrize("rev_hex", ["00000001", "00010000"])
+def test_ensure_initialized_accepts_any_ubiconnect_revision_and_substitutes_live_ref(
+    rev_hex: str,
+) -> None:
+    live_ref = "00002E3C01000010"
+    fake = _InitFakeHIDDevice(proxy_ref_hex=live_ref, rev_hex=rev_hex)
+    hw = _transport(fake)
+    hw.initialized = False
+    for st in hw.sequences["init"]["steps"]:
+        if st.get("wait_ms"):
+            st["wait_ms"] = 50
+    assert hw.ensure_initialized() is True
+    assert hw.initialized is True
+    assert len(fake.writes) == 3
+    assert fake.writes[0][:4].hex().upper() == "010001FF"
+    assert fake.writes[1][:13].hex().upper() == f"0A00120101{live_ref}"
+    assert fake.writes[2][:13].hex().upper() == f"0001040101{live_ref}"
+
+
+def test_pair_single_gun_accepts_other_gun_firmware_revision() -> None:
+    class _AltRevPairFakeHIDDevice(_MultiGunPairFakeHIDDevice):
+        def write(self, data: bytes) -> int:
+            payload = bytes(data[1:]) if len(data) == 65 else bytes(data)
+            self.writes.append(payload)
+            head = payload[:3].hex().upper()
+            if head == "0BFF12" and not self.acked:
+                self.acked = True
+            elif head == "000204":
+                self.rev_seen += 1
+                self.inbox.append(self._pkt(f"04020400010002{REF_A}"))
+            elif head == "050284":
+                self.prof_seen += 1
+                name = b"Rex"
+                avatar = b"cat.tga"
+                prof = (
+                    bytes.fromhex("3502840000001130")
+                    + bytes([len(name)])
+                    + name
+                    + bytes([len(avatar)])
+                    + avatar
+                )
+                self.inbox.append(self._pkt(prof.hex().upper()))
+            return len(data)
+
+    fake = _AltRevPairFakeHIDDevice()
+    hw = _fast_pair_hw(fake)
+    info = hw.pair_single_gun(REF_A, bytes.fromhex(REF_A))
+    assert info is not None
+    assert info["gun_id"] == 2
+    assert info["name"] == "Rex"
+    assert info["avatar"] == "Cat"
+    assert fake.rev_seen == 1
+
+
+def test_init_and_pair_toggles_rf_pairing_mode_0x13() -> None:
+    class _EmptyFakeHIDDevice:
+        def __init__(self) -> None:
+            self.writes: list[bytes] = []
+
+        def set_nonblocking(self, _flag: bool) -> None:
+            pass
+
+        def write(self, data: bytes) -> int:
+            payload = bytes(data[1:]) if len(data) == 65 else bytes(data)
+            self.writes.append(payload)
+            return len(data)
+
+        def read(self, _size: int, timeout_ms: int = 100) -> bytes:
+            return b""
+
+    # Case 1: 0 guns found (timeout) still sends 01001301 before and 01001300 after.
+    empty_fake = _EmptyFakeHIDDevice()
+    hw_empty = _transport(empty_fake)
+    assert hw_empty.init_and_pair(expected_guns=1, pair_timeout_s=0.05) == []
+    assert [w[:4].hex().upper() for w in empty_fake.writes] == ["01001301", "01001300"]
+
+    # Case 2: gun detected sends 01001301 before scanning and 01001300 before pair_single_gun.
+    ann_fake = AnnouncementFakeHIDDevice(REF_A, repeat=True)
+    hw_pair = _transport(ann_fake)
+    recorded_writes_at_pair: list[str] = []
+
+    def _stub(ref_hex, ref_bytes, **kwargs):
+        recorded_writes_at_pair.extend(
+            (bytes(w[1:]) if len(w) == 65 else bytes(w))[:4].hex().upper()
+            for w in ann_fake.writes
+        )
+        hw_pair.paired_by_ref[ref_hex] = {"gun_num": 1, "gun_id": 2, "ref_hex": ref_hex}
+        return hw_pair.paired_by_ref[ref_hex]
+
+    hw_pair.pair_single_gun = _stub  # type: ignore[method-assign]
+    paired = hw_pair.init_and_pair(expected_guns=1, pair_timeout_s=1.0)
+    assert [g["gun_num"] for g in paired] == [1]
+    assert recorded_writes_at_pair == ["01001301", "01001300"]

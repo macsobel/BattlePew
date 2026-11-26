@@ -575,6 +575,8 @@ class RealHIDTransport:
         if self.dev is None:
             raise RuntimeError("UbiConnect device is not open.")
         n = self.dev.write(bytes([0x00]) + payload64)
+        if n is None:
+            return len(payload64) + 1
         if n < 0:
             try:
                 err = self.dev.error()
@@ -742,6 +744,8 @@ class RealHIDTransport:
                 self.log(f"  FAIL: no reply starting with {expect} within {wait_ms} ms")
                 return False
             self.log(f"  IN  {matched.hex().upper()}")
+            if len(matched) >= 7 and matched[0] == 0x04 and matched[2] == 0x04:
+                self.log(f"  device {matched[1]:02x} revision: 0x{matched[3:7].hex().upper()}")
             if "capture_ref_bytes" in step and not seq.get("lock_ref"):
                 a, b = step["capture_ref_bytes"]
                 if len(matched) >= b:
@@ -890,7 +894,7 @@ class RealHIDTransport:
             if "expect_prefix" in new_step and new_step["expect_prefix"]:
                 prefix = new_step["expect_prefix"]
                 if prefix.upper().startswith("0402"):
-                    new_step["expect_prefix"] = f"04{gun_id_hex}"
+                    new_step["expect_prefix"] = f"04{gun_id_hex}04"
                 elif prefix.upper().startswith("3502"):
                     new_step["expect_prefix"] = f"35{gun_id_hex}"
             pair_seq["steps"].append(new_step)
@@ -1073,42 +1077,62 @@ class RealHIDTransport:
         if not self.ensure_initialized():
             return []
 
+        self.log("PAIR MODE: sending 01 00 13 01 (RF pairing start)")
+        self.write_packet(bytes([0x01, 0x00, 0x13, 0x01]))
+
         self.log(f"=== COLLECT PAIRING ANNOUNCEMENTS (up to {pair_timeout_s:.0f}s) ===")
         gun_refs: dict[str, bytes] = {}
         start_time = time.time()
         last_new_ref_ts = start_time
-        while (time.time() - start_time) < pair_timeout_s:
+        unmatched_logged = 0
+        try:
+            while (time.time() - start_time) < pair_timeout_s:
+                try:
+                    data = self.dev.read(REPORT_LEN + 1, timeout_ms=500)
+                    if not data:
+                        time.sleep(0.01)
+                    else:
+                        b = bytes(data[1:]) if len(data) == REPORT_LEN + 1 else bytes(data)
+                        if len(b) >= 11 and b[0] == 0x10 and b[1] == 0x00 and b[2] == 0x12:
+                            ref_bytes = bytes(b[3:11])
+                            ref_hex = "".join(f"{x:02X}" for x in ref_bytes)
+                            if (
+                                ref_hex not in gun_refs
+                                and ref_hex not in self.paired_by_ref
+                                and ref_hex not in self.ignored_refs
+                            ):
+                                proxy_hex = b[11:19].hex().upper() if len(b) >= 19 else ""
+                                self.log(
+                                    f"  Saw pairing announcement, ref {ref_hex}"
+                                    + (f" (paired_proxy {proxy_hex})" if proxy_hex else "")
+                                )
+                                gun_refs[ref_hex] = ref_bytes
+                                last_new_ref_ts = time.time()
+                                if len(self.paired_by_ref) + len(gun_refs) >= expected_guns:
+                                    self.log(f"All {expected_guns} guns detected!")
+                                    break
+                        elif unmatched_logged < 5:
+                            self.log(
+                                f"  pairing scan IN (unmatched, len={len(data)}): {b[:20].hex().upper()}"
+                            )
+                            unmatched_logged += 1
+                except Exception:
+                    pass
+                # Quiet-period exit: guns in pairing mode announce every ~150 ms,
+                # so 2 s without a NEW announcement means every gun that is on has
+                # been seen. Without this the scan always burns the full timeout
+                # when fewer than `expected_guns` are present. When no guns at all
+                # are known yet, keep waiting the full timeout for the user to
+                # power one on.
+                if (gun_refs or self.paired_by_ref) and (time.time() - last_new_ref_ts) > 2.0:
+                    self.log("Pairing scan: no new announcements for 2s, proceeding.")
+                    break
+        finally:
             try:
-                data = self.dev.read(REPORT_LEN + 1, timeout_ms=500)
-                if not data:
-                    time.sleep(0.01)
-                else:
-                    b = bytes(data[1:]) if len(data) == REPORT_LEN + 1 else bytes(data)
-                    if len(b) >= 11 and b[0] == 0x10 and b[1] == 0x00 and b[2] == 0x12:
-                        ref_bytes = bytes(b[3:11])
-                        ref_hex = "".join(f"{x:02X}" for x in ref_bytes)
-                        if (
-                            ref_hex not in gun_refs
-                            and ref_hex not in self.paired_by_ref
-                            and ref_hex not in self.ignored_refs
-                        ):
-                            self.log(f"  Saw pairing announcement, ref {ref_hex}")
-                            gun_refs[ref_hex] = ref_bytes
-                            last_new_ref_ts = time.time()
-                            if len(self.paired_by_ref) + len(gun_refs) >= expected_guns:
-                                self.log(f"All {expected_guns} guns detected!")
-                                break
-            except Exception:
-                pass
-            # Quiet-period exit: guns in pairing mode announce every ~150 ms,
-            # so 2 s without a NEW announcement means every gun that is on has
-            # been seen. Without this the scan always burns the full timeout
-            # when fewer than `expected_guns` are present. When no guns at all
-            # are known yet, keep waiting the full timeout for the user to
-            # power one on.
-            if (gun_refs or self.paired_by_ref) and (time.time() - last_new_ref_ts) > 2.0:
-                self.log("Pairing scan: no new announcements for 2s, proceeding.")
-                break
+                self.log("PAIR MODE: sending 01 00 13 00 (RF pairing stop)")
+                self.write_packet(bytes([0x01, 0x00, 0x13, 0x00]))
+            except Exception as exc:
+                self.log(f"WARN: failed to send 01 00 13 00 (RF pairing stop): {exc}")
 
         for ref_hex, ref_bytes in gun_refs.items():
             self.pair_single_gun(ref_hex, ref_bytes, progress_cb=progress_cb)

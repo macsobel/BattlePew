@@ -929,7 +929,7 @@ async def api_trigger_pairing() -> JSONResponse:
     await broadcast_state()
 
     try:
-        paired = await asyncio.to_thread(engine.hw.init_and_pair, 8, 8.0)
+        paired = await asyncio.to_thread(engine.hw.init_and_pair, 8, 12.0)
     finally:
         engine.phase = "LOBBY"
     if paired:

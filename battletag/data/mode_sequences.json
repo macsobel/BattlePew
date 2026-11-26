@@ -21,9 +21,9 @@
       },
       {
         "send": "0001040101{{ref}}8A7FFAFA8A7FFAFA8A7FFAFA8A7FFAFA8A7FFAFA8A7FFAFA8A7FFAFA8A7FFAFA8A7FFAFA8A7FFAFA8A7FFAFA8A7FFAFA8A7FFA",
-        "expect_prefix": "04010400010000",
+        "expect_prefix": "040104",
         "wait_ms": 2000,
-        "note": "Revision request 00 01 04; expect the UbiConnect revision reply (BE revision 0x00010000)."
+        "note": "Revision request 00 01 04; expect any 4-byte UbiConnect revision reply (04 01 04 <4-byte rev>)."
       }
     ]
   },
@@ -70,7 +70,7 @@
       },
       {
         "send": "000204020101{{ref}}7FFAFA8A7FFAFA8A7FFAFA8A7FFAFA8A7FFAFA8A7FFAFA8A7FFAFA8A7FFAFA8A7FFAFA8A7FFAFA8A7FFAFA8A7FFAFA8A7FFA",
-        "expect_prefix": "04020400020000",
+        "expect_prefix": "040204",
         "wait_ms": 2000,
         "note": "Revision request 00 02 04 for gun id 02; expect revision reply (BE revision 0x00020000). The ref at bytes 6..13 is the LIVE ref (the gun validates it \u2014 the 2026-11-11 retry went unanswered with the old capture's ref in this spot)."
       },
