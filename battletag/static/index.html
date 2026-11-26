@@ -629,12 +629,20 @@
       letter-spacing: 0.08em;
     }
 
+    .header-window-stack {
+      display: none;
+      flex-direction: column;
+      gap: 6px;
+      flex-shrink: 0;
+    }
+
     .header-quit-btn {
       display: none;
       align-items: center;
       justify-content: center;
+      flex: 1 1 0;
       width: 44px;
-      height: 44px;
+      min-height: 36px;
       border: 1.5px solid var(--border-steel);
       border-radius: 10px;
       background: #FFFFFF;
@@ -4094,21 +4102,23 @@
           </span>
         </a>
 
-        <button type="button" class="header-quit-btn header-fullscreen-btn" id="headerFullscreenBtn" title="Toggle Fullscreen (F11)" aria-label="Toggle Fullscreen">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-            <polyline points="15 3 21 3 21 9"></polyline>
-            <polyline points="9 21 3 21 3 15"></polyline>
-            <line x1="21" y1="3" x2="14" y2="10"></line>
-            <line x1="3" y1="21" x2="10" y2="14"></line>
-          </svg>
-        </button>
+        <div class="header-window-stack" id="headerWindowStack">
+          <button type="button" class="header-quit-btn" id="headerQuitBtn" title="Quit BattlePew" aria-label="Quit BattlePew">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path d="M18.36 6.64a9 9 0 1 1-12.73 0"></path>
+              <line x1="12" y1="2" x2="12" y2="12"></line>
+            </svg>
+          </button>
 
-        <button type="button" class="header-quit-btn" id="headerQuitBtn" title="Quit BattlePew" aria-label="Quit BattlePew">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-            <path d="M18.36 6.64a9 9 0 1 1-12.73 0"></path>
-            <line x1="12" y1="2" x2="12" y2="12"></line>
-          </svg>
-        </button>
+          <button type="button" class="header-quit-btn header-fullscreen-btn" id="headerFullscreenBtn" title="Toggle Fullscreen (F11)" aria-label="Toggle Fullscreen">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <polyline points="15 3 21 3 21 9"></polyline>
+              <polyline points="9 21 3 21 3 15"></polyline>
+              <line x1="21" y1="3" x2="14" y2="10"></line>
+              <line x1="3" y1="21" x2="10" y2="14"></line>
+            </svg>
+          </button>
+        </div>
       </div>
     </header>
 
@@ -8629,7 +8639,27 @@
       }
     }
 
+    function syncHeaderFullscreenButton(isFs, shortcutLabel = 'F11') {
+      const fsBtn = document.getElementById('headerFullscreenBtn');
+      if (!fsBtn) return;
+      fsBtn.title = isFs
+        ? `Exit Fullscreen / Windowed (${shortcutLabel})`
+        : `Enter Fullscreen (${shortcutLabel})`;
+      fsBtn.setAttribute('aria-pressed', isFs ? 'true' : 'false');
+    }
+
     if (isNativeMacApp()) {
+      const windowStack = document.getElementById('headerWindowStack');
+      if (windowStack) windowStack.style.display = 'flex';
+      const fsBtn = document.getElementById('headerFullscreenBtn');
+      if (fsBtn) {
+        fsBtn.style.display = 'inline-flex';
+        syncHeaderFullscreenButton(false, '⌃⌘F');
+        window.__onDesktopFullscreenChanged = (isFs) => syncHeaderFullscreenButton(isFs, '⌃⌘F');
+        fsBtn.addEventListener('click', () => {
+          window.webkit.messageHandlers.battlepew.postMessage({ action: 'toggleFullscreen' });
+        });
+      }
       const headerQuitBtn = document.getElementById('headerQuitBtn');
       const ubiconnectQuitBtn = document.getElementById('ubiconnectQuitBtn');
       const audioAssetsQuitBtn = document.getElementById('audioAssetsQuitBtn');
@@ -8652,12 +8682,10 @@
       if (!api || window.__battlepewDesktopWired) return;
       window.__battlepewDesktopWired = true;
 
+      const windowStack = document.getElementById('headerWindowStack');
+      if (windowStack) windowStack.style.display = 'flex';
       const fsBtn = document.getElementById('headerFullscreenBtn');
-      const syncFsBtn = (isFs) => {
-        if (!fsBtn) return;
-        fsBtn.title = isFs ? 'Exit Fullscreen / Windowed (F11)' : 'Enter Fullscreen (F11)';
-        fsBtn.setAttribute('aria-pressed', isFs ? 'true' : 'false');
-      };
+      const syncFsBtn = (isFs) => syncHeaderFullscreenButton(isFs, 'F11');
       window.__onDesktopFullscreenChanged = syncFsBtn;
 
       if (fsBtn) {

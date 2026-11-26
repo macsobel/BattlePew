@@ -346,10 +346,19 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, WKNa
 
     func windowDidEnterFullScreen(_ notification: Notification) {
         UserDefaults.standard.set(true, forKey: Self.fullscreenDefaultsKey)
+        syncFullscreenStateToWebView()
     }
 
     func windowDidExitFullScreen(_ notification: Notification) {
         UserDefaults.standard.set(false, forKey: Self.fullscreenDefaultsKey)
+        syncFullscreenStateToWebView()
+    }
+
+    private func syncFullscreenStateToWebView() {
+        guard webView != nil, window != nil else { return }
+        let isFs = window.styleMask.contains(.fullScreen)
+        let js = "window.__onDesktopFullscreenChanged && window.__onDesktopFullscreenChanged(\(isFs ? "true" : "false"));"
+        webView.evaluateJavaScript(js, completionHandler: nil)
     }
 
     // MARK: - WKScriptMessageHandler
@@ -365,6 +374,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, WKNa
         switch action {
         case "quit":
             quitApp()
+        case "toggleFullscreen":
+            window.toggleFullScreen(nil)
         case "selectInstaller":
             presentInstallerOpenPanel()
         case "openExternal":
@@ -423,6 +434,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, WKNa
         } else {
             decisionHandler(.cancel)
         }
+    }
+
+    func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) {
+        syncFullscreenStateToWebView()
     }
 
     // MARK: - WKUIDelegate
