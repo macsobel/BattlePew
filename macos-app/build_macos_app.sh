@@ -327,6 +327,7 @@ if [ "$DO_SMOKE_TEST" -eq 1 ]; then
     (
         cd "$SERVER_DIR"
         PYTHONPATH="$DEPS_DIR" BATTLETAG_PORT="$SMOKE_PORT" \
+            BATTLETAG_DISABLE_UPDATE_CHECK=1 \
             "$PYTHON_BIN" run_battletag.py --host 127.0.0.1 --port "$SMOKE_PORT" \
             >"$SMOKE_LOG" 2>&1 &
         echo $! >"$OUTPUT_DIR/.smoke.pid"

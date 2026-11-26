@@ -140,6 +140,48 @@
       text-transform: uppercase;
     }
 
+    .brand-version {
+      margin-left: 6px;
+      font-size: 0.72rem;
+      font-weight: 600;
+      color: var(--text-muted);
+      opacity: 0.72;
+      text-transform: none;
+      letter-spacing: 0.02em;
+    }
+
+    .update-available-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      margin-left: 6px;
+      padding: 5px 11px;
+      border-radius: 999px;
+      font-size: 0.74rem;
+      font-weight: 800;
+      letter-spacing: 0.03em;
+      text-transform: uppercase;
+      text-decoration: none;
+      background: rgba(242, 99, 20, 0.1);
+      border: 1.5px solid rgba(242, 99, 20, 0.35);
+      color: #B44A0E;
+      transition: transform 0.12s ease, background 0.15s ease, border-color 0.15s ease;
+    }
+
+    .update-available-pill:hover {
+      background: rgba(242, 99, 20, 0.17);
+      border-color: rgba(242, 99, 20, 0.6);
+      transform: translateY(-1px);
+    }
+
+    .update-pill-dot {
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      background: var(--bt-orange);
+      box-shadow: 0 0 6px rgba(242, 99, 20, 0.65);
+    }
+
     .status-pills {
       display: flex;
       align-items: center;
@@ -3402,6 +3444,28 @@
       color: #2E7D32;
     }
 
+    .global-setting-tag.tag-neutral {
+      background: #EBEDF2;
+      color: var(--text-muted);
+    }
+
+    .update-setting-control {
+      display: flex;
+      justify-content: flex-end;
+      align-items: center;
+    }
+
+    .update-links-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-top: 10px;
+    }
+
+    .update-links-row a.btn {
+      text-decoration: none;
+    }
+
     .global-setting-desc {
       margin: 6px 0 0;
       font-size: 0.86rem;
@@ -3974,8 +4038,12 @@
         <img class="brand-logo" src="/static/assets/textures/Ui/Loading_Logo.png" alt="BattlePew Logo" />
         <div class="brand-titles">
           <h1>Battle <span>Pew</span></h1>
-          <p>Arena Master Control Center</p>
+          <p>Arena Master Control Center <span class="brand-version" id="appVersionBadge" aria-label="Application version"></span></p>
         </div>
+        <a class="update-available-pill" id="headerUpdatePill" href="#" target="_blank" rel="noopener noreferrer" style="display: none;" onclick="return openExternalUrl(this.href, event)">
+          <span class="update-pill-dot" aria-hidden="true"></span>
+          <span id="headerUpdateText">Update Available</span>
+        </a>
       </div>
 
       <div class="top-actions">
@@ -4356,6 +4424,25 @@
         These settings describe the venue and the T-Blasters, not the game being played.
       </p>
       <div class="global-settings-list" id="globalSettingsGrid"></div>
+      <div class="global-settings-list" id="updateSettingsSection" style="margin-top: 18px;">
+        <div class="global-setting-group" style="margin-top: 0;">Software Updates</div>
+        <div class="global-setting-card" id="updateSettingsCard">
+          <div class="global-setting-text">
+            <div class="global-setting-title">
+              BattlePew Version
+              <span class="global-setting-tag tag-neutral" id="updateVersionTag">v—</span>
+            </div>
+            <p class="global-setting-desc" id="updateStatusDesc">Checking GitHub Releases for updates…</p>
+            <div class="update-links-row" id="updateLinksRow" style="display: none;">
+              <a class="btn btn-primary btn-sm" id="updateDownloadLink" href="#" target="_blank" rel="noopener noreferrer" onclick="return openExternalUrl(this.href, event)">Download Update</a>
+              <a class="btn btn-outline btn-sm" id="updateReleaseNotesLink" href="#" target="_blank" rel="noopener noreferrer" onclick="return openExternalUrl(this.href, event)">Release Notes</a>
+            </div>
+          </div>
+          <div class="global-setting-control update-setting-control">
+            <button type="button" class="btn btn-outline btn-sm" id="checkUpdatesBtn" onclick="checkForUpdates(true)">Check for Updates</button>
+          </div>
+        </div>
+      </div>
     </div>
   </dialog>
 
@@ -5480,6 +5567,7 @@
       renderResultsView(state);
       renderSimulatorView(state);
       renderSettingsView(state);
+      renderUpdateStatus(state.update_status, state.app_version);
       syncEditorStatus(state);
 
       // Pairing feedback: flash the new roster cards and play the sound.
@@ -8042,7 +8130,12 @@
       initAudio();
       const modal = document.getElementById('settingsModal');
       if (!modal) return;
-      if (appState) renderSettingsView(appState);
+      if (appState) {
+        renderSettingsView(appState);
+        renderUpdateStatus(appState.update_status, appState.app_version);
+      } else if (latestUpdateStatus) {
+        renderUpdateStatus(latestUpdateStatus, latestUpdateStatus.current_version);
+      }
       modal.showModal();
     }
 
@@ -8369,6 +8462,165 @@
 
     function isNativeMacApp() {
       return Boolean(window.webkit && window.webkit.messageHandlers && window.webkit.messageHandlers.battlepew);
+    }
+
+    function openExternalUrl(url, ev) {
+      if (typeof url !== 'string' || !/^https?:\/\//i.test(url)) {
+        if (ev) ev.preventDefault();
+        return false;
+      }
+      if (isNativeMacApp()) {
+        if (ev) ev.preventDefault();
+        window.webkit.messageHandlers.battlepew.postMessage({ action: 'openExternal', url });
+        return false;
+      }
+      if (window.pywebview && window.pywebview.api && typeof window.pywebview.api.open_external === 'function') {
+        if (ev) ev.preventDefault();
+        window.pywebview.api.open_external(url);
+        return false;
+      }
+      return true;
+    }
+
+    let updateCheckInFlight = false;
+    let latestUpdateStatus = null;
+
+    function formatCheckedTime(ts) {
+      if (!ts) return '';
+      try {
+        return new Date(ts * 1000).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
+      } catch (e) {
+        return '';
+      }
+    }
+
+    function renderUpdateStatus(updateStatus, appVersion) {
+      const info = updateStatus || latestUpdateStatus || {};
+      if (updateStatus) latestUpdateStatus = updateStatus;
+
+      const rawVersion = info.current_version || appVersion || '';
+      const version = rawVersion ? String(rawVersion).replace(/^v/i, '') : '';
+      const platformName = info.platform_label || 'Desktop';
+      const status = updateCheckInFlight ? 'checking' : (info.status || 'idle');
+
+      const badge = document.getElementById('appVersionBadge');
+      if (badge) {
+        badge.textContent = version ? `· v${version}` : '';
+      }
+
+      const headerPill = document.getElementById('headerUpdatePill');
+      const headerText = document.getElementById('headerUpdateText');
+      const downloadUrl = info.download_url || info.release_url || '';
+      const releaseUrl = info.release_url || '';
+      if (headerPill && headerText) {
+        if (status === 'update_available' && info.update_available && downloadUrl && info.latest_version) {
+          headerPill.href = downloadUrl;
+          headerPill.title = `Download BattlePew v${info.latest_version} for ${platformName} (GitHub Release)`;
+          headerText.textContent = `Update v${info.latest_version} ↗`;
+          headerPill.style.display = 'inline-flex';
+        } else {
+          headerPill.style.display = 'none';
+        }
+      }
+
+      const tagEl = document.getElementById('updateVersionTag');
+      const descEl = document.getElementById('updateStatusDesc');
+      const linksRow = document.getElementById('updateLinksRow');
+      const dlLink = document.getElementById('updateDownloadLink');
+      const notesLink = document.getElementById('updateReleaseNotesLink');
+      const checkBtn = document.getElementById('checkUpdatesBtn');
+      if (!tagEl || !descEl || !linksRow || !dlLink || !notesLink || !checkBtn) return;
+
+      checkBtn.disabled = status === 'checking';
+      checkBtn.textContent = status === 'checking' ? 'Checking…' : 'Check for Updates';
+
+      tagEl.className = 'global-setting-tag';
+      linksRow.style.display = 'none';
+
+      if (status === 'checking') {
+        tagEl.classList.add('tag-neutral');
+        tagEl.textContent = version ? `v${version}` : 'Checking';
+        descEl.textContent = 'Checking GitHub Releases for a newer version…';
+        return;
+      }
+
+      if (status === 'update_available' && info.update_available && info.latest_version) {
+        tagEl.classList.add('tag-upload');
+        tagEl.textContent = `Update: v${info.latest_version}`;
+        const assetDetail = info.asset_name ? ` (${info.asset_name})` : '';
+        const runningText = version ? ` (running v${version})` : '';
+        descEl.textContent = `A newer GitHub release v${info.latest_version} is available for ${platformName}${assetDetail}${runningText}.`;
+        if (downloadUrl) {
+          dlLink.href = downloadUrl;
+          dlLink.textContent = info.asset_name
+            ? `Download v${info.latest_version} (${platformName})`
+            : `Download v${info.latest_version}`;
+          dlLink.style.display = '';
+        } else {
+          dlLink.style.display = 'none';
+        }
+        if (releaseUrl && releaseUrl !== downloadUrl) {
+          notesLink.href = releaseUrl;
+          notesLink.style.display = '';
+        } else {
+          notesLink.style.display = 'none';
+        }
+        linksRow.style.display = (downloadUrl || releaseUrl) ? 'flex' : 'none';
+        return;
+      }
+
+      if (status === 'up_to_date') {
+        tagEl.classList.add('tag-instant');
+        tagEl.textContent = version ? `v${version} · Up to date` : 'Up to date';
+        const when = formatCheckedTime(info.checked_at);
+        const checkedNote = when ? ` Last checked at ${when}.` : '';
+        descEl.textContent = `You are running the latest BattlePew release${version ? ` (v${version})` : ''} on ${platformName}.${checkedNote}`;
+        return;
+      }
+
+      tagEl.classList.add('tag-neutral');
+      tagEl.textContent = version ? `v${version}` : 'v—';
+
+      if (status === 'no_releases') {
+        descEl.textContent = `Running BattlePew${version ? ` v${version}` : ''} (${platformName}). No GitHub releases have been published yet.`;
+      } else if (status === 'error') {
+        descEl.textContent = `Running BattlePew${version ? ` v${version}` : ''} (${platformName}). ${info.error || 'Could not check for updates.'}`;
+      } else {
+        descEl.textContent = `Running BattlePew${version ? ` v${version}` : ''} (${platformName}). Check GitHub Releases for newer versions.`;
+      }
+    }
+
+    async function checkForUpdates(manual = false) {
+      if (updateCheckInFlight) return;
+      updateCheckInFlight = true;
+      renderUpdateStatus(latestUpdateStatus, appState && appState.app_version);
+      try {
+        const res = await fetch('/api/updates/check', { method: 'POST' });
+        let data = null;
+        try {
+          data = await res.json();
+        } catch (e) {
+          data = null;
+        }
+        if (!res.ok) {
+          throw new Error((data && data.detail) || `HTTP ${res.status}`);
+        }
+        if (data) {
+          latestUpdateStatus = data;
+          if (appState) appState.update_status = data;
+        }
+      } catch (err) {
+        const prev = latestUpdateStatus || (appState && appState.update_status) || {};
+        latestUpdateStatus = {
+          ...prev,
+          status: 'error',
+          update_available: false,
+          error: (err && err.message) ? `Could not check for updates (${err.message}).` : 'Could not check for updates.',
+        };
+      } finally {
+        updateCheckInFlight = false;
+        renderUpdateStatus(latestUpdateStatus, appState && appState.app_version);
+      }
     }
 
     function quitNativeMacApp() {

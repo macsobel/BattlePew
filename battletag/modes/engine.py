@@ -22,6 +22,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Callable
 
+from battletag import __version__
 from battletag.audio import AudioCue, GameMasterAudio, audio_assets_ready
 from battletag.hardware import RealHIDTransport, SimulatorTransport, detect_ubiconnect_readonly
 from battletag.protocol import AVATAR_NAMES, RFID_CARDS, TEAM_INFO, DecodedStatus
@@ -1513,6 +1514,7 @@ class ArenaEngine:
         display = self._mode.display_state(self)
 
         return {
+            "app_version": __version__,
             "phase": self.phase,
             "wizard_step": self.wizard_step,
             "profile_write_status": {str(k): dict(v) for k, v in self.profile_write_status.items()},

@@ -11,6 +11,7 @@ import sys
 import threading
 import time
 import urllib.error
+import urllib.parse
 import urllib.request
 import webbrowser
 
@@ -74,6 +75,15 @@ class DesktopApi:
     def quit_app(self) -> None:
         if self._window is not None:
             self._window.destroy()
+
+    def open_external(self, url: str) -> bool:
+        try:
+            parsed = urllib.parse.urlparse(str(url))
+        except Exception:
+            return False
+        if parsed.scheme not in ("http", "https") or not parsed.netloc:
+            return False
+        return bool(webbrowser.open(str(url), new=2))
 
 
 _KEYBIND_JS = """
@@ -183,6 +193,7 @@ def _run_smoke_test(base_url: str, log_path: str | None) -> int:
                     raise RuntimeError(f"{route} returned unexpectedly small body ({len(body)} bytes)")
             lines.append(f"OK {route} ({len(body)} bytes)")
 
+        # pyrefly: ignore[missing-import]
         import webview  # noqa: F401
         lines.append(f"OK pywebview imported ({getattr(webview, '__version__', 'unknown')})")
         lines.append("SMOKE_TEST_PASSED")
@@ -204,6 +215,8 @@ def main(argv: list[str] | None = None) -> int:
     port = _find_free_port()
     os.environ["BATTLETAG_PORT"] = str(port)
     os.environ["BATTLETAG_CONFIRM_WRITE"] = "1"
+    if smoke_test:
+        os.environ["BATTLETAG_DISABLE_UPDATE_CHECK"] = "1"
 
     from battletag.app import app as battletag_app
 
@@ -236,6 +249,7 @@ def main(argv: list[str] | None = None) -> int:
         return rc
 
     try:
+        # pyrefly: ignore[missing-import]
         import webview
 
         start_fullscreen = _load_fullscreen_pref()

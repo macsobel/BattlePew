@@ -18,12 +18,14 @@ from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
 import battletag.audio as audio_mod
+from battletag import __version__
 from battletag.asset_extractor import extract_audio_from_installer
 from battletag.audio import USER_ASSETS_DIR, AudioCue, refresh_audio_paths
 from battletag.hardware import RealHIDTransport, detect_ubiconnect_readonly, load_mode_sequences
 from battletag.modes import MODE_CATALOG, ArenaEngine
 from battletag.profile_writes import ProfileWriteQueue, WriteJob, execute_profile_write
 from battletag.protocol import build_profile_block
+from battletag.updates import UpdateChecker
 
 ROOT = pathlib.Path(__file__).resolve().parent.parent
 STATIC_DIR = ROOT / "battletag" / "static"
@@ -39,7 +41,7 @@ def get_lan_ip() -> str:
         return "127.0.0.1"
 
 
-app = FastAPI(title="BattlePew — Arena Master", version="2.0.0")
+app = FastAPI(title="BattlePew — Arena Master", version=__version__)
 
 # Serve /static/assets/* from repo static/assets (e.g. custom icons) first,
 # falling back to extracted user assets (textures/fonts) before /static mount.
@@ -154,6 +156,7 @@ if engine.hardware_write_confirmed:
 # Profile writes from all interfaces funnel through one background queue
 # so concurrent saves never interleave on the single HID handle.
 profile_write_queue = ProfileWriteQueue()
+update_checker = UpdateChecker(current_version=__version__)
 
 _match_task: asyncio.Task | None = None
 _bot_demo_enabled: bool = False
@@ -186,11 +189,17 @@ def get_base_url(request: Request | None = None) -> str:
     return f"http://{lan_ip}:{port}"
 
 
+def _build_state_snapshot(request: Request | None = None) -> dict[str, Any]:
+    snap = engine.get_snapshot(base_url=get_base_url(request))
+    snap["update_status"] = update_checker.to_dict()
+    return snap
+
+
 async def broadcast_state() -> None:
     while pending_notifications:
         note = pending_notifications.pop(0)
         await ws_manager.broadcast(note)
-    snap = engine.get_snapshot(base_url=get_base_url())
+    snap = _build_state_snapshot()
     await ws_manager.broadcast({"type": "state", "data": snap})
 
 
@@ -309,7 +318,19 @@ async def generate_qr_code(
 # --- State & Control Endpoints ---
 @app.get("/api/state")
 async def get_state(request: Request) -> JSONResponse:
-    return JSONResponse(engine.get_snapshot(base_url=get_base_url(request)))
+    return JSONResponse(_build_state_snapshot(request=request))
+
+
+@app.get("/api/updates")
+async def get_updates() -> JSONResponse:
+    return JSONResponse(update_checker.to_dict())
+
+
+@app.post("/api/updates/check")
+async def check_updates() -> JSONResponse:
+    result = await update_checker.check_async(force=True)
+    await broadcast_state()
+    return JSONResponse(result)
 
 
 @app.post("/api/audio/ubiconnect-connected")
@@ -1184,6 +1205,14 @@ async def _lobby_auto_pairing_loop() -> None:
         await asyncio.sleep(0.4)
 
 
+async def _startup_update_check() -> None:
+    try:
+        await update_checker.check_async(force=False)
+        await broadcast_state()
+    except Exception:
+        pass
+
+
 @app.on_event("startup")
 async def on_startup() -> None:
     if engine.hardware_write_confirmed and not engine.use_simulator:
@@ -1195,6 +1224,8 @@ async def on_startup() -> None:
             print(f"Hardware init note: {exc}")
     asyncio.create_task(_lobby_auto_pairing_loop())
     asyncio.create_task(_profile_write_worker())
+    if os.environ.get("BATTLETAG_DISABLE_UPDATE_CHECK") != "1":
+        asyncio.create_task(_startup_update_check())
 
 
 @app.on_event("shutdown")
@@ -1780,7 +1811,7 @@ async def websocket_endpoint(ws: WebSocket) -> None:
         await ws.send_json(
             {
                 "type": "state",
-                "data": engine.get_snapshot(base_url=get_base_url()),
+                "data": _build_state_snapshot(),
             }
         )
         if engine.audio.current_music:

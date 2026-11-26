@@ -18,7 +18,7 @@ import WebKit
 ///   server first. There is no close-to-background and no orphaned server.
 /// - Sudden termination is deliberately NOT enabled: macOS must always
 ///   run the normal quit path so the server shuts down cleanly.
-final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, WKNavigationDelegate, WKScriptMessageHandler {
+final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, WKNavigationDelegate, WKUIDelegate, WKScriptMessageHandler {
 
     private static let fullscreenDefaultsKey = "BattlePewWasFullscreen"
     private static let windowAutosaveName = "BattlePewMainWindow"
@@ -235,6 +235,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, WKNa
 
         webView = WKWebView(frame: .zero, configuration: config)
         webView.navigationDelegate = self
+        webView.uiDelegate = self
         webView.allowsMagnification = false
         webView.allowsBackForwardNavigationGestures = false
         // No toolbar, address bar, or tab UI exists: the web content fills
@@ -366,6 +367,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, WKNa
             quitApp()
         case "selectInstaller":
             presentInstallerOpenPanel()
+        case "openExternal":
+            if let body = message.body as? [String: Any],
+               let urlString = body["url"] as? String,
+               let url = URL(string: urlString),
+               url.scheme == "http" || url.scheme == "https" {
+                NSWorkspace.shared.open(url)
+            }
         default:
             break
         }
@@ -415,6 +423,20 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, WKNa
         } else {
             decisionHandler(.cancel)
         }
+    }
+
+    // MARK: - WKUIDelegate
+
+    func webView(_ webView: WKWebView,
+                 createWebViewWith configuration: WKWebViewConfiguration,
+                 for navigationAction: WKNavigationAction,
+                 windowFeatures: WKWindowFeatures) -> WKWebView? {
+        if navigationAction.targetFrame == nil,
+           let url = navigationAction.request.url,
+           url.scheme == "http" || url.scheme == "https" {
+            NSWorkspace.shared.open(url)
+        }
+        return nil
     }
 
     func webView(_ webView: WKWebView,
