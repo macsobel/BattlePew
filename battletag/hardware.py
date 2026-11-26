@@ -10,7 +10,9 @@ from __future__ import annotations
 import datetime as dt
 import functools
 import json
+import os
 import pathlib
+import sys
 import threading
 import time
 from dataclasses import dataclass, field
@@ -45,7 +47,19 @@ ROOT = pathlib.Path(__file__).resolve().parent.parent
 DATA_DIR = ROOT / "battletag" / "data"
 MINIMAL_DIR = ROOT / "battle-tag-antigravity-handoff" / "freefrag-minimal"
 MINIMAL_GUN_REFS = MINIMAL_DIR / "gun_refs.json"
-LOGS_DIR = ROOT / "logs"
+def _default_logs_dir() -> pathlib.Path:
+    if getattr(sys, "frozen", False):
+        if sys.platform == "darwin":
+            return pathlib.Path.home() / "Library" / "Logs" / "BattlePew"
+        if sys.platform == "win32":
+            base = os.environ.get("LOCALAPPDATA") or str(pathlib.Path.home() / "AppData" / "Local")
+            return pathlib.Path(base) / "BattlePew" / "logs"
+        xdg = os.environ.get("XDG_DATA_HOME") or str(pathlib.Path.home() / ".local" / "share")
+        return pathlib.Path(xdg) / "BattlePew" / "logs"
+    return ROOT / "logs"
+
+
+LOGS_DIR = _default_logs_dir()
 
 
 def load_mode_sequences() -> dict[str, Any]:
@@ -467,7 +481,10 @@ class RealHIDTransport:
         # its own.
         self.ignored_refs: set[str] = ignored_refs if ignored_refs is not None else set()
         self.last_ping_ts: float = 0.0
-        LOGS_DIR.mkdir(exist_ok=True)
+        try:
+            LOGS_DIR.mkdir(parents=True, exist_ok=True)
+        except OSError:
+            pass
         self.log_path = LOGS_DIR / f"battletag_hw_{dt.datetime.now().strftime('%Y%m%d_%H%M%S')}.log"
         self._log_file: Any = None
 
@@ -476,10 +493,16 @@ class RealHIDTransport:
         line = f"{stamp} {text}"
         print(line, flush=True)
         if self._log_file is None and self.confirm_write:
-            self._log_file = open(self.log_path, "a", encoding="utf-8")
-        if self._log_file is not None:
-            self._log_file.write(line + "\n")
-            self._log_file.flush()
+            try:
+                self._log_file = open(self.log_path, "a", encoding="utf-8")
+            except OSError:
+                self._log_file = False
+        if self._log_file:
+            try:
+                self._log_file.write(line + "\n")
+                self._log_file.flush()
+            except OSError:
+                pass
         if self.ext_logger:
             self.ext_logger(text)
 
