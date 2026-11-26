@@ -114,10 +114,12 @@ class OldFashionDuelMode(GameMode):
         ],
         "defaults": {
             "countdownSeconds": 5,
-            "rounds": 5,
+            "rounds": 3,
+            "earlyClinch": 1,
         },
         "options": [
             {"key": "rounds", "label": "Rounds per Duel", "choices": [1, 3, 5, 7]},
+            {"key": "earlyClinch", "label": "Early Clinch (Best-of)", "choices": [0, 1]},
         ],
     }
 
@@ -146,10 +148,14 @@ class OldFashionDuelMode(GameMode):
             str(p.gun_num): {"wins": 0, "losses": 0, "draws": 0}
             for p in ctx.players.values()
         }
+        max_rnd = int(ctx.settings.get("rounds", 3))
+        early_clinch = int(ctx.settings.get("earlyClinch", 1)) != 0 and max_rnd > 1
         ctx._duel_round_triggered = False
         ctx.duel_state = {
             "round": 0,
-            "max_rounds": int(ctx.settings.get("rounds", 5)),
+            "max_rounds": max_rnd,
+            "early_clinch": early_clinch,
+            "clinched": False,
             "phase_code": 2,
             "subphase": "MATCH_INTRO" if is_tournament else "INTRO",
             "can_shoot": False,
@@ -216,7 +222,7 @@ class OldFashionDuelMode(GameMode):
         now = time.time()
         ds = ctx.duel_state
         sub = ds.get("subphase", "INTRO")
-        max_rnd = int(ds.get("max_rounds", 5))
+        max_rnd = int(ds.get("max_rounds", 3))
         curr_rnd = int(ds.get("round", 0))
         active_pair: list[int] = list(ds.get("active_pair") or [])
 
@@ -286,7 +292,7 @@ class OldFashionDuelMode(GameMode):
         if now >= ds.get("next_transition_at", 0.0):
             ds["countdown_remaining"] = 0
             if sub in ("INTRO", "ROUND_END"):
-                if curr_rnd + 1 > max_rnd:
+                if curr_rnd + 1 > max_rnd or self._is_pairing_clinched(ctx):
                     self._finish_duel_pairing(ctx, now)
                     return
                 self._begin_duel_round(ctx, curr_rnd + 1, max_rnd, now)
@@ -323,7 +329,7 @@ class OldFashionDuelMode(GameMode):
                 self._record_duel_round_result(ctx, None)
                 ctx.add_event("duel", f"Round {ds['round']} ended in a draw!")
                 ctx.audio.trigger_pool("duel_drawn", force=True)
-        elif sub in ("INTRO", "ROUND_END") and curr_rnd < max_rnd:
+        elif sub in ("INTRO", "ROUND_END") and curr_rnd < max_rnd and not self._is_pairing_clinched(ctx):
             rem_s = ds.get("next_transition_at", 0.0) - now
             if 0.0 < rem_s <= 3.0:
                 cd = max(1, min(3, int(rem_s) + 1))
@@ -517,6 +523,7 @@ class OldFashionDuelMode(GameMode):
         ds["next_pair"] = next_pair
         ds["upcoming_matches"] = upcoming
         ds["round"] = 0
+        ds["clinched"] = False
         ds["round_scores"] = {gid: 0 for gid in active_pair}
         ds["round_results"] = []
         ds["last_result_text"] = ""
@@ -574,6 +581,51 @@ class OldFashionDuelMode(GameMode):
     def display_state(self, ctx: ArenaEngine) -> dict[str, Any]:
         return {"duel_state": ctx.duel_state, "race_state": None, "race_session_best": None}
 
+    def _is_pairing_clinched(self, ctx: ArenaEngine) -> bool:
+        """True when Early Clinch is active and a duelist holds a majority of rounds."""
+        ds = ctx.duel_state
+        if not ds.get("early_clinch"):
+            return False
+        max_rnd = int(ds.get("max_rounds", 3))
+        if max_rnd <= 1:
+            return False
+        needed = (max_rnd // 2) + 1
+        scores = ds.get("round_scores") or {}
+        active_pair = ds.get("active_pair") or list(ctx.players.keys())
+        return any(int(scores.get(gid, 0)) >= needed for gid in active_pair)
+
+    def _duel_wins(self, ctx: ArenaEngine, player: PlayerState) -> int:
+        records = ctx.duel_state.get("match_records") or {}
+        return int((records.get(str(player.gun_num)) or {}).get("wins", 0))
+
+    def sort_players(self, ctx: ArenaEngine, players: list[PlayerState]) -> list[PlayerState]:
+        ds = ctx.duel_state
+        if ds.get("is_tournament") and ds.get("early_clinch"):
+            return sorted(
+                players,
+                key=lambda p: (
+                    self._duel_wins(ctx, p),
+                    p.score,
+                    p.hits_landed,
+                    -p.hits_received,
+                    p.accuracy,
+                ),
+                reverse=True,
+            )
+        return super().sort_players(ctx, players)
+
+    def gameover_outcomes(self, ctx: ArenaEngine) -> dict[int, bool]:
+        ds = ctx.duel_state
+        if ds.get("is_tournament") and ds.get("early_clinch"):
+            ranked = self.sort_players(ctx, list(ctx.players.values()))
+            if not ranked:
+                return {}
+            top_key = (self._duel_wins(ctx, ranked[0]), ranked[0].score)
+            winners = [p.gun_id for p in ranked if (self._duel_wins(ctx, p), p.score) == top_key]
+            is_tie = len(winners) > 1
+            return {gid: (not is_tie and gid == winners[0]) for gid in ctx.players}
+        return super().gameover_outcomes(ctx)
+
     def _record_duel_round_result(self, ctx: ArenaEngine, winner: PlayerState | None) -> None:
         """Record one finished duel round for the round display.
 
@@ -588,6 +640,7 @@ class OldFashionDuelMode(GameMode):
         ctx.duel_state.setdefault("round_results", []).append(
             {"round": rnd, "winner_gun_num": winner.gun_num if winner else None}
         )
+        ctx.duel_state["clinched"] = self._is_pairing_clinched(ctx)
 
     def _reset_duel_ammo(self, ctx: ArenaEngine) -> None:
         """Reset active duelists' ammo to 6 bullets for the next round."""
@@ -678,7 +731,7 @@ class OldFashionDuelMode(GameMode):
             return
 
         rnd = int(ds.get("round", 1))
-        max_rnd = int(ds.get("max_rounds", 5))
+        max_rnd = int(ds.get("max_rounds", 3))
         match_idx = int(ds.get("match_index", 0))
         already_resolved = any(
             r.get("round") == rnd for r in ds.get("round_results", [])
@@ -732,13 +785,13 @@ class OldFashionDuelMode(GameMode):
                     ctx.audio.trigger_pool("duel_cheat", custom_subtitle=cheat_sub, force=True)
                     cheat_wait = max(0.5, ctx.audio.active_until - time.time()) + 0.25
                     self._announce_duel_round_win(ctx, opponent, initial_delay=cheat_wait)
-                    next_wait = 8.5 if (ds.get("is_tournament") and rnd >= max_rnd) else 10.5
+                    next_wait = 8.5 if (ds.get("is_tournament") and (rnd >= max_rnd or self._is_pairing_clinched(ctx))) else 10.5
                 else:
                     self._record_duel_round_result(ctx, None)
                     ds["last_winner_gun_num"] = None
                     ds["last_result_text"] = f"ROUND {rnd}: DRAW — NO POINT"
                     ctx.audio.trigger_pool("duel_drawn", force=True)
-                    next_wait = 6.0 if (ds.get("is_tournament") and rnd >= max_rnd) else 8.5
+                    next_wait = 6.0 if (ds.get("is_tournament") and (rnd >= max_rnd or self._is_pairing_clinched(ctx))) else 8.5
                 ds["subphase"] = "ROUND_END"
                 ds["phase_code"] = 2
                 ds["can_shoot"] = False
@@ -789,7 +842,7 @@ class OldFashionDuelMode(GameMode):
                 ds["countdown_remaining"] = 0
                 now = time.time()
                 ds["round_ended_at"] = now
-                end_wait = 6.0 if (ds.get("is_tournament") and rnd >= max_rnd) else 8.5
+                end_wait = 6.0 if (ds.get("is_tournament") and (rnd >= max_rnd or self._is_pairing_clinched(ctx))) else 8.5
                 ds["next_transition_at"] = now + end_wait
                 ctx._check_lead_change()
             elif (
@@ -803,7 +856,7 @@ class OldFashionDuelMode(GameMode):
                 ds["countdown_remaining"] = 0
                 now = time.time()
                 ds["round_ended_at"] = now
-                end_wait = 6.0 if (ds.get("is_tournament") and rnd >= max_rnd) else 8.5
+                end_wait = 6.0 if (ds.get("is_tournament") and (rnd >= max_rnd or self._is_pairing_clinched(ctx))) else 8.5
                 ds["next_transition_at"] = now + end_wait
                 ds["last_winner_gun_num"] = None
                 ds["last_result_text"] = (

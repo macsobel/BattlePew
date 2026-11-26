@@ -2034,10 +2034,18 @@
         if (q.life_points !== p.life_points) return q.life_points > p.life_points;
         return (q.frags || 0) > (p.frags || 0);
       };
+      const duelWinsHud = (pl) => (((state.duel_state && state.duel_state.match_records) || {})[String(pl.gun_num)] || {}).wins || 0;
+      const isDuelClinchHud = isDuel && state.duel_state && state.duel_state.is_tournament && state.duel_state.early_clinch;
       const rank = isRace
         ? (meBenched ? null : 1 + rankPool.filter((p) => !raceBenchNums.has(p.gun_num) && raceAheadHud(p, rankMe)).length)
         : isLMS
         ? 1 + rankPool.filter((p) => lmsAheadHud(p, rankMe)).length
+        : isDuelClinchHud
+        ? 1 + rankPool.filter((p) => {
+            const pw = duelWinsHud(p);
+            const mw = duelWinsHud(rankMe);
+            return pw > mw || (pw === mw && p.score > rankMe.score);
+          }).length
         : 1 + rankPool.filter((p) => p.score > rankMe.score).length;
       document.getElementById('hudModeLabel').textContent = state.mode.title;
       // Race clock counts UP with tenths during a run, shows the
@@ -2093,6 +2101,7 @@
       }
       const isDuelCd = isDuel && ds
         && ['INTRO', 'ROUND_END', 'COUNTDOWN'].includes(ds.subphase)
+        && !ds.clinched
         && (ds.countdown_remaining || 0) > 0;
       hudClockEl.style.color = isDuelCd ? 'var(--team-red)' : '';
       document.getElementById('hudRank').textContent = rank === null ? '—' : `#${rank}`;
@@ -2149,7 +2158,7 @@
         const pBName = pB ? (pB.name || `Player ${pB.gun_num}`).toUpperCase() : 'PLAYER B';
         const scores = ds.round_scores || {};
         const nextSecs = ds.next_transition_at ? Math.max(0, Math.ceil(ds.next_transition_at - Date.now() / 1000)) : 0;
-        const hasMoreRounds = ds.round < ds.max_rounds;
+        const hasMoreRounds = ds.round < ds.max_rounds && !ds.clinched;
         const subNoteEl = document.getElementById('hudDuelSubnote');
         const roundEl = document.getElementById('hudDuelRound');
         const subEl = document.getElementById('hudDuelSubphase');
@@ -2185,7 +2194,7 @@
           };
           const endTail = (ds.subphase === 'ROUND_END' && hasMoreRounds)
             ? (cd > 0 ? ` (Next round starts in ${cd}…)` : (nextSecs > 0 ? ` (Next round in ${nextSecs}s…)` : ''))
-            : '';
+            : (ds.subphase === 'ROUND_END' && ds.clinched ? ' (Clinched!)' : '');
           subEl.textContent = (subLabels[ds.subphase] || ds.subphase || '') + endTail;
           subEl.className = 'duel-subphase ' + (
             ds.subphase === 'WAIT' ? 'wait'

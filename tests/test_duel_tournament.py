@@ -268,3 +268,66 @@ def test_duel_api_trigger_and_skip_endpoints(monkeypatch) -> None:
     with pytest.raises(HTTPException) as exc:
         asyncio.run(app_mod.api_duel_skip())
     assert exc.value.status_code == 400
+
+
+def test_early_clinch_stops_2_0_and_ranks_by_duels_won() -> None:
+    assert MODE_CATALOG["OldFashionDuel"]["defaults"]["rounds"] == 3
+    assert MODE_CATALOG["OldFashionDuel"]["defaults"]["earlyClinch"] == 1
+
+    # 2-player Best-of-3 clinches at 2-0 without playing Round 3
+    eng = ArenaEngine()
+    eng.set_num_simulated_guns(2)
+    eng.select_mode("OldFashionDuel", {"rounds": 3, "earlyClinch": 1})
+    eng.reset_stats_for_new_match()
+    eng.phase = "PLAYING"
+    eng.match_start_ts = time.time()
+    _poll_active_pair(eng)
+
+    for _ in range(2):
+        eng.duel_state["next_transition_at"] = time.time() - 1.0
+        eng.tick_mode_timers()
+        _advance_to_draw(eng)
+        eng.sim.sim_fire_shot(2, 3)
+        _poll_active_pair(eng)
+
+    assert eng.duel_state["round"] == 2
+    assert eng.duel_state["clinched"] is True
+    eng.duel_state["next_transition_at"] = time.time() - 1.0
+    eng.tick_mode_timers()
+    assert eng.duel_state["subphase"] == "COMPLETE"
+
+    # Early Clinch Off plays Round 3 even at 2-0
+    eng_full = ArenaEngine()
+    eng_full.set_num_simulated_guns(2)
+    eng_full.select_mode("OldFashionDuel", {"rounds": 3, "earlyClinch": 0})
+    eng_full.reset_stats_for_new_match()
+    eng_full.phase = "PLAYING"
+    eng_full.match_start_ts = time.time()
+    _poll_active_pair(eng_full)
+    for _ in range(2):
+        eng_full.duel_state["next_transition_at"] = time.time() - 1.0
+        eng_full.tick_mode_timers()
+        _advance_to_draw(eng_full)
+        eng_full.sim.sim_fire_shot(2, 3)
+        _poll_active_pair(eng_full)
+    assert eng_full.duel_state["clinched"] is False
+    eng_full.duel_state["next_transition_at"] = time.time() - 1.0
+    eng_full.tick_mode_timers()
+    assert eng_full.duel_state["round"] == 3
+    assert eng_full.duel_state["subphase"] == "WAIT"
+
+    # Tournament ranking prioritizes duels won over raw round points
+    eng_t = ArenaEngine()
+    _start_tournament(eng_t, guns=3, rounds=3)
+    eng_t.players[2].score = 3  # 1W-1L (3 round pts)
+    eng_t.players[3].score = 4  # 0W-2L (4 round pts)
+    eng_t.players[4].score = 3  # 2W-0L (3 round pts)
+    eng_t.duel_state["match_records"] = {
+        "1": {"wins": 1, "losses": 1, "draws": 0},
+        "2": {"wins": 0, "losses": 2, "draws": 0},
+        "3": {"wins": 2, "losses": 0, "draws": 0},
+    }
+    ranked = eng_t.get_sorted_players()
+    assert [p.gun_num for p in ranked] == [3, 1, 2]
+    assert eng_t.compute_gameover_outcomes() == {2: False, 3: False, 4: True}
+

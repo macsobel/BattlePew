@@ -1490,10 +1490,9 @@
       padding-top: 8px;
       border-top: 1px dashed rgba(100, 116, 139, 0.3);
       display: flex;
-      flex-wrap: wrap;
-      justify-content: center;
-      align-items: center;
-      gap: 6px;
+      flex-direction: column;
+      align-items: stretch;
+      gap: 5px;
       font-size: 0.72rem;
       font-weight: 700;
       color: var(--text-muted);
@@ -1504,6 +1503,37 @@
       text-transform: uppercase;
       letter-spacing: 0.06em;
       color: var(--text-dark);
+      text-align: center;
+    }
+
+    .tv-duel-queue-list {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    .tv-duel-queue-item {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      font-size: 0.75rem;
+      font-weight: 700;
+      letter-spacing: 0.03em;
+      color: var(--text-dark);
+      background: #FFFFFF;
+      border: 1px solid var(--border-steel);
+      border-radius: 8px;
+      padding: 4px 10px;
+    }
+
+    .tv-duel-queue-num {
+      font-family: var(--font-display);
+      font-size: 0.68rem;
+      color: var(--bt-orange);
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      flex-shrink: 0;
     }
 
     .tv-duel-record {
@@ -5613,11 +5643,16 @@
       // 2. Settings Grid: horizontal segmented controls with sliding swish indicator
       const isRaceSettings = state.mode.id === 'TagThenShoot';
       const isDuelSettings = state.mode.id === 'OldFashionDuel';
+      const duelRoundsVal = state.settings && state.settings.rounds ? Number(state.settings.rounds) : 3;
+      const duelEarlyClinchOn = !(state.settings && state.settings.earlyClinch === 0) && duelRoundsVal > 1;
+      const duelFormatNote = duelEarlyClinchOn
+        ? `Best of ${duelRoundsVal} (first to ${Math.floor(duelRoundsVal / 2) + 1})`
+        : `All ${duelRoundsVal} round${duelRoundsVal === 1 ? '' : 's'}`;
       const roundsExplainText = isRaceSettings
         ? 'How many times every racer runs the course. Each racer runs once per round, in race order; the best finished time wins.'
         : isDuelSettings && rosterCount > 2
-        ? `With ${rosterCount} players, everyone plays 1v1 round-robin (${(rosterCount * (rosterCount - 1)) / 2} duels, ${state.settings && state.settings.rounds ? state.settings.rounds : 5} round${state.settings && state.settings.rounds === 1 ? '' : 's'} each). Either duelist pulls their trigger when ready to start each duel.`
-        : 'How many quickdraw rounds the duel lasts (1, 3, 5, or 7).';
+        ? `With ${rosterCount} players, everyone plays 1v1 round-robin (${(rosterCount * (rosterCount - 1)) / 2} duels, ${duelFormatNote}). Either duelist pulls their trigger when ready to start each duel.`
+        : `How many quickdraw rounds the duel lasts (${duelFormatNote}).`;
       const SETTING_EXPLAIN = {
         durationSeconds: 'How long the match lasts. The timer runs on the Arena Master.',
         gameLaunch: isRaceSettings
@@ -5629,6 +5664,7 @@
         clips: 'Spare clips. Scan an ammo box to reload.',
         teamFrag: 'When on, teammates’ shots hurt each other.',
         rounds: roundsExplainText,
+        earlyClinch: 'When Yes, a duel ends immediately once a player wins a majority (e.g. 2 wins in 3 rounds). Tournament standings rank by Duels Won, then Round Points.',
         numberOfBase: 'T-Bases on the course. Each base must be tagged, then the tower shot, in order.',
         ammoBox: 'Ammo boxes required to reload clips. When No, players have infinite ammo.',
         tBase: 'When Yes, eliminated players scan their team T-Base to respawn. When No, players respawn automatically after the Respawn Delay.',
@@ -5641,7 +5677,7 @@
         if (key === 'gameLaunch') return c === 0 ? 'Auto' : (isRaceSettings ? 'Manual (Each Player)' : 'Manual (P1 Trigger)');
         if (key === 'scoreLimit') return c === 0 ? 'Timed' : `${c}`;
         if (key === 'teamFrag' || key === 'swap') return c === 1 ? 'On' : 'Off';
-        if (key === 'medkit' || key === 'ammoBox' || key === 'tBase') return c === 1 ? 'Yes' : 'No';
+        if (key === 'medkit' || key === 'ammoBox' || key === 'tBase' || key === 'earlyClinch') return c === 1 ? 'Yes' : 'No';
         if (key === 'respawnTime') return c === 0 ? 'Instant' : `${c}s`;
         return `${c}`;
       };
@@ -5655,6 +5691,7 @@
       const isOptionDisabled = (optKey) => {
         if (optKey === 'ammunitions' || optKey === 'clips') return noAmmoBoxes;
         if (optKey === 'swap') return noAmmoBoxes && (modeId === 'StarterFrag' || !state.settings || !state.settings.medkit);
+        if (optKey === 'earlyClinch') return modeId === 'OldFashionDuel' && duelRoundsVal <= 1;
         return false;
       };
 
@@ -6274,13 +6311,17 @@
           } else if (ds.subphase === 'ROUND_END') {
             phaseCls = 'phase-end';
             headText = ds.last_result_text || 'ROUND COMPLETE';
-            const hasMore = (ds.round || 0) < (ds.max_rounds || 0);
+            const hasMore = (ds.round || 0) < (ds.max_rounds || 0) && !ds.clinched;
             const cd = ds.countdown_remaining || 0;
             subText = hasMore
               ? (cd > 0 ? `Next round starts in ${cd}…` : (nextSecs > 0 ? `Next round starting in ${nextSecs}s…` : 'Starting next round…'))
-              : (isTourn && ((ds.match_index || 0) + 1 < (ds.total_matches || 1))
-                ? 'Final round complete — wrapping up duel…'
-                : 'Final round complete — finishing duel…');
+              : (ds.clinched
+                ? (isTourn && ((ds.match_index || 0) + 1 < (ds.total_matches || 1))
+                  ? 'Duel clinched — wrapping up duel…'
+                  : 'Duel clinched — finishing duel…')
+                : (isTourn && ((ds.match_index || 0) + 1 < (ds.total_matches || 1))
+                  ? 'Final round complete — wrapping up duel…'
+                  : 'Final round complete — finishing duel…'));
           } else if (ds.subphase === 'MATCH_END') {
             phaseCls = 'phase-end';
             headText = ds.last_match_result_text || 'DUEL COMPLETE';
@@ -6321,15 +6362,18 @@
             : '';
 
           const upcomingList = isTourn && Array.isArray(ds.upcoming_matches) ? ds.upcoming_matches : [];
+          const baseMatchNum = (ds.match_index || 0) + 2;
           const queueHtml = upcomingList.length > 0 && ds.subphase !== 'COMPLETE'
             ? `<div class="tv-duel-queue">
-                 <span class="tv-duel-queue-label">Up Next:</span>
-                 ${upcomingList.map((pair) => {
-                   const uA = playersByGid[pair[0]];
-                   const uB = playersByGid[pair[1]];
-                   if (!uA || !uB) return '';
-                   return `<span class="tv-duel-chip">${esc((uA.name || `P${uA.gun_num}`).toUpperCase())} vs ${esc((uB.name || `P${uB.gun_num}`).toUpperCase())}</span>`;
-                 }).join('')}
+                 <div class="tv-duel-queue-label">Up Next</div>
+                 <div class="tv-duel-queue-list">
+                   ${upcomingList.map((pair, idx) => {
+                     const uA = playersByGid[pair[0]];
+                     const uB = playersByGid[pair[1]];
+                     if (!uA || !uB) return '';
+                     return `<div class="tv-duel-queue-item"><span class="tv-duel-queue-num">Duel ${baseMatchNum + idx}</span><span>${esc((uA.name || `P${uA.gun_num}`).toUpperCase())} vs ${esc((uB.name || `P${uB.gun_num}`).toUpperCase())}</span></div>`;
+                   }).join('')}
+                 </div>
                </div>`
             : '';
 
@@ -6543,7 +6587,7 @@
           return `<div class="tv-round-chips">${chips.join('')}</div>`;
         };
         let raceVitalsHtml = '';
-        if (isUpNow) {
+        if (isRace && isUpNow) {
           const awaitingShot = p.tower_hits < p.tags;
           const tagged = Math.min(p.tags, raceBases);
           const nextLabel = awaitingShot ? 'SHOOT THE TOWER' : (p.tags < raceBases ? `NEXT: T-BASE ${p.tags + 1}` : 'FINISH!');
@@ -7053,6 +7097,8 @@
           }
         } else {
           // Solo modes: a tie at the top is a tie game, not a victory.
+          const isDuelClinchRank = isDuel && state.duel_state && state.duel_state.is_tournament && state.duel_state.early_clinch;
+          const duelWinsOf = (pl) => (((state.duel_state && state.duel_state.match_records) || {})[String(pl.gun_num)] || {}).wins || 0;
           const runnerUp = sorted[1];
             const isTie = isLMS
               ? Boolean(
@@ -7061,9 +7107,13 @@
                   && runnerUp.score === topWinner.score
                   && runnerUp.life_points === topWinner.life_points
                 )
+              : isDuelClinchRank
+              ? Boolean(runnerUp && duelWinsOf(runnerUp) === duelWinsOf(topWinner) && runnerUp.score === topWinner.score)
               : Boolean(runnerUp && runnerUp.score === topWinner.score);
             if (isTie) {
-              document.getElementById('resultsHeadline').textContent = `Tie Game — ${topWinner.score} Points!`;
+              document.getElementById('resultsHeadline').textContent = isDuelClinchRank
+                ? `Tie Game — ${duelWinsOf(topWinner)} Duels Won!`
+                : `Tie Game — ${topWinner.score} Points!`;
               document.getElementById('resultsSub').textContent = `${state.mode.title} Match Complete · No outright winner`;
             } else {
               hasOutrightWinner = true;
@@ -7071,6 +7121,8 @@
               document.getElementById('resultsHeadline').textContent = `Victory: ${topWinner.name.toUpperCase()}!`;
               document.getElementById('resultsSub').textContent = isLMS && topWinner.life_points > 0
                 ? `${state.mode.title} Match Complete · Last Survivor (${topWinner.life_points} HP · ${topWinner.score} Pts · ${topWinner.frags} ${topWinner.frags === 1 ? 'Elim' : 'Elims'})`
+                : isDuelClinchRank
+                ? `${state.mode.title} Tournament Complete · ${duelWinsOf(topWinner)} Duels Won · ${topWinner.score} Round Pts`
                 : `${state.mode.title} Match Complete · Top Score: ${topWinner.score} Points`;
             }
         }
@@ -7114,6 +7166,15 @@
             if (q.score !== p.score) return q.score > p.score;
             return q.life_points > p.life_points;
           }).length + 1
+        : (isDuel && state.duel_state && state.duel_state.is_tournament && state.duel_state.early_clinch)
+        ? (p) => {
+            const recs = state.duel_state.match_records || {};
+            const pWins = (recs[String(p.gun_num)] || {}).wins || 0;
+            return sorted.filter((q) => {
+              const qWins = (recs[String(q.gun_num)] || {}).wins || 0;
+              return qWins > pWins || (qWins === pWins && q.score > p.score);
+            }).length + 1;
+          }
         : (p) => sorted.filter((q) => q.score > p.score).length + 1;
       const raceRoundChips = (p) => {
         const chips = [];

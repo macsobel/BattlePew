@@ -810,6 +810,17 @@ def _trigger_winner_announcement() -> None:
             p for p in ranked_players
             if (p.life_points > 0, p.score, p.life_points) == top_key
         ]
+    elif engine.mode_name == "OldFashionDuel" and engine.duel_state.get("is_tournament") and engine.duel_state.get("early_clinch"):
+        ranked_players = engine.get_sorted_players()
+        if not ranked_players:
+            return
+        records = engine.duel_state.get("match_records") or {}
+        top_wins = int((records.get(str(ranked_players[0].gun_num)) or {}).get("wins", 0))
+        top_score = ranked_players[0].score
+        winners = [
+            p for p in ranked_players
+            if (int((records.get(str(p.gun_num)) or {}).get("wins", 0)), p.score) == (top_wins, top_score)
+        ]
     else:
         ranked_players = sorted(engine.players.values(), key=lambda p: p.score, reverse=True)
         if not ranked_players:
