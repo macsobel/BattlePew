@@ -237,6 +237,12 @@ class OldFashionDuelMode(GameMode):
                 ds["countdown_remaining"] = 0
                 ds["trigger_armed"] = {gid: False for gid in active_pair}
                 ctx._duel_round_triggered = False
+                ctx.audio.play_gun_voice(
+                    "en/DSN4_SD17_Press-the-trigger-to-start-the-game.wav",
+                    "Press the trigger to start the game!",
+                    priority=0,
+                    duration=3.0,
+                )
             return
 
         if sub == "WAIT_TRIGGER":

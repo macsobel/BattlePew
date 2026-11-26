@@ -456,13 +456,16 @@ class GameMasterAudio:
         return cue
 
     def _play_local_nonblocking(self, cue: AudioCue) -> None:
-        file_map = {
-            "announcer": ANNOUNCER_DIR / cue.filename,
-            "ui": UI_SFX_DIR / cue.filename,
-            "music": MUSIC_DIR / cue.filename,
-            "gun": GUN_SOUNDS_DIR / cue.filename,
-        }
-        path = file_map.get(cue.category)
+        if cue.url.startswith("/audio/gun/"):
+            path = GUN_SOUNDS_DIR / cue.url.removeprefix("/audio/gun/")
+        else:
+            file_map = {
+                "announcer": ANNOUNCER_DIR / cue.filename,
+                "ui": UI_SFX_DIR / cue.filename,
+                "music": MUSIC_DIR / cue.filename,
+                "gun": GUN_SOUNDS_DIR / cue.filename,
+            }
+            path = file_map.get(cue.category)
         if path and path.exists():
             try:
                 subprocess.Popen(
@@ -558,6 +561,26 @@ class GameMasterAudio:
                 category="announcer",
                 url=f"/audio/announcer/{wav_name}",
                 filename=wav_name,
+                priority=priority,
+                subtitle=subtitle,
+            )
+        )
+
+    def play_gun_voice(
+        self, rel_path: str, subtitle: str, priority: int = 0, duration: float = 3.0
+    ) -> AudioCue | None:
+        """Emit a spoken prompt from `GUN_SOUNDS_DIR` on the announcer channel."""
+        path = GUN_SOUNDS_DIR / rel_path
+        if not path.exists():
+            return None
+        dur = _wav_duration_s(path, duration)
+        self.active_priority = priority
+        self.active_until = time.time() + dur
+        return self._emit(
+            AudioCue(
+                category="announcer",
+                url=f"/audio/gun/{rel_path}",
+                filename=rel_path,
                 priority=priority,
                 subtitle=subtitle,
             )
