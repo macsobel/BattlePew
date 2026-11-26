@@ -130,18 +130,89 @@ def _wait_for_server(url: str, timeout: float = 20.0) -> bool:
     return False
 
 
-def main() -> int:
+def _ensure_std_streams() -> None:
+    """Prevent None stdout/stderr crashes in PyInstaller --windowed builds on Windows."""
+    if sys.stdout is None:
+        sys.stdout = open(os.devnull, "w", encoding="utf-8")
+    if sys.stderr is None:
+        sys.stderr = open(os.devnull, "w", encoding="utf-8")
+
+
+def _parse_smoke_test_args(argv: list[str]) -> tuple[bool, str | None]:
+    smoke_test = "--smoke-test" in argv
+    log_path: str | None = None
+    for idx, arg in enumerate(argv):
+        if arg == "--smoke-test-log" and idx + 1 < len(argv):
+            log_path = argv[idx + 1]
+        elif arg.startswith("--smoke-test-log="):
+            log_path = arg.split("=", 1)[1]
+    return smoke_test, log_path
+
+
+def _write_smoke_log(log_path: str | None, lines: list[str]) -> None:
+    text = "\n".join(lines) + "\n"
+    try:
+        sys.stdout.write(text)
+        sys.stdout.flush()
+    except Exception:
+        pass
+    if log_path:
+        path = pathlib.Path(log_path)
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(text, encoding="utf-8")
+
+
+def _run_smoke_test(base_url: str, log_path: str | None) -> int:
+    lines: list[str] = []
+    try:
+        with urllib.request.urlopen(f"{base_url}/api/state", timeout=5.0) as resp:
+            if resp.status != 200:
+                raise RuntimeError(f"/api/state returned HTTP {resp.status}")
+            state = json.loads(resp.read().decode("utf-8"))
+        modes = state.get("modes") or state.get("mode_catalog") or []
+        if not modes:
+            raise RuntimeError("/api/state returned no game modes")
+        lines.append(f"OK /api/state (modes={len(modes)})")
+
+        for route in ("/", "/hud"):
+            with urllib.request.urlopen(f"{base_url}{route}", timeout=5.0) as resp:
+                if resp.status != 200:
+                    raise RuntimeError(f"{route} returned HTTP {resp.status}")
+                body = resp.read()
+                if len(body) < 100:
+                    raise RuntimeError(f"{route} returned unexpectedly small body ({len(body)} bytes)")
+            lines.append(f"OK {route} ({len(body)} bytes)")
+
+        import webview  # noqa: F401
+        lines.append(f"OK pywebview imported ({getattr(webview, '__version__', 'unknown')})")
+        lines.append("SMOKE_TEST_PASSED")
+        _write_smoke_log(log_path, lines)
+        return 0
+    except Exception as exc:
+        lines.append(f"SMOKE_TEST_FAILED: {exc!r}")
+        _write_smoke_log(log_path, lines)
+        return 1
+
+
+def main(argv: list[str] | None = None) -> int:
     multiprocessing.freeze_support()
+    _ensure_std_streams()
+
+    args = list(sys.argv[1:] if argv is None else argv)
+    smoke_test, smoke_log = _parse_smoke_test_args(args)
 
     port = _find_free_port()
     os.environ["BATTLETAG_PORT"] = str(port)
     os.environ["BATTLETAG_CONFIRM_WRITE"] = "1"
 
+    from battletag.app import app as battletag_app
+
     config = uvicorn.Config(
-        "battletag.app:app",
+        battletag_app,
         host="0.0.0.0",
         port=port,
         log_level="warning",
+        log_config=None,
     )
     server = uvicorn.Server(config)
 
@@ -152,8 +223,17 @@ def main() -> int:
     if not _wait_for_server(f"{base_url}/api/state"):
         server.should_exit = True
         server_thread.join(timeout=3.0)
-        print("BattlePew server failed to start.", file=sys.stderr)
+        if smoke_test:
+            _write_smoke_log(smoke_log, ["SMOKE_TEST_FAILED: BattlePew server failed to start."])
+        else:
+            print("BattlePew server failed to start.", file=sys.stderr)
         return 1
+
+    if smoke_test:
+        rc = _run_smoke_test(base_url, smoke_log)
+        server.should_exit = True
+        server_thread.join(timeout=5.0)
+        return rc
 
     try:
         import webview
