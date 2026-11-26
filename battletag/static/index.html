@@ -8245,6 +8245,12 @@
       audioAssetsSelectBtn.addEventListener('click', () => {
         if (isNativeMacApp()) {
           window.webkit.messageHandlers.battlepew.postMessage({ action: 'selectInstaller' });
+        } else if (window.pywebview && window.pywebview.api && typeof window.pywebview.api.select_installer === 'function') {
+          window.pywebview.api.select_installer().then((path) => {
+            if (path) window.__onInstallerSelected(path);
+          }).catch((err) => {
+            setAudioAssetsUIExtracting(false, 0, '', String(err));
+          });
         } else if (audioAssetsFileInput) {
           audioAssetsFileInput.click();
         }
